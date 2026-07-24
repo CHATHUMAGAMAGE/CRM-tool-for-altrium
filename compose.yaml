@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: eleven_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: eleven_crm
+      POSTGRES_USER: eleven_user
+      POSTGRES_PASSWORD: eleven_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
