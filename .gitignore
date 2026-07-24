@@ -1,0 +1,33 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# React / Expo
+node_modules/
+dist/
+build/
+.expo/
+
+# Logs
+*.log
+
+# Editors and operating systems
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
