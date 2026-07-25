@@ -31,6 +31,4 @@ build/
 .idea/
 Thumbs.db
 .DS_Store
-
-# Local IDE config
 pyrefly.toml
