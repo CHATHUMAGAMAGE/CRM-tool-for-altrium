@@ -24,9 +24,14 @@ import {
   VisibilityOff,
 } from '@mui/icons-material'
 
+import { useNavigate } from 'react-router'
+
 import { getCurrentUser, loginUser } from '../services/auth'
 
 function LoginPage() {
+
+  const navigate = useNavigate()
+  
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -49,6 +54,7 @@ function LoginPage() {
     const currentUser = await getCurrentUser()
 
 console.log('Current user:', currentUser)
+navigate('/dashboard', { replace: true })
 
     console.log('Login successful')
   } catch (error) {
