@@ -1,8 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import {
+  
+  Alert,
   Box,
   Button,
   Checkbox,
+  CircularProgress,
   FormControlLabel,
   IconButton,
   InputAdornment,
@@ -11,6 +14,7 @@ import {
   Stack,
   TextField,
   Typography,
+
 } from '@mui/material'
 import {
   GridViewRounded,
@@ -20,17 +24,43 @@ import {
   VisibilityOff,
 } from '@mui/icons-material'
 
+import { getCurrentUser, loginUser } from '../services/auth'
+
 function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  
+  
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  event.preventDefault()
 
-    // Django connection will be added in Step 7.
-    console.log({ username, password })
+  setError('')
+  setIsLoading(true)
+
+  try {
+    const tokens = await loginUser(username, password)
+
+    localStorage.setItem('accessToken', tokens.access)
+    localStorage.setItem('refreshToken', tokens.refresh)
+    const currentUser = await getCurrentUser()
+
+console.log('Current user:', currentUser)
+
+    console.log('Login successful')
+  } catch (error) {
+    setError(
+      error instanceof Error
+        ? error.message
+        : 'Login failed. Please try again.',
+    )
+  } finally {
+    setIsLoading(false)
   }
+}
 
   return (
     <Box
@@ -157,6 +187,11 @@ function LoginPage() {
 
             <Box component="form" onSubmit={handleSubmit}>
               <Stack spacing={2.5}>
+                {error && (
+  <Alert severity="error">
+    {error}
+  </Alert>
+)}
                 <TextField
                   label="Username"
                   placeholder="Enter your username"
@@ -233,18 +268,23 @@ function LoginPage() {
                 </Stack>
 
                 <Button
-                  type="submit"
-                  variant="contained"
-                  size="large"
-                  fullWidth
-                  sx={{
-                    py: 1.4,
-                    textTransform: 'none',
-                    fontWeight: 700,
-                  }}
-                >
-                  Login
-                </Button>
+                    type="submit"
+                    variant="contained"
+                    size="large"
+                    fullWidth
+                    disabled={isLoading}
+                    sx={{
+                      py: 1.4,
+                      textTransform: 'none',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {isLoading ? (
+                      <CircularProgress size={24} color="inherit" />
+                    ) : (
+                      'Login'
+                    )}
+              </Button>
               </Stack>
             </Box>
           </Paper>
