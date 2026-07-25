@@ -35,8 +35,19 @@ const summaryCards = [
   },
 ]
 
+import { useNavigate } from 'react-router'
+import { logoutUser } from '../services/auth'
+
 function DashboardPage() {
-  return (
+  
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+  logoutUser()
+  navigate('/login', { replace: true })
+}
+  
+    return (
     <Box sx={{ minHeight: '100vh', display: 'flex', bgcolor: '#f5f7fa' }}>
       <Box
         component="aside"
@@ -87,9 +98,10 @@ function DashboardPage() {
         <Button
           startIcon={<Logout />}
           color="inherit"
+          onClick={handleLogout}
           sx={{ justifyContent: 'flex-start' }}
-        >
-          Log out
+>
+         Log out
         </Button>
       </Box>
 

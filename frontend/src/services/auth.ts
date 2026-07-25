@@ -81,3 +81,118 @@ export async function getCurrentUser(): Promise<CurrentUser> {
 
   return (await response.json()) as CurrentUser
 }
+
+export function logoutUser(): void {
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('refreshToken')
+}
+
+
+type JwtPayload = {
+  exp?: number
+}
+
+export function hasValidAccessToken(): boolean {
+  const accessToken = localStorage.getItem('accessToken')
+
+  if (!accessToken) {
+    return false
+  }
+
+  try {
+    const payloadSegment = accessToken.split('.')[1]
+
+    if (!payloadSegment) {
+      return false
+    }
+
+    const base64 = payloadSegment
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+
+    const paddedBase64 = base64.padEnd(
+      Math.ceil(base64.length / 4) * 4,
+      '=',
+    )
+
+    const payload = JSON.parse(atob(paddedBase64)) as JwtPayload
+
+    if (typeof payload.exp !== 'number') {
+      return false
+    }
+
+    return payload.exp > Math.floor(Date.now() / 1000)
+  } catch {
+    return false
+  }
+}
+type RefreshResponse = {
+  access: string
+  refresh?: string
+}
+
+export async function refreshAccessToken(): Promise<string> {
+  const refreshToken = localStorage.getItem('refreshToken')
+
+  if (!refreshToken) {
+    throw new Error('No refresh token found.')
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/auth/refresh/`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        refresh: refreshToken,
+      }),
+    },
+  )
+
+  if (!response.ok) {
+    logoutUser()
+    throw new Error('Session expired. Please log in again.')
+  }
+
+  const tokens = (await response.json()) as RefreshResponse
+
+  localStorage.setItem('accessToken', tokens.access)
+
+  if (tokens.refresh) {
+    localStorage.setItem('refreshToken', tokens.refresh)
+  }
+
+  return tokens.access
+}
+
+let refreshRequest: Promise<string> | null = null
+
+export async function ensureValidSession(): Promise<boolean> {
+  if (hasValidAccessToken()) {
+    return true
+  }
+
+  const refreshToken = localStorage.getItem('refreshToken')
+
+  if (!refreshToken) {
+    logoutUser()
+    return false
+  }
+
+  try {
+    if (!refreshRequest) {
+      refreshRequest = refreshAccessToken().finally(() => {
+        refreshRequest = null
+      })
+    }
+
+    await refreshRequest
+
+    return hasValidAccessToken()
+  } catch {
+    logoutUser()
+    return false
+  }
+}
