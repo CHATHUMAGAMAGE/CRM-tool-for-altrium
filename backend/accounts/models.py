@@ -9,9 +9,11 @@ class UserProfile(models.Model):
     class Role(models.TextChoices):
         ADMIN = "ADMIN", "Administrator"
         MARKETING = "MARKETING", "Marketing Employee"
-        PROJECT_MANAGER = "PROJECT_MANAGER", "Project Manager"
         SALES_REP = "SALES_REP", "Sales Representative"
-        DIRECTOR = "DIRECTOR", "Director"
+        SALES_MANAGER = "SALES_MANAGER", "Sales Manager"
+        PROJECT_MANAGER = "PROJECT_MANAGER", "Project Manager"
+        SOFTWARE_ENGINEER = "SOFTWARE_ENGINEER", "Software Engineer"
+    DIRECTOR = "DIRECTOR", "Director"
 
     user = models.OneToOneField(
         User,
