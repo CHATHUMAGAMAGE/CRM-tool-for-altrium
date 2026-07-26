@@ -1,8 +1,11 @@
 import { Route, Routes } from 'react-router'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicOnlyRoute from './components/PublicOnlyRoute'
+import AppShell from './layouts/AppShell'
 import DashboardPage from './pages/DashboardPage'
+import LeadsPage from './pages/LeadsPage'
 import LoginPage from './pages/LoginPage'
+import CustomersPage from './pages/CustomersPage'
 
 function App() {
   return (
@@ -13,7 +16,11 @@ function App() {
       </Route>
 
       <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route element={<AppShell />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/leads" element={<LeadsPage />} />
+          <Route path="/customers" element={<CustomersPage />} />
+        </Route>
       </Route>
     </Routes>
   )
