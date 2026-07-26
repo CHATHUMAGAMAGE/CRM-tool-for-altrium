@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import {
   Box,
   Button,
@@ -6,6 +7,7 @@ import {
   Typography,
 } from '@mui/material'
 import {
+  AdminPanelSettingsOutlined,
   DashboardRounded,
   LogoutRounded,
   PeopleAltOutlined,
@@ -13,11 +15,26 @@ import {
   ViewKanbanOutlined,
 } from '@mui/icons-material'
 import { useLocation, useNavigate } from 'react-router'
-import { logoutUser } from '../../services/auth'
+import {
+  getCurrentUser,
+  logoutUser,
+  type CurrentUser,
+} from '../../services/auth'
+import {
+  hasRequiredRole,
+  type UserRole,
+} from '../../auth/roles'
 
 export const SIDEBAR_WIDTH = 260
 
-const navigationItems = [
+type NavigationItem = {
+  label: string
+  path: string
+  icon: React.ReactNode
+  allowedRoles?: UserRole[]
+}
+
+const navigationItems: NavigationItem[] = [
   {
     label: 'Dashboard',
     path: '/dashboard',
@@ -33,6 +50,12 @@ const navigationItems = [
     path: '/customers',
     icon: <PeopleAltOutlined />,
   },
+  {
+    label: 'Administration',
+    path: '/admin',
+    icon: <AdminPanelSettingsOutlined />,
+    allowedRoles: ['ADMIN'],
+  },
 ]
 
 type AppSidebarProps = {
@@ -47,6 +70,33 @@ function AppSidebar({
   const navigate = useNavigate()
   const location = useLocation()
 
+  const [currentUser, setCurrentUser] =
+    useState<CurrentUser | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadCurrentUser = async () => {
+      try {
+        const user = await getCurrentUser()
+
+        if (isMounted) {
+          setCurrentUser(user)
+        }
+      } catch {
+        if (isMounted) {
+          setCurrentUser(null)
+        }
+      }
+    }
+
+    void loadCurrentUser()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   const handleNavigation = (path: string) => {
     navigate(path)
     onNavigate?.()
@@ -57,6 +107,17 @@ function AppSidebar({
     onNavigate?.()
     navigate('/login', { replace: true })
   }
+
+  const visibleNavigationItems = navigationItems.filter((item) => {
+    if (!item.allowedRoles) {
+      return true
+    }
+
+    return (
+      currentUser !== null &&
+      hasRequiredRole(currentUser.role, item.allowedRoles)
+    )
+  })
 
   return (
     <Box
@@ -91,7 +152,7 @@ function AppSidebar({
       </Box>
 
       <Stack spacing={1}>
-        {navigationItems.map((item) => {
+        {visibleNavigationItems.map((item) => {
           const isActive = location.pathname === item.path
 
           return (
