@@ -29,9 +29,12 @@ import { AddRounded, SearchRounded } from '@mui/icons-material'
 type LeadStatus =
   | 'NEW'
   | 'CONTACTED'
+  | 'FOLLOW_UP_REQUIRED'
   | 'QUALIFIED'
+  | 'PROPOSAL_SENT'
+  | 'NEGOTIATION'
   | 'CONVERTED'
-  | 'REJECTED'
+  | 'LOST'
 
 type LeadView = 'ACTIVE' | 'CLOSED' | 'ALL'
 
@@ -44,18 +47,19 @@ type Lead = {
   status: LeadStatus
   assignedTo: string
   createdAt: string
+  lostReason: string
 }
 
 const activeStatuses: LeadStatus[] = [
   'NEW',
   'CONTACTED',
+  'FOLLOW_UP_REQUIRED',
   'QUALIFIED',
+  'PROPOSAL_SENT',
+  'NEGOTIATION',
 ]
 
-const closedStatuses: LeadStatus[] = [
-  'CONVERTED',
-  'REJECTED',
-]
+const closedStatuses: LeadStatus[] = ['CONVERTED', 'LOST']
 
 const initialLeads: Lead[] = [
   {
@@ -67,6 +71,7 @@ const initialLeads: Lead[] = [
     status: 'NEW',
     assignedTo: 'Nuwan Perera',
     createdAt: '30 Jul 2026',
+    lostReason: '',
   },
   {
     id: 2,
@@ -74,9 +79,10 @@ const initialLeads: Lead[] = [
     company: 'Vertex Holdings',
     email: 'dinithi@vertex.lk',
     source: 'Referral',
-    status: 'CONTACTED',
+    status: 'FOLLOW_UP_REQUIRED',
     assignedTo: 'Nuwan Perera',
     createdAt: '29 Jul 2026',
+    lostReason: '',
   },
   {
     id: 3,
@@ -84,9 +90,10 @@ const initialLeads: Lead[] = [
     company: 'Peak Digital',
     email: 'kasun@peakdigital.lk',
     source: 'Campaign',
-    status: 'QUALIFIED',
+    status: 'PROPOSAL_SENT',
     assignedTo: 'Kasun Fernando',
     createdAt: '28 Jul 2026',
+    lostReason: '',
   },
   {
     id: 4,
@@ -97,6 +104,7 @@ const initialLeads: Lead[] = [
     status: 'CONVERTED',
     assignedTo: 'Kasun Fernando',
     createdAt: '24 Jul 2026',
+    lostReason: '',
   },
   {
     id: 5,
@@ -104,9 +112,10 @@ const initialLeads: Lead[] = [
     company: 'Brightway Solutions',
     email: 'nimal@brightway.lk',
     source: 'Website',
-    status: 'REJECTED',
+    status: 'LOST',
     assignedTo: 'Nuwan Perera',
     createdAt: '21 Jul 2026',
+    lostReason: 'Customer selected another service provider.',
   },
 ]
 
@@ -116,9 +125,13 @@ function LeadsPage() {
   const [leadView, setLeadView] = useState<LeadView>('ACTIVE')
   const [statusFilter, setStatusFilter] =
     useState<LeadStatus | 'ALL'>('ALL')
+
   const [addDialogOpen, setAddDialogOpen] = useState(false)
-  const [selectedLead, setSelectedLead] =
-    useState<Lead | null>(null)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+
+  const [draftStatus, setDraftStatus] = useState<LeadStatus>('NEW')
+  const [lostReason, setLostReason] = useState('')
+  const [lostReasonError, setLostReasonError] = useState(false)
 
   const [form, setForm] = useState({
     name: '',
@@ -130,17 +143,15 @@ function LeadsPage() {
 
   const activeLeadCount = useMemo(
     () =>
-      leads.filter((lead) =>
-        activeStatuses.includes(lead.status),
-      ).length,
+      leads.filter((lead) => activeStatuses.includes(lead.status))
+        .length,
     [leads],
   )
 
   const closedLeadCount = useMemo(
     () =>
-      leads.filter((lead) =>
-        closedStatuses.includes(lead.status),
-      ).length,
+      leads.filter((lead) => closedStatuses.includes(lead.status))
+        .length,
     [leads],
   )
 
@@ -172,6 +183,18 @@ function LeadsPage() {
     setStatusFilter('ALL')
   }
 
+  const handleOpenLead = (lead: Lead) => {
+    setSelectedLead(lead)
+    setDraftStatus(lead.status)
+    setLostReason(lead.lostReason)
+    setLostReasonError(false)
+  }
+
+  const handleCloseLead = () => {
+    setSelectedLead(null)
+    setLostReasonError(false)
+  }
+
   const handleAddLead = () => {
     if (!form.name.trim() || !form.email.trim()) {
       return
@@ -190,12 +213,10 @@ function LeadsPage() {
         month: 'short',
         year: 'numeric',
       }),
+      lostReason: '',
     }
 
-    setLeads((currentLeads) => [
-      newLead,
-      ...currentLeads,
-    ])
+    setLeads((currentLeads) => [newLead, ...currentLeads])
 
     setForm({
       name: '',
@@ -210,44 +231,61 @@ function LeadsPage() {
     setAddDialogOpen(false)
   }
 
-  const handleStatusChange = (status: LeadStatus) => {
+  const handleSaveLeadChanges = () => {
     if (!selectedLead) {
+      return
+    }
+
+    if (draftStatus === 'LOST' && !lostReason.trim()) {
+      setLostReasonError(true)
       return
     }
 
     const updatedLead: Lead = {
       ...selectedLead,
-      status,
+      status: draftStatus,
+      lostReason: draftStatus === 'LOST' ? lostReason.trim() : '',
     }
 
     setLeads((currentLeads) =>
       currentLeads.map((lead) =>
-        lead.id === selectedLead.id
-          ? updatedLead
-          : lead,
+        lead.id === selectedLead.id ? updatedLead : lead,
       ),
     )
 
-    setSelectedLead(updatedLead)
+    handleCloseLead()
   }
+
+  const getStatusLabel = (status: LeadStatus) =>
+    status
+      .split('_')
+      .map(
+        (word) =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+      )
+      .join(' ')
 
   const getStatusColor = (
     status: LeadStatus,
-  ):
-    | 'warning'
-    | 'info'
-    | 'success'
-    | 'error' => {
+  ): 'default' | 'info' | 'warning' | 'success' | 'error' => {
     switch (status) {
       case 'CONTACTED':
+      case 'PROPOSAL_SENT':
         return 'info'
+
+      case 'FOLLOW_UP_REQUIRED':
+      case 'NEGOTIATION':
+        return 'warning'
+
       case 'QUALIFIED':
       case 'CONVERTED':
         return 'success'
-      case 'REJECTED':
+
+      case 'LOST':
         return 'error'
+
       default:
-        return 'warning'
+        return 'default'
     }
   }
 
@@ -278,16 +316,12 @@ function LeadsPage() {
         }}
       >
         <Box>
-          <Typography
-            variant="h4"
-            sx={{ fontWeight: 800 }}
-          >
+          <Typography variant="h4" sx={{ fontWeight: 800 }}>
             Leads
           </Typography>
 
           <Typography sx={{ color: 'text.secondary' }}>
-            Manage and track Altrium&apos;s potential
-            customers.
+            Manage and track Altrium&apos;s potential customers.
           </Typography>
         </Box>
 
@@ -305,68 +339,38 @@ function LeadsPage() {
         spacing={2}
         sx={{ mb: 3 }}
       >
-        <Card
-          variant="outlined"
-          sx={{ flex: 1, p: 2 }}
-        >
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
+        <Card variant="outlined" sx={{ flex: 1, p: 2 }}>
+          <Typography variant="body2" color="text.secondary">
             Active leads
           </Typography>
 
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 800 }}
-          >
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>
             {activeLeadCount}
           </Typography>
         </Card>
 
-        <Card
-          variant="outlined"
-          sx={{ flex: 1, p: 2 }}
-        >
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
+        <Card variant="outlined" sx={{ flex: 1, p: 2 }}>
+          <Typography variant="body2" color="text.secondary">
             Closed leads
           </Typography>
 
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 800 }}
-          >
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>
             {closedLeadCount}
           </Typography>
         </Card>
 
-        <Card
-          variant="outlined"
-          sx={{ flex: 1, p: 2 }}
-        >
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
+        <Card variant="outlined" sx={{ flex: 1, p: 2 }}>
+          <Typography variant="body2" color="text.secondary">
             Total leads
           </Typography>
 
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 800 }}
-          >
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>
             {leads.length}
           </Typography>
         </Card>
       </Stack>
 
-      <Card
-        variant="outlined"
-        sx={{ mb: 3, p: 2 }}
-      >
+      <Card variant="outlined" sx={{ mb: 3, p: 2 }}>
         <Stack
           direction={{ xs: 'column', lg: 'row' }}
           spacing={2}
@@ -376,9 +380,7 @@ function LeadsPage() {
             size="small"
             placeholder="Search by name, company or email"
             value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
+            onChange={(event) => setSearch(event.target.value)}
             slotProps={{
               input: {
                 startAdornment: (
@@ -390,19 +392,14 @@ function LeadsPage() {
             }}
           />
 
-          <FormControl
-            size="small"
-            sx={{ minWidth: 180 }}
-          >
+          <FormControl size="small" sx={{ minWidth: 180 }}>
             <InputLabel>Lead view</InputLabel>
 
             <Select
               value={leadView}
               label="Lead view"
               onChange={(event) =>
-                handleLeadViewChange(
-                  event.target.value as LeadView,
-                )
+                handleLeadViewChange(event.target.value as LeadView)
               }
             >
               <MenuItem value="ACTIVE">
@@ -413,16 +410,11 @@ function LeadsPage() {
                 Closed ({closedLeadCount})
               </MenuItem>
 
-              <MenuItem value="ALL">
-                All ({leads.length})
-              </MenuItem>
+              <MenuItem value="ALL">All ({leads.length})</MenuItem>
             </Select>
           </FormControl>
 
-          <FormControl
-            size="small"
-            sx={{ minWidth: 190 }}
-          >
+          <FormControl size="small" sx={{ minWidth: 220 }}>
             <InputLabel>Status</InputLabel>
 
             <Select
@@ -430,42 +422,29 @@ function LeadsPage() {
               label="Status"
               onChange={(event) =>
                 setStatusFilter(
-                  event.target.value as
-                    | LeadStatus
-                    | 'ALL',
+                  event.target.value as LeadStatus | 'ALL',
                 )
               }
             >
-              <MenuItem value="ALL">
-                All statuses
-              </MenuItem>
-
+              <MenuItem value="ALL">All statuses</MenuItem>
               <MenuItem value="NEW">New</MenuItem>
+              <MenuItem value="CONTACTED">Contacted</MenuItem>
 
-              <MenuItem value="CONTACTED">
-                Contacted
+              <MenuItem value="FOLLOW_UP_REQUIRED">
+                Follow-up Required
               </MenuItem>
 
-              <MenuItem value="QUALIFIED">
-                Qualified
-              </MenuItem>
-
-              <MenuItem value="CONVERTED">
-                Converted
-              </MenuItem>
-
-              <MenuItem value="REJECTED">
-                Rejected
-              </MenuItem>
+              <MenuItem value="QUALIFIED">Qualified</MenuItem>
+              <MenuItem value="PROPOSAL_SENT">Proposal Sent</MenuItem>
+              <MenuItem value="NEGOTIATION">Negotiation</MenuItem>
+              <MenuItem value="CONVERTED">Converted</MenuItem>
+              <MenuItem value="LOST">Lost</MenuItem>
             </Select>
           </FormControl>
         </Stack>
       </Card>
 
-      <TableContainer
-        component={Card}
-        variant="outlined"
-      >
+      <TableContainer component={Card} variant="outlined">
         <Table>
           <TableHead>
             <TableRow>
@@ -483,7 +462,7 @@ function LeadsPage() {
               <TableRow
                 key={lead.id}
                 hover
-                onClick={() => setSelectedLead(lead)}
+                onClick={() => handleOpenLead(lead)}
                 sx={{ cursor: 'pointer' }}
               >
                 <TableCell>
@@ -500,26 +479,18 @@ function LeadsPage() {
                 </TableCell>
 
                 <TableCell>{lead.company}</TableCell>
-
                 <TableCell>{lead.source}</TableCell>
-
-                <TableCell>
-                  {lead.assignedTo}
-                </TableCell>
+                <TableCell>{lead.assignedTo}</TableCell>
 
                 <TableCell>
                   <Chip
                     size="small"
-                    label={lead.status}
-                    color={getStatusColor(
-                      lead.status,
-                    )}
+                    label={getStatusLabel(lead.status)}
+                    color={getStatusColor(lead.status)}
                   />
                 </TableCell>
 
-                <TableCell>
-                  {lead.createdAt}
-                </TableCell>
+                <TableCell>{lead.createdAt}</TableCell>
               </TableRow>
             ))}
 
@@ -530,9 +501,7 @@ function LeadsPage() {
                   align="center"
                   sx={{ py: 6 }}
                 >
-                  <Typography
-                    sx={{ fontWeight: 700 }}
-                  >
+                  <Typography sx={{ fontWeight: 700 }}>
                     {getEmptyMessage()}
                   </Typography>
 
@@ -551,7 +520,7 @@ function LeadsPage() {
 
       <Dialog
         open={Boolean(selectedLead)}
-        onClose={() => setSelectedLead(null)}
+        onClose={handleCloseLead}
         fullWidth
         maxWidth="sm"
       >
@@ -567,10 +536,7 @@ function LeadsPage() {
                 }}
               >
                 <Box>
-                  <Typography
-                    variant="h6"
-                    sx={{ fontWeight: 800 }}
-                  >
+                  <Typography variant="h6" sx={{ fontWeight: 800 }}>
                     {selectedLead.name}
                   </Typography>
 
@@ -584,10 +550,8 @@ function LeadsPage() {
 
                 <Chip
                   size="small"
-                  label={selectedLead.status}
-                  color={getStatusColor(
-                    selectedLead.status,
-                  )}
+                  label={getStatusLabel(draftStatus)}
+                  color={getStatusColor(draftStatus)}
                 />
               </Stack>
             </DialogTitle>
@@ -604,9 +568,7 @@ function LeadsPage() {
                     Email address
                   </Typography>
 
-                  <Typography>
-                    {selectedLead.email}
-                  </Typography>
+                  <Typography>{selectedLead.email}</Typography>
                 </Box>
 
                 <Box>
@@ -617,9 +579,7 @@ function LeadsPage() {
                     Lead source
                   </Typography>
 
-                  <Typography>
-                    {selectedLead.source}
-                  </Typography>
+                  <Typography>{selectedLead.source}</Typography>
                 </Box>
 
                 <Box>
@@ -630,9 +590,7 @@ function LeadsPage() {
                     Assigned sales representative
                   </Typography>
 
-                  <Typography>
-                    {selectedLead.assignedTo}
-                  </Typography>
+                  <Typography>{selectedLead.assignedTo}</Typography>
                 </Box>
 
                 <Box>
@@ -643,69 +601,84 @@ function LeadsPage() {
                     Created date
                   </Typography>
 
-                  <Typography>
-                    {selectedLead.createdAt}
-                  </Typography>
+                  <Typography>{selectedLead.createdAt}</Typography>
                 </Box>
 
                 <FormControl fullWidth>
                   <InputLabel>Lead status</InputLabel>
 
                   <Select
-                    value={selectedLead.status}
+                    value={draftStatus}
                     label="Lead status"
-                    onChange={(event) =>
-                      handleStatusChange(
-                        event.target
-                          .value as LeadStatus,
-                      )
-                    }
+                    onChange={(event) => {
+                      const newStatus = event.target.value as LeadStatus
+
+                      setDraftStatus(newStatus)
+                      setLostReasonError(false)
+                    }}
                   >
-                    <MenuItem value="NEW">
-                      New
+                    <MenuItem value="NEW">New</MenuItem>
+                    <MenuItem value="CONTACTED">Contacted</MenuItem>
+
+                    <MenuItem value="FOLLOW_UP_REQUIRED">
+                      Follow-up Required
                     </MenuItem>
 
-                    <MenuItem value="CONTACTED">
-                      Contacted
+                    <MenuItem value="QUALIFIED">Qualified</MenuItem>
+
+                    <MenuItem value="PROPOSAL_SENT">
+                      Proposal Sent
                     </MenuItem>
 
-                    <MenuItem value="QUALIFIED">
-                      Qualified
+                    <MenuItem value="NEGOTIATION">
+                      Negotiation
                     </MenuItem>
 
-                    <MenuItem value="CONVERTED">
-                      Converted
-                    </MenuItem>
-
-                    <MenuItem value="REJECTED">
-                      Rejected
-                    </MenuItem>
+                    <MenuItem value="CONVERTED">Converted</MenuItem>
+                    <MenuItem value="LOST">Lost</MenuItem>
                   </Select>
                 </FormControl>
 
-                {closedStatuses.includes(
-                  selectedLead.status,
-                ) && (
+                {draftStatus === 'LOST' && (
+                  <TextField
+                    required
+                    multiline
+                    minRows={3}
+                    label="Reason the lead was lost"
+                    value={lostReason}
+                    error={lostReasonError}
+                    helperText={
+                      lostReasonError
+                        ? 'A lost reason is required.'
+                        : 'Record why this lead was unsuccessful.'
+                    }
+                    onChange={(event) => {
+                      setLostReason(event.target.value)
+                      setLostReasonError(false)
+                    }}
+                  />
+                )}
+
+                {closedStatuses.includes(draftStatus) && (
                   <Typography
                     variant="body2"
                     color="text.secondary"
                   >
-                    This lead is closed and will appear
-                    under the Closed Leads view.
+                    Saving this status will move the lead to the
+                    Closed Leads view.
                   </Typography>
                 )}
               </Stack>
             </DialogContent>
 
-            <DialogActions
-              sx={{ px: 3, pb: 3 }}
-            >
+            <DialogActions sx={{ px: 3, pb: 3 }}>
+              <Button onClick={handleCloseLead}>Cancel</Button>
+
               <Button
-                onClick={() =>
-                  setSelectedLead(null)
-                }
+                variant="contained"
+                onClick={handleSaveLeadChanges}
               >
-                Close
+                Save Changes
               </Button>
             </DialogActions>
           </>
@@ -775,8 +748,7 @@ function LeadsPage() {
               onChange={(event) =>
                 setForm({
                   ...form,
-                  assignedTo:
-                    event.target.value,
+                  assignedTo: event.target.value,
                 })
               }
             />
@@ -784,21 +756,14 @@ function LeadsPage() {
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button
-            onClick={() =>
-              setAddDialogOpen(false)
-            }
-          >
+          <Button onClick={() => setAddDialogOpen(false)}>
             Cancel
           </Button>
 
           <Button
             variant="contained"
             onClick={handleAddLead}
-            disabled={
-              !form.name.trim() ||
-              !form.email.trim()
-            }
+            disabled={!form.name.trim() || !form.email.trim()}
           >
             Save Lead
           </Button>
