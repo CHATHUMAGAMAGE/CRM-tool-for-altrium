@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router'
+
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicOnlyRoute from './components/PublicOnlyRoute'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
@@ -6,8 +7,10 @@ import AppShell from './layouts/AppShell'
 import AdminPage from './pages/AdminPage'
 import CustomersPage from './pages/CustomersPage'
 import DashboardPage from './pages/DashboardPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import LeadsPage from './pages/LeadsPage'
 import LoginPage from './pages/LoginPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 
 function App() {
   return (
@@ -15,7 +18,16 @@ function App() {
       <Route element={<PublicOnlyRoute />}>
         <Route path="/" element={<LoginPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/forgot-password"
+          element={<ForgotPasswordPage />}
+        />
       </Route>
+
+      <Route
+        path="/reset-password"
+        element={<ResetPasswordPage />}
+      />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>

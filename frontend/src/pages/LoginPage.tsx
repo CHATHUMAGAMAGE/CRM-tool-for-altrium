@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react'
 import {
-  
   Alert,
   Box,
   Button,
@@ -14,7 +13,6 @@ import {
   Stack,
   TextField,
   Typography,
-
 } from '@mui/material'
 import {
   GridViewRounded,
@@ -23,50 +21,54 @@ import {
   Visibility,
   VisibilityOff,
 } from '@mui/icons-material'
+import {
+  Link as RouterLink,
+  useNavigate,
+} from 'react-router'
 
-import { useNavigate } from 'react-router'
-
-import { getCurrentUser, loginUser } from '../services/auth'
+import {
+  getCurrentUser,
+  loginUser,
+} from '../services/auth'
 
 function LoginPage() {
-
   const navigate = useNavigate()
-  
+
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  
-  
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-  event.preventDefault()
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault()
 
-  setError('')
-  setIsLoading(true)
+    setError('')
+    setIsLoading(true)
 
-  try {
-    const tokens = await loginUser(username, password)
+    try {
+      const tokens = await loginUser(username, password)
 
-    localStorage.setItem('accessToken', tokens.access)
-    localStorage.setItem('refreshToken', tokens.refresh)
-    const currentUser = await getCurrentUser()
+      localStorage.setItem('accessToken', tokens.access)
+      localStorage.setItem('refreshToken', tokens.refresh)
 
-console.log('Current user:', currentUser)
-navigate('/dashboard', { replace: true })
+      await getCurrentUser()
 
-    console.log('Login successful')
-  } catch (error) {
-    setError(
-      error instanceof Error
-        ? error.message
-        : 'Login failed. Please try again.',
-    )
-  } finally {
-    setIsLoading(false)
+      navigate('/dashboard', {
+        replace: true,
+      })
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Login failed. Please try again.',
+      )
+    } finally {
+      setIsLoading(false)
+    }
   }
-}
 
   return (
     <Box
@@ -76,7 +78,6 @@ navigate('/dashboard', { replace: true })
         backgroundColor: '#f5f7fa',
       }}
     >
-      {/* Left branding section */}
       <Box
         sx={{
           display: { xs: 'none', md: 'flex' },
@@ -94,7 +95,9 @@ navigate('/dashboard', { replace: true })
         <Stack
           direction="row"
           spacing={2}
-          sx={{ alignItems: 'center' }}
+          sx={{
+            alignItems: 'center',
+          }}
         >
           <Box
             sx={{
@@ -111,7 +114,9 @@ navigate('/dashboard', { replace: true })
 
           <Typography
             variant="h4"
-            sx={{ fontWeight: 800 }}
+            sx={{
+              fontWeight: 800,
+            }}
           >
             ELEVEN
           </Typography>
@@ -122,7 +127,10 @@ navigate('/dashboard', { replace: true })
             variant="h2"
             sx={{
               fontWeight: 800,
-              fontSize: { md: '3rem', lg: '4rem' },
+              fontSize: {
+                md: '3rem',
+                lg: '4rem',
+              },
               lineHeight: 1.05,
               mb: 3,
             }}
@@ -140,8 +148,8 @@ navigate('/dashboard', { replace: true })
               fontWeight: 400,
             }}
           >
-            Manage leads, assignments, follow-ups and customer conversions
-            from one secure, centralized platform.
+            Manage leads, assignments, follow-ups and customer
+            conversions from one secure, centralized platform.
           </Typography>
         </Box>
 
@@ -157,27 +165,39 @@ navigate('/dashboard', { replace: true })
         </Typography>
       </Box>
 
-      {/* Right login section */}
       <Box
         sx={{
-          width: { xs: '100%', md: '50%' },
+          width: {
+            xs: '100%',
+            md: '50%',
+          },
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           padding: 3,
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: 440 }}>
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: 440,
+          }}
+        >
           <Paper
             elevation={2}
             sx={{
-              padding: { xs: 3, sm: 4 },
+              padding: {
+                xs: 3,
+                sm: 4,
+              },
               borderRadius: 2,
             }}
           >
             <Typography
               variant="h4"
-              sx={{ fontWeight: 750 }}
+              sx={{
+                fontWeight: 750,
+              }}
             >
               Welcome Back
             </Typography>
@@ -191,20 +211,27 @@ navigate('/dashboard', { replace: true })
               Sign in to access ELEVEN
             </Typography>
 
-            <Box component="form" onSubmit={handleSubmit}>
+            <Box
+              component="form"
+              onSubmit={handleSubmit}
+            >
               <Stack spacing={2.5}>
                 {error && (
-  <Alert severity="error">
-    {error}
-  </Alert>
-)}
+                  <Alert severity="error">
+                    {error}
+                  </Alert>
+                )}
+
                 <TextField
                   label="Username"
                   placeholder="Enter your username"
                   value={username}
-                  onChange={(event) => setUsername(event.target.value)}
+                  onChange={(event) =>
+                    setUsername(event.target.value)
+                  }
                   required
                   fullWidth
+                  autoComplete="username"
                   slotProps={{
                     input: {
                       startAdornment: (
@@ -221,9 +248,12 @@ navigate('/dashboard', { replace: true })
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) =>
+                    setPassword(event.target.value)
+                  }
                   required
                   fullWidth
+                  autoComplete="current-password"
                   slotProps={{
                     input: {
                       startAdornment: (
@@ -234,11 +264,18 @@ navigate('/dashboard', { replace: true })
                       endAdornment: (
                         <InputAdornment position="end">
                           <IconButton
+                            type="button"
                             onClick={() =>
-                              setShowPassword((current) => !current)
+                              setShowPassword(
+                                (current) => !current,
+                              )
                             }
                             edge="end"
-                            aria-label="Show or hide password"
+                            aria-label={
+                              showPassword
+                                ? 'Hide password'
+                                : 'Show password'
+                            }
                           >
                             {showPassword ? (
                               <VisibilityOff />
@@ -265,32 +302,38 @@ navigate('/dashboard', { replace: true })
                   />
 
                   <Link
-                    href="#"
+                    component={RouterLink}
+                    to="/forgot-password"
                     underline="hover"
-                    sx={{ fontWeight: 600 }}
+                    sx={{
+                      fontWeight: 600,
+                    }}
                   >
                     Forgot password?
                   </Link>
                 </Stack>
 
                 <Button
-                    type="submit"
-                    variant="contained"
-                    size="large"
-                    fullWidth
-                    disabled={isLoading}
-                    sx={{
-                      py: 1.4,
-                      textTransform: 'none',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {isLoading ? (
-                      <CircularProgress size={24} color="inherit" />
-                    ) : (
-                      'Login'
-                    )}
-              </Button>
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  fullWidth
+                  disabled={isLoading}
+                  sx={{
+                    py: 1.4,
+                    textTransform: 'none',
+                    fontWeight: 700,
+                  }}
+                >
+                  {isLoading ? (
+                    <CircularProgress
+                      size={24}
+                      color="inherit"
+                    />
+                  ) : (
+                    'Login'
+                  )}
+                </Button>
               </Stack>
             </Box>
           </Paper>
