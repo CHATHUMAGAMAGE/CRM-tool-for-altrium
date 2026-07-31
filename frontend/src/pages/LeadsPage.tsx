@@ -8,6 +8,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
   InputAdornment,
   InputLabel,
@@ -25,7 +26,17 @@ import {
 } from '@mui/material'
 import { AddRounded, SearchRounded } from '@mui/icons-material'
 
-type LeadStatus = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'REJECTED'
+type LeadStatus =
+  | 'NEW'
+  | 'CONTACTED'
+  | 'FOLLOW_UP_REQUIRED'
+  | 'QUALIFIED'
+  | 'PROPOSAL_SENT'
+  | 'NEGOTIATION'
+  | 'CONVERTED'
+  | 'LOST'
+
+type LeadView = 'ACTIVE' | 'CLOSED' | 'ALL'
 
 type Lead = {
   id: number
@@ -36,7 +47,19 @@ type Lead = {
   status: LeadStatus
   assignedTo: string
   createdAt: string
+  lostReason: string
 }
+
+const activeStatuses: LeadStatus[] = [
+  'NEW',
+  'CONTACTED',
+  'FOLLOW_UP_REQUIRED',
+  'QUALIFIED',
+  'PROPOSAL_SENT',
+  'NEGOTIATION',
+]
+
+const closedStatuses: LeadStatus[] = ['CONVERTED', 'LOST']
 
 const initialLeads: Lead[] = [
   {
@@ -48,6 +71,7 @@ const initialLeads: Lead[] = [
     status: 'NEW',
     assignedTo: 'Nuwan Perera',
     createdAt: '30 Jul 2026',
+    lostReason: '',
   },
   {
     id: 2,
@@ -55,9 +79,10 @@ const initialLeads: Lead[] = [
     company: 'Vertex Holdings',
     email: 'dinithi@vertex.lk',
     source: 'Referral',
-    status: 'CONTACTED',
+    status: 'FOLLOW_UP_REQUIRED',
     assignedTo: 'Nuwan Perera',
     createdAt: '29 Jul 2026',
+    lostReason: '',
   },
   {
     id: 3,
@@ -65,17 +90,48 @@ const initialLeads: Lead[] = [
     company: 'Peak Digital',
     email: 'kasun@peakdigital.lk',
     source: 'Campaign',
-    status: 'QUALIFIED',
+    status: 'PROPOSAL_SENT',
     assignedTo: 'Kasun Fernando',
     createdAt: '28 Jul 2026',
+    lostReason: '',
+  },
+  {
+    id: 4,
+    name: 'Tharushi Fernando',
+    company: 'Lanka Commerce',
+    email: 'tharushi@lankacommerce.lk',
+    source: 'Referral',
+    status: 'CONVERTED',
+    assignedTo: 'Kasun Fernando',
+    createdAt: '24 Jul 2026',
+    lostReason: '',
+  },
+  {
+    id: 5,
+    name: 'Nimal Silva',
+    company: 'Brightway Solutions',
+    email: 'nimal@brightway.lk',
+    source: 'Website',
+    status: 'LOST',
+    assignedTo: 'Nuwan Perera',
+    createdAt: '21 Jul 2026',
+    lostReason: 'Customer selected another service provider.',
   },
 ]
 
 function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL')
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [leadView, setLeadView] = useState<LeadView>('ACTIVE')
+  const [statusFilter, setStatusFilter] =
+    useState<LeadStatus | 'ALL'>('ALL')
+
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+
+  const [draftStatus, setDraftStatus] = useState<LeadStatus>('NEW')
+  const [lostReason, setLostReason] = useState('')
+  const [lostReasonError, setLostReasonError] = useState(false)
 
   const [form, setForm] = useState({
     name: '',
@@ -84,6 +140,20 @@ function LeadsPage() {
     source: '',
     assignedTo: '',
   })
+
+  const activeLeadCount = useMemo(
+    () =>
+      leads.filter((lead) => activeStatuses.includes(lead.status))
+        .length,
+    [leads],
+  )
+
+  const closedLeadCount = useMemo(
+    () =>
+      leads.filter((lead) => closedStatuses.includes(lead.status))
+        .length,
+    [leads],
+  )
 
   const filteredLeads = useMemo(() => {
     const query = search.toLowerCase().trim()
@@ -97,9 +167,33 @@ function LeadsPage() {
       const matchesStatus =
         statusFilter === 'ALL' || lead.status === statusFilter
 
-      return matchesSearch && matchesStatus
+      const matchesLeadView =
+        leadView === 'ALL' ||
+        (leadView === 'ACTIVE' &&
+          activeStatuses.includes(lead.status)) ||
+        (leadView === 'CLOSED' &&
+          closedStatuses.includes(lead.status))
+
+      return matchesSearch && matchesStatus && matchesLeadView
     })
-  }, [leads, search, statusFilter])
+  }, [leads, search, statusFilter, leadView])
+
+  const handleLeadViewChange = (view: LeadView) => {
+    setLeadView(view)
+    setStatusFilter('ALL')
+  }
+
+  const handleOpenLead = (lead: Lead) => {
+    setSelectedLead(lead)
+    setDraftStatus(lead.status)
+    setLostReason(lead.lostReason)
+    setLostReasonError(false)
+  }
+
+  const handleCloseLead = () => {
+    setSelectedLead(null)
+    setLostReasonError(false)
+  }
 
   const handleAddLead = () => {
     if (!form.name.trim() || !form.email.trim()) {
@@ -119,9 +213,11 @@ function LeadsPage() {
         month: 'short',
         year: 'numeric',
       }),
+      lostReason: '',
     }
 
     setLeads((currentLeads) => [newLead, ...currentLeads])
+
     setForm({
       name: '',
       company: '',
@@ -129,20 +225,80 @@ function LeadsPage() {
       source: '',
       assignedTo: '',
     })
-    setDialogOpen(false)
+
+    setLeadView('ACTIVE')
+    setStatusFilter('ALL')
+    setAddDialogOpen(false)
   }
 
-  const getStatusColor = (status: LeadStatus) => {
-    switch (status) {
-      case 'QUALIFIED':
-        return 'success'
-      case 'CONTACTED':
-        return 'info'
-      case 'REJECTED':
-        return 'error'
-      default:
-        return 'warning'
+  const handleSaveLeadChanges = () => {
+    if (!selectedLead) {
+      return
     }
+
+    if (draftStatus === 'LOST' && !lostReason.trim()) {
+      setLostReasonError(true)
+      return
+    }
+
+    const updatedLead: Lead = {
+      ...selectedLead,
+      status: draftStatus,
+      lostReason: draftStatus === 'LOST' ? lostReason.trim() : '',
+    }
+
+    setLeads((currentLeads) =>
+      currentLeads.map((lead) =>
+        lead.id === selectedLead.id ? updatedLead : lead,
+      ),
+    )
+
+    handleCloseLead()
+  }
+
+  const getStatusLabel = (status: LeadStatus) =>
+    status
+      .split('_')
+      .map(
+        (word) =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+      )
+      .join(' ')
+
+  const getStatusColor = (
+    status: LeadStatus,
+  ): 'default' | 'info' | 'warning' | 'success' | 'error' => {
+    switch (status) {
+      case 'CONTACTED':
+      case 'PROPOSAL_SENT':
+        return 'info'
+
+      case 'FOLLOW_UP_REQUIRED':
+      case 'NEGOTIATION':
+        return 'warning'
+
+      case 'QUALIFIED':
+      case 'CONVERTED':
+        return 'success'
+
+      case 'LOST':
+        return 'error'
+
+      default:
+        return 'default'
+    }
+  }
+
+  const getEmptyMessage = () => {
+    if (leadView === 'ACTIVE') {
+      return 'No active leads found'
+    }
+
+    if (leadView === 'CLOSED') {
+      return 'No closed leads found'
+    }
+
+    return 'No leads found'
   }
 
   return (
@@ -151,7 +307,10 @@ function LeadsPage() {
         direction={{ xs: 'column', sm: 'row' }}
         sx={{
           justifyContent: 'space-between',
-          alignItems: { xs: 'flex-start', sm: 'center' },
+          alignItems: {
+            xs: 'flex-start',
+            sm: 'center',
+          },
           gap: 2,
           mb: 4,
         }}
@@ -169,14 +328,53 @@ function LeadsPage() {
         <Button
           variant="contained"
           startIcon={<AddRounded />}
-          onClick={() => setDialogOpen(true)}
+          onClick={() => setAddDialogOpen(true)}
         >
           Add Lead
         </Button>
       </Stack>
 
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        sx={{ mb: 3 }}
+      >
+        <Card variant="outlined" sx={{ flex: 1, p: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Active leads
+          </Typography>
+
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>
+            {activeLeadCount}
+          </Typography>
+        </Card>
+
+        <Card variant="outlined" sx={{ flex: 1, p: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Closed leads
+          </Typography>
+
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>
+            {closedLeadCount}
+          </Typography>
+        </Card>
+
+        <Card variant="outlined" sx={{ flex: 1, p: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Total leads
+          </Typography>
+
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>
+            {leads.length}
+          </Typography>
+        </Card>
+      </Stack>
+
       <Card variant="outlined" sx={{ mb: 3, p: 2 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+        <Stack
+          direction={{ xs: 'column', lg: 'row' }}
+          spacing={2}
+        >
           <TextField
             fullWidth
             size="small"
@@ -194,21 +392,53 @@ function LeadsPage() {
             }}
           />
 
-          <FormControl size="small" sx={{ minWidth: 190 }}>
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel>Lead view</InputLabel>
+
+            <Select
+              value={leadView}
+              label="Lead view"
+              onChange={(event) =>
+                handleLeadViewChange(event.target.value as LeadView)
+              }
+            >
+              <MenuItem value="ACTIVE">
+                Active ({activeLeadCount})
+              </MenuItem>
+
+              <MenuItem value="CLOSED">
+                Closed ({closedLeadCount})
+              </MenuItem>
+
+              <MenuItem value="ALL">All ({leads.length})</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 220 }}>
             <InputLabel>Status</InputLabel>
 
             <Select
               value={statusFilter}
               label="Status"
               onChange={(event) =>
-                setStatusFilter(event.target.value as LeadStatus | 'ALL')
+                setStatusFilter(
+                  event.target.value as LeadStatus | 'ALL',
+                )
               }
             >
               <MenuItem value="ALL">All statuses</MenuItem>
               <MenuItem value="NEW">New</MenuItem>
               <MenuItem value="CONTACTED">Contacted</MenuItem>
+
+              <MenuItem value="FOLLOW_UP_REQUIRED">
+                Follow-up Required
+              </MenuItem>
+
               <MenuItem value="QUALIFIED">Qualified</MenuItem>
-              <MenuItem value="REJECTED">Rejected</MenuItem>
+              <MenuItem value="PROPOSAL_SENT">Proposal Sent</MenuItem>
+              <MenuItem value="NEGOTIATION">Negotiation</MenuItem>
+              <MenuItem value="CONVERTED">Converted</MenuItem>
+              <MenuItem value="LOST">Lost</MenuItem>
             </Select>
           </FormControl>
         </Stack>
@@ -229,13 +459,21 @@ function LeadsPage() {
 
           <TableBody>
             {filteredLeads.map((lead) => (
-              <TableRow key={lead.id} hover>
+              <TableRow
+                key={lead.id}
+                hover
+                onClick={() => handleOpenLead(lead)}
+                sx={{ cursor: 'pointer' }}
+              >
                 <TableCell>
                   <Typography sx={{ fontWeight: 700 }}>
                     {lead.name}
                   </Typography>
 
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                  >
                     {lead.email}
                   </Typography>
                 </TableCell>
@@ -247,7 +485,7 @@ function LeadsPage() {
                 <TableCell>
                   <Chip
                     size="small"
-                    label={lead.status.replace('_', ' ')}
+                    label={getStatusLabel(lead.status)}
                     color={getStatusColor(lead.status)}
                   />
                 </TableCell>
@@ -258,13 +496,20 @@ function LeadsPage() {
 
             {filteredLeads.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                <TableCell
+                  colSpan={6}
+                  align="center"
+                  sx={{ py: 6 }}
+                >
                   <Typography sx={{ fontWeight: 700 }}>
-                    No leads found
+                    {getEmptyMessage()}
                   </Typography>
 
-                  <Typography variant="body2" color="text.secondary">
-                    Try changing your search or status filter.
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                  >
+                    Try changing your search or filters.
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -274,8 +519,175 @@ function LeadsPage() {
       </TableContainer>
 
       <Dialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        open={Boolean(selectedLead)}
+        onClose={handleCloseLead}
+        fullWidth
+        maxWidth="sm"
+      >
+        {selectedLead && (
+          <>
+            <DialogTitle>
+              <Stack
+                direction="row"
+                sx={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 2,
+                }}
+              >
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                    {selectedLead.name}
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                  >
+                    {selectedLead.company}
+                  </Typography>
+                </Box>
+
+                <Chip
+                  size="small"
+                  label={getStatusLabel(draftStatus)}
+                  color={getStatusColor(draftStatus)}
+                />
+              </Stack>
+            </DialogTitle>
+
+            <Divider />
+
+            <DialogContent>
+              <Stack spacing={3} sx={{ mt: 1 }}>
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Email address
+                  </Typography>
+
+                  <Typography>{selectedLead.email}</Typography>
+                </Box>
+
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Lead source
+                  </Typography>
+
+                  <Typography>{selectedLead.source}</Typography>
+                </Box>
+
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Assigned sales representative
+                  </Typography>
+
+                  <Typography>{selectedLead.assignedTo}</Typography>
+                </Box>
+
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Created date
+                  </Typography>
+
+                  <Typography>{selectedLead.createdAt}</Typography>
+                </Box>
+
+                <FormControl fullWidth>
+                  <InputLabel>Lead status</InputLabel>
+
+                  <Select
+                    value={draftStatus}
+                    label="Lead status"
+                    onChange={(event) => {
+                      const newStatus = event.target.value as LeadStatus
+
+                      setDraftStatus(newStatus)
+                      setLostReasonError(false)
+                    }}
+                  >
+                    <MenuItem value="NEW">New</MenuItem>
+                    <MenuItem value="CONTACTED">Contacted</MenuItem>
+
+                    <MenuItem value="FOLLOW_UP_REQUIRED">
+                      Follow-up Required
+                    </MenuItem>
+
+                    <MenuItem value="QUALIFIED">Qualified</MenuItem>
+
+                    <MenuItem value="PROPOSAL_SENT">
+                      Proposal Sent
+                    </MenuItem>
+
+                    <MenuItem value="NEGOTIATION">
+                      Negotiation
+                    </MenuItem>
+
+                    <MenuItem value="CONVERTED">Converted</MenuItem>
+                    <MenuItem value="LOST">Lost</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {draftStatus === 'LOST' && (
+                  <TextField
+                    required
+                    multiline
+                    minRows={3}
+                    label="Reason the lead was lost"
+                    value={lostReason}
+                    error={lostReasonError}
+                    helperText={
+                      lostReasonError
+                        ? 'A lost reason is required.'
+                        : 'Record why this lead was unsuccessful.'
+                    }
+                    onChange={(event) => {
+                      setLostReason(event.target.value)
+                      setLostReasonError(false)
+                    }}
+                  />
+                )}
+
+                {closedStatuses.includes(draftStatus) && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                  >
+                    Saving this status will move the lead to the
+                    Closed Leads view.
+                  </Typography>
+                )}
+              </Stack>
+            </DialogContent>
+
+            <DialogActions sx={{ px: 3, pb: 3 }}>
+              <Button onClick={handleCloseLead}>Cancel</Button>
+
+              <Button
+                variant="contained"
+                onClick={handleSaveLeadChanges}
+              >
+                Save Changes
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
+      <Dialog
+        open={addDialogOpen}
+        onClose={() => setAddDialogOpen(false)}
         fullWidth
         maxWidth="sm"
       >
@@ -288,7 +700,10 @@ function LeadsPage() {
               label="Contact name"
               value={form.name}
               onChange={(event) =>
-                setForm({ ...form, name: event.target.value })
+                setForm({
+                  ...form,
+                  name: event.target.value,
+                })
               }
             />
 
@@ -296,7 +711,10 @@ function LeadsPage() {
               label="Company"
               value={form.company}
               onChange={(event) =>
-                setForm({ ...form, company: event.target.value })
+                setForm({
+                  ...form,
+                  company: event.target.value,
+                })
               }
             />
 
@@ -306,7 +724,10 @@ function LeadsPage() {
               label="Email address"
               value={form.email}
               onChange={(event) =>
-                setForm({ ...form, email: event.target.value })
+                setForm({
+                  ...form,
+                  email: event.target.value,
+                })
               }
             />
 
@@ -314,7 +735,10 @@ function LeadsPage() {
               label="Lead source"
               value={form.source}
               onChange={(event) =>
-                setForm({ ...form, source: event.target.value })
+                setForm({
+                  ...form,
+                  source: event.target.value,
+                })
               }
             />
 
@@ -322,14 +746,19 @@ function LeadsPage() {
               label="Assigned sales representative"
               value={form.assignedTo}
               onChange={(event) =>
-                setForm({ ...form, assignedTo: event.target.value })
+                setForm({
+                  ...form,
+                  assignedTo: event.target.value,
+                })
               }
             />
           </Stack>
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setAddDialogOpen(false)}>
+            Cancel
+          </Button>
 
           <Button
             variant="contained"
