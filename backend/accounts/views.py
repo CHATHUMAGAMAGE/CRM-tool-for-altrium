@@ -13,14 +13,18 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.token_blacklist.models import (
     BlacklistedToken,
     OutstandingToken,
 )
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import (
     CurrentUserSerializer,
     ForgotPasswordSerializer,
+    LogoutSerializer,
     ResetPasswordSerializer,
 )
 
@@ -31,6 +35,49 @@ class CurrentUserView(RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    invalid_token_message = (
+        "The supplied refresh token is invalid."
+    )
+
+    def post(self, request):
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            refresh_token = RefreshToken(
+                serializer.validated_data["refresh"],
+            )
+        except TokenError:
+            return Response(
+                {"detail": self.invalid_token_message},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        token_user_id = refresh_token.get(
+            api_settings.USER_ID_CLAIM,
+        )
+        authenticated_user_id = getattr(
+            request.user,
+            api_settings.USER_ID_FIELD,
+        )
+
+        if str(token_user_id) != str(authenticated_user_id):
+            return Response(
+                {"detail": self.invalid_token_message},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        refresh_token.blacklist()
+
+        return Response(
+            {"detail": "You have been logged out successfully."},
+            status=status.HTTP_200_OK,
+        )
 
 
 class ForgotPasswordView(APIView):

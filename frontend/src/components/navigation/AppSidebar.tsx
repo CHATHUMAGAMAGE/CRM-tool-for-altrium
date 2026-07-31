@@ -15,6 +15,7 @@ import {
   ViewKanbanOutlined,
 } from '@mui/icons-material'
 import { useLocation, useNavigate } from 'react-router'
+
 import {
   getCurrentUser,
   logoutUser,
@@ -73,6 +74,8 @@ function AppSidebar({
   const [currentUser, setCurrentUser] =
     useState<CurrentUser | null>(null)
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
   useEffect(() => {
     let isMounted = true
 
@@ -103,9 +106,23 @@ function AppSidebar({
   }
 
   const handleLogout = () => {
-    logoutUser()
+    if (isLoggingOut) {
+      return
+    }
+
+    setIsLoggingOut(true)
+
+    /*
+     * logoutUser clears the browser tokens immediately,
+     * then blacklists the refresh token in the background.
+     */
+    void logoutUser()
+
     onNavigate?.()
-    navigate('/login', { replace: true })
+
+    navigate('/login', {
+      replace: true,
+    })
   }
 
   const visibleNavigationItems = navigationItems.filter((item) => {
@@ -125,7 +142,12 @@ function AppSidebar({
       sx={{
         width: SIDEBAR_WIDTH,
         minHeight: mobile ? '100%' : '100vh',
-        display: mobile ? 'flex' : { xs: 'none', md: 'flex' },
+        display: mobile
+          ? 'flex'
+          : {
+              xs: 'none',
+              md: 'flex',
+            },
         flexDirection: 'column',
         flexShrink: 0,
         borderRight: '1px solid',
@@ -135,7 +157,12 @@ function AppSidebar({
       }}
     >
       <Box sx={{ mb: 5 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900 }}>
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 900,
+          }}
+        >
           ELEVEN
         </Typography>
 
@@ -196,12 +223,13 @@ function AppSidebar({
           startIcon={<LogoutRounded />}
           color="inherit"
           onClick={handleLogout}
+          disabled={isLoggingOut}
           sx={{
             justifyContent: 'flex-start',
             textTransform: 'none',
           }}
         >
-          Log out
+          {isLoggingOut ? 'Logging out...' : 'Log out'}
         </Button>
       </Stack>
     </Box>

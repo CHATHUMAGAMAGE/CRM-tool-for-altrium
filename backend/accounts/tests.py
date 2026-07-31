@@ -531,3 +531,192 @@ class ResetPasswordAPITests(APITestCase):
             refresh_response.status_code,
             status.HTTP_401_UNAUTHORIZED,
         )
+
+class LogoutAPITests(APITestCase):
+    def setUp(self):
+        self.password = "SecureLogoutPassword@2026"
+
+        self.user = User.objects.create_user(
+            username="logout_user",
+            email="logout@altrium.lk",
+            password=self.password,
+        )
+
+        self.login_response = self.client.post(
+            reverse("login"),
+            {
+                "username": self.user.username,
+                "password": self.password,
+            },
+        )
+
+        self.access_token = self.login_response.data["access"]
+        self.refresh_token = self.login_response.data["refresh"]
+        self.logout_url = reverse("logout")
+
+    def authenticate(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self.access_token}",
+        )
+
+    def test_logout_requires_authentication(self):
+        response = self.client.post(
+            self.logout_url,
+            {
+                "refresh": self.refresh_token,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_401_UNAUTHORIZED,
+        )
+
+    def test_logout_requires_refresh_token(self):
+        self.authenticate()
+
+        response = self.client.post(
+            self.logout_url,
+            {},
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    def test_valid_logout_succeeds(self):
+        self.authenticate()
+
+        response = self.client.post(
+            self.logout_url,
+            {
+                "refresh": self.refresh_token,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            response.data["detail"],
+            "You have been logged out successfully.",
+        )
+
+    def test_logged_out_refresh_token_cannot_be_reused(self):
+        self.authenticate()
+
+        logout_response = self.client.post(
+            self.logout_url,
+            {
+                "refresh": self.refresh_token,
+            },
+        )
+
+        refresh_response = self.client.post(
+            reverse("refresh"),
+            {
+                "refresh": self.refresh_token,
+            },
+        )
+
+        self.assertEqual(
+            logout_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            refresh_response.status_code,
+            status.HTTP_401_UNAUTHORIZED,
+        )
+
+    def test_invalid_refresh_token_is_rejected(self):
+        self.authenticate()
+
+        response = self.client.post(
+            self.logout_url,
+            {
+                "refresh": "invalid-refresh-token",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    def test_user_cannot_blacklist_another_users_token(self):
+        second_password = "SecondUserPassword@2026"
+
+        second_user = User.objects.create_user(
+            username="second_logout_user",
+            email="second@altrium.lk",
+            password=second_password,
+        )
+
+        second_login = self.client.post(
+            reverse("login"),
+            {
+                "username": second_user.username,
+                "password": second_password,
+            },
+        )
+
+        second_refresh_token = second_login.data["refresh"]
+
+        self.authenticate()
+
+        logout_response = self.client.post(
+            self.logout_url,
+            {
+                "refresh": second_refresh_token,
+            },
+        )
+
+        self.assertEqual(
+            logout_response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.client.credentials()
+
+        refresh_response = self.client.post(
+            reverse("refresh"),
+            {
+                "refresh": second_refresh_token,
+            },
+        )
+
+        self.assertEqual(
+            refresh_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+    def test_refresh_token_cannot_be_logged_out_twice(self):
+        self.authenticate()
+
+        first_response = self.client.post(
+            self.logout_url,
+            {
+                "refresh": self.refresh_token,
+            },
+        )
+
+        second_response = self.client.post(
+            self.logout_url,
+            {
+                "refresh": self.refresh_token,
+            },
+        )
+
+        self.assertEqual(
+            first_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            second_response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
