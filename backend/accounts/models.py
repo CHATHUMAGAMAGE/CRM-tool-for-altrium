@@ -1,6 +1,3 @@
-from django.db import models
-
-# Create your models here.
 from django.contrib.auth.models import User
 from django.db import models
 
@@ -13,7 +10,7 @@ class UserProfile(models.Model):
         SALES_MANAGER = "SALES_MANAGER", "Sales Manager"
         PROJECT_MANAGER = "PROJECT_MANAGER", "Project Manager"
         SOFTWARE_ENGINEER = "SOFTWARE_ENGINEER", "Software Engineer"
-    DIRECTOR = "DIRECTOR", "Director"
+        DIRECTOR = "DIRECTOR", "Director"
 
     user = models.OneToOneField(
         User,
