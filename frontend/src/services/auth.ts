@@ -45,6 +45,11 @@ type RefreshResponse = {
   refresh?: string
 }
 
+function clearStoredTokens(): void {
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('refreshToken')
+}
+
 export async function loginUser(
   username: string,
   password: string,
@@ -199,11 +204,6 @@ export async function getCurrentUser(): Promise<CurrentUser> {
   return (await response.json()) as CurrentUser
 }
 
-export function logoutUser(): void {
-  localStorage.removeItem('accessToken')
-  localStorage.removeItem('refreshToken')
-}
-
 export function hasValidAccessToken(): boolean {
   const accessToken = localStorage.getItem('accessToken')
 
@@ -260,7 +260,7 @@ export async function refreshAccessToken(): Promise<string> {
   )
 
   if (!response.ok) {
-    logoutUser()
+    clearStoredTokens()
     throw new Error('Session expired. Please log in again.')
   }
 
@@ -275,6 +275,71 @@ export async function refreshAccessToken(): Promise<string> {
   return tokens.access
 }
 
+export async function logoutUser(): Promise<void> {
+  const refreshToken = localStorage.getItem('refreshToken')
+  let accessToken = localStorage.getItem('accessToken')
+  let refreshTokenToBlacklist = refreshToken
+
+  const accessTokenWasValid = hasValidAccessToken()
+
+  // Log out from the browser immediately.
+  clearStoredTokens()
+
+  if (!refreshToken) {
+    return
+  }
+
+  try {
+    if (!accessTokenWasValid) {
+      const refreshResponse = await fetch(
+        `${API_BASE_URL}/api/v1/auth/refresh/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            refresh: refreshToken,
+          }),
+        },
+      )
+
+      if (!refreshResponse.ok) {
+        return
+      }
+
+      const refreshedTokens =
+        (await refreshResponse.json()) as RefreshResponse
+
+      accessToken = refreshedTokens.access
+
+      if (refreshedTokens.refresh) {
+        refreshTokenToBlacklist = refreshedTokens.refresh
+      }
+    }
+
+    if (!accessToken || !refreshTokenToBlacklist) {
+      return
+    }
+
+    await fetch(
+      `${API_BASE_URL}/api/v1/auth/logout/`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          refresh: refreshTokenToBlacklist,
+        }),
+      },
+    )
+  } catch {
+    // The local session has already been cleared.
+  }
+}
+
 let refreshRequest: Promise<string> | null = null
 
 export async function ensureValidSession(): Promise<boolean> {
@@ -285,7 +350,7 @@ export async function ensureValidSession(): Promise<boolean> {
   const refreshToken = localStorage.getItem('refreshToken')
 
   if (!refreshToken) {
-    logoutUser()
+    clearStoredTokens()
     return false
   }
 
@@ -300,7 +365,7 @@ export async function ensureValidSession(): Promise<boolean> {
 
     return hasValidAccessToken()
   } catch {
-    logoutUser()
+    clearStoredTokens()
     return false
   }
 }

@@ -60,3 +60,10 @@ class ResetPasswordSerializer(serializers.Serializer):
             validate_password(attrs["new_password"], user=user)
 
         return attrs
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+    )
