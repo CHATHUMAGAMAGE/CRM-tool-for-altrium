@@ -16,8 +16,33 @@ export type CurrentUser = {
   phone_number: string
 }
 
+export type ResetPasswordRequest = {
+  uid: string
+  token: string
+  newPassword: string
+  confirmPassword: string
+}
+
+export type PasswordRecoveryResponse = {
+  detail: string
+}
+
 type LoginErrorResponse = {
   detail?: string
+}
+
+type PasswordRecoveryErrorResponse = {
+  detail?: string
+  email?: string[]
+}
+
+type JwtPayload = {
+  exp?: number
+}
+
+type RefreshResponse = {
+  access: string
+  refresh?: string
 }
 
 export async function loginUser(
@@ -58,6 +83,98 @@ export async function loginUser(
   return (await response.json()) as LoginResponse
 }
 
+export async function forgotPassword(
+  email: string,
+): Promise<PasswordRecoveryResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/auth/forgot-password/`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+      }),
+    },
+  )
+
+  if (!response.ok) {
+    let message =
+      'Unable to process your password reset request.'
+
+    try {
+      const errorData =
+        (await response.json()) as PasswordRecoveryErrorResponse
+
+      if (errorData.detail) {
+        message = errorData.detail
+      } else if (errorData.email?.[0]) {
+        message = errorData.email[0]
+      }
+    } catch {
+      // Use the default error message.
+    }
+
+    throw new Error(message)
+  }
+
+  return (await response.json()) as PasswordRecoveryResponse
+}
+
+export async function resetPassword({
+  uid,
+  token,
+  newPassword,
+  confirmPassword,
+}: ResetPasswordRequest): Promise<PasswordRecoveryResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/auth/reset-password/`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        uid,
+        token,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      }),
+    },
+  )
+
+  if (!response.ok) {
+    let message =
+      'Unable to reset your password. The link may have expired.'
+
+    try {
+      const errorData = (await response.json()) as {
+        detail?: string
+        new_password?: string[]
+        confirm_password?: string[]
+        non_field_errors?: string[]
+      }
+
+      if (errorData.detail) {
+        message = errorData.detail
+      } else if (errorData.new_password?.[0]) {
+        message = errorData.new_password[0]
+      } else if (errorData.confirm_password?.[0]) {
+        message = errorData.confirm_password[0]
+      } else if (errorData.non_field_errors?.[0]) {
+        message = errorData.non_field_errors[0]
+      }
+    } catch {
+      // Use the default error message.
+    }
+
+    throw new Error(message)
+  }
+
+  return (await response.json()) as PasswordRecoveryResponse
+}
+
 export async function getCurrentUser(): Promise<CurrentUser> {
   const accessToken = localStorage.getItem('accessToken')
 
@@ -85,11 +202,6 @@ export async function getCurrentUser(): Promise<CurrentUser> {
 export function logoutUser(): void {
   localStorage.removeItem('accessToken')
   localStorage.removeItem('refreshToken')
-}
-
-
-type JwtPayload = {
-  exp?: number
 }
 
 export function hasValidAccessToken(): boolean {
@@ -125,10 +237,6 @@ export function hasValidAccessToken(): boolean {
   } catch {
     return false
   }
-}
-type RefreshResponse = {
-  access: string
-  refresh?: string
 }
 
 export async function refreshAccessToken(): Promise<string> {

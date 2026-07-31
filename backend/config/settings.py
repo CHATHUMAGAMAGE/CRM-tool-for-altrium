@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 
     "rest_framework",
     "corsheaders",
+    "rest_framework_simplejwt.token_blacklist",
     "core",
     "accounts",
     "crm",
@@ -150,3 +151,30 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+
+# Authentication email and password-reset settings
+
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND",
+    default="django.core.mail.backends.console.EmailBackend",
+)
+
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL",
+    default="no-reply@eleven.local",
+)
+
+FRONTEND_URL = env(
+    "FRONTEND_URL",
+    default="http://localhost:5173",
+)
+
+# Reset links expire after one hour.
+PASSWORD_RESET_TIMEOUT = env.int(
+    "PASSWORD_RESET_TIMEOUT",
+    default=3600,
+)
+
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
+    "password_reset": "5/hour",
+}
