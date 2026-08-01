@@ -80,10 +80,20 @@ function getFullName(user: AdminUser): string {
     user.first_name,
     user.last_name,
   ]
-    .filter(Boolean)
+    .filter((value) => value?.trim())
     .join(' ')
 
-  return fullName || 'Not provided'
+  return fullName || user.username
+}
+
+function getRoleLabel(user: AdminUser): string {
+  const displayLabel = user.role_display?.trim()
+
+  if (displayLabel) {
+    return displayLabel
+  }
+
+  return roleLabels[user.role] || 'Unassigned'
 }
 
 function AdminUserTable() {
@@ -190,7 +200,10 @@ function AdminUserTable() {
 
             <Typography
               variant="body2"
-              sx={{ color: 'text.secondary', mt: 0.5 }}
+              sx={{
+                color: 'text.secondary',
+                mt: 0.5,
+              }}
             >
               Search and filter employee accounts.
             </Typography>
@@ -442,9 +455,13 @@ function AdminUserTable() {
 
                         <TableCell>
                           <Chip
-                            label={user.role_display}
+                            label={getRoleLabel(user)}
                             size="small"
                             variant="outlined"
+                            sx={{
+                              minWidth: 110,
+                              justifyContent: 'center',
+                            }}
                           />
                         </TableCell>
 
