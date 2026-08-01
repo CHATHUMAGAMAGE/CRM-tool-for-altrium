@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.db.models import Count, Q
+from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404
 from django.utils.encoding import force_bytes
 from django.utils.http import (
@@ -11,7 +12,11 @@ from django.utils.http import (
     urlsafe_base64_encode,
 )
 from rest_framework import status
-from rest_framework.generics import ListAPIView, RetrieveAPIView, UpdateAPIView
+from rest_framework.generics import (
+    ListAPIView,
+    RetrieveAPIView,
+    UpdateAPIView,
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -406,6 +411,70 @@ class AdminUserUpdateView(UpdateAPIView):
                     token=outstanding_token,
                 )
 
+
+class AdminUserDeleteView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def delete(self, request, pk):
+        user = get_object_or_404(
+            User.objects.select_related("profile"),
+            pk=pk,
+        )
+
+        if user.pk == request.user.pk:
+            return Response(
+                {
+                    "detail": (
+                        "You cannot delete your own account."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if (
+            user.profile.role == UserProfile.Role.ADMIN
+            and user.is_active
+        ):
+            active_admin_count = User.objects.filter(
+                profile__role=UserProfile.Role.ADMIN,
+                is_active=True,
+            ).count()
+
+            if active_admin_count <= 1:
+                return Response(
+                    {
+                        "detail": (
+                            "The final active administrator "
+                            "cannot be deleted."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        username = user.username
+
+        try:
+            user.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "detail": (
+                        "This user cannot be deleted because "
+                        "they are connected to existing CRM records. "
+                        "Deactivate the account instead."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response(
+            {
+                "detail": (
+                    f'User "{username}" was deleted successfully.'
+                )
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class AdminUserPasswordResetEmailView(APIView):

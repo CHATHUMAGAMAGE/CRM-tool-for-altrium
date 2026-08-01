@@ -70,6 +70,7 @@ class LogoutSerializer(serializers.Serializer):
         trim_whitespace=False,
     )
 
+
 class AdminDashboardSummarySerializer(serializers.Serializer):
     total_users = serializers.IntegerField(min_value=0)
     active_users = serializers.IntegerField(min_value=0)
@@ -77,7 +78,6 @@ class AdminDashboardSummarySerializer(serializers.Serializer):
     role_counts = serializers.DictField(
         child=serializers.IntegerField(min_value=0),
     )
-
 
 
 class AdminUserListSerializer(serializers.ModelSerializer):
@@ -142,24 +142,28 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
     def validate_username(self, value):
+        normalized_username = value.strip()
+
         if User.objects.filter(
-            username__iexact=value,
+            username__iexact=normalized_username,
         ).exists():
             raise serializers.ValidationError(
                 "A user with this username already exists."
             )
 
-        return value
+        return normalized_username
 
     def validate_email(self, value):
+        normalized_email = value.strip().lower()
+
         if User.objects.filter(
-            email__iexact=value,
+            email__iexact=normalized_email,
         ).exists():
             raise serializers.ValidationError(
                 "A user with this email address already exists."
             )
 
-        return value
+        return normalized_email
 
     def create(self, validated_data):
         role = validated_data.pop("role")
@@ -184,9 +188,16 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
         return user
 
 
-
-
 class AdminUserUpdateSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        max_length=150,
+    )
+    email = serializers.EmailField(
+        required=False,
+        allow_blank=False,
+    )
     role = serializers.ChoiceField(
         choices=UserProfile.Role.choices,
         source="profile.role",
@@ -202,6 +213,7 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
+            "username",
             "first_name",
             "last_name",
             "email",
@@ -209,6 +221,44 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
             "phone_number",
             "is_active",
         ]
+
+    def validate_username(self, value):
+        normalized_username = value.strip()
+
+        existing_users = User.objects.filter(
+            username__iexact=normalized_username,
+        )
+
+        if self.instance:
+            existing_users = existing_users.exclude(
+                pk=self.instance.pk,
+            )
+
+        if existing_users.exists():
+            raise serializers.ValidationError(
+                "A user with this username already exists."
+            )
+
+        return normalized_username
+
+    def validate_email(self, value):
+        normalized_email = value.strip().lower()
+
+        existing_users = User.objects.filter(
+            email__iexact=normalized_email,
+        )
+
+        if self.instance:
+            existing_users = existing_users.exclude(
+                pk=self.instance.pk,
+            )
+
+        if existing_users.exists():
+            raise serializers.ValidationError(
+                "A user with this email address already exists."
+            )
+
+        return normalized_email
 
     def validate(self, attrs):
         request = self.context.get("request")
@@ -223,7 +273,8 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
 
             if (
                 "role" in profile_data
-                and profile_data["role"] != UserProfile.Role.ADMIN
+                and profile_data["role"]
+                != UserProfile.Role.ADMIN
             ):
                 raise serializers.ValidationError(
                     {
