@@ -76,3 +76,35 @@ class AdminDashboardSummarySerializer(serializers.Serializer):
         child=serializers.IntegerField(min_value=0),
     )
 
+
+
+class AdminUserListSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(
+        source="profile.role",
+        read_only=True,
+    )
+    role_display = serializers.CharField(
+        source="profile.get_role_display",
+        read_only=True,
+    )
+    phone_number = serializers.CharField(
+        source="profile.phone_number",
+        read_only=True,
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "role",
+            "role_display",
+            "phone_number",
+            "is_active",
+            "date_joined",
+            "last_login",
+        ]
+        read_only_fields = fields

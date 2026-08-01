@@ -10,7 +10,7 @@ from django.utils.http import (
     urlsafe_base64_encode,
 )
 from rest_framework import status
-from rest_framework.generics import RetrieveAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -31,6 +31,7 @@ from .models import UserProfile
 from .permissions import IsAdminRole
 from .serializers import (
     AdminDashboardSummarySerializer,
+    AdminUserListSerializer,
     CurrentUserSerializer,
     ForgotPasswordSerializer,
     LogoutSerializer,
@@ -261,3 +262,60 @@ class AdminDashboardSummaryView(APIView):
             serializer.data,
             status=status.HTTP_200_OK,
         )
+
+
+class AdminUserListView(ListAPIView):
+    serializer_class = AdminUserListSerializer
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def get_queryset(self):
+        queryset = User.objects.select_related(
+            "profile",
+        ).order_by("-date_joined")
+
+        search = self.request.query_params.get(
+            "search",
+            "",
+        ).strip()
+
+        role = self.request.query_params.get(
+            "role",
+            "",
+        ).strip()
+
+        status_filter = self.request.query_params.get(
+            "status",
+            "",
+        ).strip().lower()
+
+        if search:
+            queryset = queryset.filter(
+                Q(username__icontains=search)
+                | Q(email__icontains=search)
+                | Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+            )
+
+        approved_roles = {
+            role_value
+            for role_value, _ in UserProfile.Role.choices
+        }
+
+        if role:
+            if role not in approved_roles:
+                return queryset.none()
+
+            queryset = queryset.filter(
+                profile__role=role,
+            )
+
+        if status_filter == "active":
+            queryset = queryset.filter(
+                is_active=True,
+            )
+        elif status_filter == "inactive":
+            queryset = queryset.filter(
+                is_active=False,
+            )
+
+        return queryset
