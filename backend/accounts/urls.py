@@ -6,6 +6,7 @@ from rest_framework_simplejwt.views import (
 
 from .views import (
     AdminDashboardSummaryView,
+    AdminUserDetailView,
     AdminUserListView,
     CurrentUserView,
     ForgotPasswordView,
@@ -38,5 +39,10 @@ urlpatterns = [
         "admin/users/",
         AdminUserListView.as_view(),
         name="admin-user-list",
+    ),
+    path(
+        "admin/users/<int:pk>/",
+        AdminUserDetailView.as_view(),
+        name="admin-user-detail",
     ),
 ]

@@ -319,3 +319,8 @@ class AdminUserListView(ListAPIView):
             )
 
         return queryset
+
+class AdminUserDetailView(RetrieveAPIView):
+    serializer_class = AdminUserListSerializer
+    permission_classes = [IsAuthenticated, IsAdminRole]
+    queryset = User.objects.select_related("profile")
