@@ -31,6 +31,7 @@ from .models import UserProfile
 from .permissions import IsAdminRole
 from .serializers import (
     AdminDashboardSummarySerializer,
+    AdminUserCreateSerializer,
     AdminUserListSerializer,
     CurrentUserSerializer,
     ForgotPasswordSerializer,
@@ -89,7 +90,11 @@ class LogoutView(APIView):
         refresh_token.blacklist()
 
         return Response(
-            {"detail": "You have been logged out successfully."},
+            {
+                "detail": (
+                    "You have been logged out successfully."
+                )
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -106,7 +111,9 @@ class ForgotPasswordView(APIView):
     )
 
     def post(self, request):
-        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer = ForgotPasswordSerializer(
+            data=request.data,
+        )
         serializer.is_valid(raise_exception=True)
 
         email = serializer.validated_data["email"]
@@ -120,7 +127,6 @@ class ForgotPasswordView(APIView):
             uid = urlsafe_base64_encode(
                 force_bytes(user.pk),
             )
-
             token = default_token_generator.make_token(user)
 
             reset_url = (
@@ -193,22 +199,14 @@ class ResetPasswordView(APIView):
 
         serializer = ResetPasswordSerializer(
             data=request.data,
-            context={
-                "user": user,
-            },
+            context={"user": user},
         )
-
         serializer.is_valid(raise_exception=True)
 
         user.set_password(
             serializer.validated_data["new_password"],
         )
-
-        user.save(
-            update_fields=[
-                "password",
-            ],
-        )
+        user.save(update_fields=["password"])
 
         for outstanding_token in OutstandingToken.objects.filter(
             user=user,
@@ -320,7 +318,70 @@ class AdminUserListView(ListAPIView):
 
         return queryset
 
+
 class AdminUserDetailView(RetrieveAPIView):
     serializer_class = AdminUserListSerializer
     permission_classes = [IsAuthenticated, IsAdminRole]
     queryset = User.objects.select_related("profile")
+
+
+class AdminUserCreateView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def post(self, request):
+        serializer = AdminUserCreateSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.save()
+
+        uid = urlsafe_base64_encode(
+            force_bytes(user.pk),
+        )
+        token = default_token_generator.make_token(user)
+
+        setup_url = (
+            f"{settings.FRONTEND_URL.rstrip('/')}"
+            f"/reset-password?uid={uid}&token={token}"
+        )
+
+        try:
+            send_password_reset_email(
+                recipient_email=user.email,
+                recipient_name=(
+                    user.first_name or user.username
+                ),
+                reset_url=setup_url,
+            )
+        except PasswordResetEmailError:
+            logger.exception(
+                "Employee password-setup email delivery failed "
+                "for user_id=%s.",
+                user.pk,
+            )
+
+            user.delete()
+
+            return Response(
+                {
+                    "detail": (
+                        "The employee account could not be created "
+                        "because the password setup email failed."
+                    )
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        response_serializer = AdminUserListSerializer(user)
+
+        return Response(
+            {
+                "detail": (
+                    "Employee account created successfully. "
+                    "A password setup email has been sent."
+                ),
+                "user": response_serializer.data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
