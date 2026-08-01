@@ -16,6 +16,7 @@ import {
 } from '@mui/icons-material'
 import { useLocation, useNavigate } from 'react-router'
 
+import BrandLogo from '../BrandLogo'
 import {
   getCurrentUser,
   logoutUser,
@@ -112,10 +113,6 @@ function AppSidebar({
 
     setIsLoggingOut(true)
 
-    /*
-     * logoutUser clears the browser tokens immediately,
-     * then blacklists the refresh token in the background.
-     */
     void logoutUser()
 
     onNavigate?.()
@@ -157,18 +154,19 @@ function AppSidebar({
       }}
     >
       <Box sx={{ mb: 5 }}>
-        <Typography
-          variant="h5"
+        <BrandLogo
+          variant="horizontal"
           sx={{
-            fontWeight: 900,
+            width: 175,
+            maxHeight: 58,
           }}
-        >
-          ELEVEN
-        </Typography>
+        />
 
         <Typography
           variant="caption"
           sx={{
+            display: 'block',
+            mt: 1.2,
             color: 'text.secondary',
             letterSpacing: 1.5,
             fontWeight: 700,
@@ -193,6 +191,7 @@ function AppSidebar({
                 justifyContent: 'flex-start',
                 px: 2,
                 py: 1.2,
+                borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 700,
               }}
@@ -213,6 +212,7 @@ function AppSidebar({
           color="inherit"
           sx={{
             justifyContent: 'flex-start',
+            borderRadius: 2,
             textTransform: 'none',
           }}
         >
@@ -226,6 +226,7 @@ function AppSidebar({
           disabled={isLoggingOut}
           sx={{
             justifyContent: 'flex-start',
+            borderRadius: 2,
             textTransform: 'none',
           }}
         >
