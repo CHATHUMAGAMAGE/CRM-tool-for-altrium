@@ -48,6 +48,7 @@ export type CreateAdminUserResponse = {
 }
 
 export type UpdateAdminUserRequest = {
+  username?: string
   first_name?: string
   last_name?: string
   email?: string
@@ -57,6 +58,7 @@ export type UpdateAdminUserRequest = {
 }
 
 export type UpdateAdminUserResponse = {
+  username: string
   first_name: string
   last_name: string
   email: string
@@ -133,6 +135,11 @@ async function authenticatedFetch(
 
   if (response.status === 401) {
     accessToken = await refreshAccessToken()
+
+    if (!accessToken) {
+      throw new Error('Session expired. Please log in again.')
+    }
+
     response = await makeRequest(accessToken)
   }
 
@@ -252,6 +259,22 @@ export async function updateAdminUser(
   return parseResponse<UpdateAdminUserResponse>(
     response,
     'Unable to update the user.',
+  )
+}
+
+export async function deleteAdminUser(
+  userId: number,
+): Promise<AdminActionResponse> {
+  const response = await authenticatedFetch(
+    `/api/v1/auth/admin/users/${userId}/delete/`,
+    {
+      method: 'DELETE',
+    },
+  )
+
+  return parseResponse<AdminActionResponse>(
+    response,
+    'Unable to delete the user.',
   )
 }
 
