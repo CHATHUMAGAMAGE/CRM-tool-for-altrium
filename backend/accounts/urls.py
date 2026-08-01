@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import (
 from .views import (
     AdminDashboardSummaryView,
     AdminUserCreateView,
+    AdminUserDeleteView,
     AdminUserDetailView,
     AdminUserListView,
     AdminUserPasswordResetEmailView,
@@ -19,10 +20,26 @@ from .views import (
 
 
 urlpatterns = [
-    path("login/", TokenObtainPairView.as_view(), name="login"),
-    path("refresh/", TokenRefreshView.as_view(), name="refresh"),
-    path("logout/", LogoutView.as_view(), name="logout"),
-    path("me/", CurrentUserView.as_view(), name="current-user"),
+    path(
+        "login/",
+        TokenObtainPairView.as_view(),
+        name="login",
+    ),
+    path(
+        "refresh/",
+        TokenRefreshView.as_view(),
+        name="refresh",
+    ),
+    path(
+        "logout/",
+        LogoutView.as_view(),
+        name="logout",
+    ),
+    path(
+        "me/",
+        CurrentUserView.as_view(),
+        name="current-user",
+    ),
     path(
         "forgot-password/",
         ForgotPasswordView.as_view(),
@@ -52,6 +69,11 @@ urlpatterns = [
         "admin/users/<int:pk>/update/",
         AdminUserUpdateView.as_view(),
         name="admin-user-update",
+    ),
+    path(
+        "admin/users/<int:pk>/delete/",
+        AdminUserDeleteView.as_view(),
+        name="admin-user-delete",
     ),
     path(
         "admin/users/<int:pk>/password-reset-email/",
