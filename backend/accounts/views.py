@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
+from django.db.models import Count, Q
 from django.utils.encoding import force_bytes
 from django.utils.http import (
     urlsafe_base64_decode,
@@ -26,7 +27,10 @@ from .email_service import (
     PasswordResetEmailError,
     send_password_reset_email,
 )
+from .models import UserProfile
+from .permissions import IsAdminRole
 from .serializers import (
+    AdminDashboardSummarySerializer,
     CurrentUserSerializer,
     ForgotPasswordSerializer,
     LogoutSerializer,
@@ -219,5 +223,41 @@ class ResetPasswordView(APIView):
                     "Please log in using your new password."
                 )
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+class AdminDashboardSummaryView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def get(self, request):
+        user_counts = User.objects.aggregate(
+            total_users=Count("id"),
+            active_users=Count(
+                "id",
+                filter=Q(is_active=True),
+            ),
+            inactive_users=Count(
+                "id",
+                filter=Q(is_active=False),
+            ),
+        )
+
+        role_counts = {
+            role_value: UserProfile.objects.filter(
+                role=role_value,
+            ).count()
+            for role_value, _ in UserProfile.Role.choices
+        }
+
+        serializer = AdminDashboardSummarySerializer(
+            {
+                **user_counts,
+                "role_counts": role_counts,
+            }
+        )
+
+        return Response(
+            serializer.data,
             status=status.HTTP_200_OK,
         )

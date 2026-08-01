@@ -5,6 +5,7 @@ from rest_framework_simplejwt.views import (
 )
 
 from .views import (
+    AdminDashboardSummaryView,
     CurrentUserView,
     ForgotPasswordView,
     LogoutView,
@@ -26,5 +27,10 @@ urlpatterns = [
         "reset-password/",
         ResetPasswordView.as_view(),
         name="reset-password",
+    ),
+    path(
+        "admin/dashboard-summary/",
+        AdminDashboardSummaryView.as_view(),
+        name="admin-dashboard-summary",
     ),
 ]

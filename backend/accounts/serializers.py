@@ -67,3 +67,12 @@ class LogoutSerializer(serializers.Serializer):
         write_only=True,
         trim_whitespace=False,
     )
+
+class AdminDashboardSummarySerializer(serializers.Serializer):
+    total_users = serializers.IntegerField(min_value=0)
+    active_users = serializers.IntegerField(min_value=0)
+    inactive_users = serializers.IntegerField(min_value=0)
+    role_counts = serializers.DictField(
+        child=serializers.IntegerField(min_value=0),
+    )
+
