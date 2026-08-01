@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404
 from django.utils.encoding import force_bytes
 from django.utils.http import (
     urlsafe_base64_decode,
@@ -404,3 +405,79 @@ class AdminUserUpdateView(UpdateAPIView):
                 BlacklistedToken.objects.get_or_create(
                     token=outstanding_token,
                 )
+
+
+
+class AdminUserPasswordResetEmailView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def post(self, request, pk):
+        user = get_object_or_404(
+            User.objects.select_related("profile"),
+            pk=pk,
+        )
+
+        if not user.is_active:
+            return Response(
+                {
+                    "detail": (
+                        "The user must be active before a password "
+                        "setup or reset email can be sent."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not user.email:
+            return Response(
+                {
+                    "detail": (
+                        "This user does not have an email address."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        uid = urlsafe_base64_encode(
+            force_bytes(user.pk),
+        )
+        token = default_token_generator.make_token(user)
+
+        reset_url = (
+            f"{settings.FRONTEND_URL.rstrip('/')}"
+            f"/reset-password?uid={uid}&token={token}"
+        )
+
+        try:
+            send_password_reset_email(
+                recipient_email=user.email,
+                recipient_name=(
+                    user.first_name or user.username
+                ),
+                reset_url=reset_url,
+            )
+        except PasswordResetEmailError:
+            logger.exception(
+                "Admin-triggered password email delivery failed "
+                "for user_id=%s.",
+                user.pk,
+            )
+
+            return Response(
+                {
+                    "detail": (
+                        "The password setup or reset email "
+                        "could not be delivered."
+                    )
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response(
+            {
+                "detail": (
+                    "Password setup or reset email sent successfully."
+                )
+            },
+            status=status.HTTP_200_OK,
+        )
