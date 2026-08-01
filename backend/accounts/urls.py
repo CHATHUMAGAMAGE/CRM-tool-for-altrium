@@ -9,6 +9,7 @@ from .views import (
     AdminUserCreateView,
     AdminUserDetailView,
     AdminUserListView,
+    AdminUserUpdateView,
     CurrentUserView,
     ForgotPasswordView,
     LogoutView,
@@ -45,6 +46,11 @@ urlpatterns = [
         "admin/users/create/",
         AdminUserCreateView.as_view(),
         name="admin-user-create",
+    ),
+    path(
+        "admin/users/<int:pk>/update/",
+        AdminUserUpdateView.as_view(),
+        name="admin-user-update",
     ),
     path(
         "admin/users/<int:pk>/",

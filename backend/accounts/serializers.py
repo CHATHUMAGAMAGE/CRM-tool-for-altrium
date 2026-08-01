@@ -184,3 +184,83 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
         return user
 
 
+
+
+class AdminUserUpdateSerializer(serializers.ModelSerializer):
+    role = serializers.ChoiceField(
+        choices=UserProfile.Role.choices,
+        source="profile.role",
+        required=False,
+    )
+    phone_number = serializers.CharField(
+        source="profile.phone_number",
+        required=False,
+        allow_blank=True,
+        max_length=20,
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "first_name",
+            "last_name",
+            "email",
+            "role",
+            "phone_number",
+            "is_active",
+        ]
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        target_user = self.instance
+
+        if (
+            request
+            and target_user
+            and request.user.pk == target_user.pk
+        ):
+            profile_data = attrs.get("profile", {})
+
+            if (
+                "role" in profile_data
+                and profile_data["role"] != UserProfile.Role.ADMIN
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "role": (
+                            "You cannot remove your own "
+                            "administrator role."
+                        )
+                    }
+                )
+
+            if attrs.get("is_active") is False:
+                raise serializers.ValidationError(
+                    {
+                        "is_active": (
+                            "You cannot deactivate your own account."
+                        )
+                    }
+                )
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop("profile", {})
+
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+
+        instance.save()
+
+        if "role" in profile_data:
+            instance.profile.role = profile_data["role"]
+
+        if "phone_number" in profile_data:
+            instance.profile.phone_number = (
+                profile_data["phone_number"]
+            )
+
+        instance.profile.save()
+
+        return instance

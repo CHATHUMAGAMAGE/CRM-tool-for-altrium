@@ -10,7 +10,7 @@ from django.utils.http import (
     urlsafe_base64_encode,
 )
 from rest_framework import status
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView, UpdateAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -33,6 +33,7 @@ from .serializers import (
     AdminDashboardSummarySerializer,
     AdminUserCreateSerializer,
     AdminUserListSerializer,
+    AdminUserUpdateSerializer,
     CurrentUserSerializer,
     ForgotPasswordSerializer,
     LogoutSerializer,
@@ -385,3 +386,21 @@ class AdminUserCreateView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class AdminUserUpdateView(UpdateAPIView):
+    serializer_class = AdminUserUpdateSerializer
+    permission_classes = [IsAuthenticated, IsAdminRole]
+    queryset = User.objects.select_related("profile")
+    http_method_names = ["patch"]
+
+    def perform_update(self, serializer):
+        user = serializer.save()
+
+        if not user.is_active:
+            for outstanding_token in OutstandingToken.objects.filter(
+                user=user,
+            ):
+                BlacklistedToken.objects.get_or_create(
+                    token=outstanding_token,
+                )
