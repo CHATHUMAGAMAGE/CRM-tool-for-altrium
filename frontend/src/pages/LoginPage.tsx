@@ -15,7 +15,6 @@ import {
   Typography,
 } from '@mui/material'
 import {
-  GridViewRounded,
   LockOutlined,
   PersonOutlined,
   Visibility,
@@ -26,6 +25,7 @@ import {
   useNavigate,
 } from 'react-router'
 
+import BrandLogo from '../components/BrandLogo'
 import {
   getCurrentUser,
   loginUser,
@@ -80,47 +80,36 @@ function LoginPage() {
     >
       <Box
         sx={{
-          display: { xs: 'none', md: 'flex' },
+          display: {
+            xs: 'none',
+            md: 'flex',
+          },
           width: '50%',
           position: 'relative',
           overflow: 'hidden',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          padding: 8,
+          padding: {
+            md: 6,
+            lg: 8,
+          },
           color: 'white',
           background:
             'radial-gradient(circle at 70% 35%, rgba(45, 125, 255, 0.45), transparent 35%), linear-gradient(145deg, #06152e 0%, #0b2a59 55%, #06162f 100%)',
         }}
       >
-        <Stack
-          direction="row"
-          spacing={2}
+        <BrandLogo
+          variant="horizontal"
+          tone="light"
           sx={{
-            alignItems: 'center',
+            width: {
+              md: 235,
+              lg: 270,
+            },
+            filter:
+              'drop-shadow(0 8px 18px rgba(0,0,0,0.2))',
           }}
-        >
-          <Box
-            sx={{
-              width: 50,
-              height: 50,
-              borderRadius: 2,
-              display: 'grid',
-              placeItems: 'center',
-              backgroundColor: '#0866e5',
-            }}
-          >
-            <GridViewRounded fontSize="large" />
-          </Box>
-
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 800,
-            }}
-          >
-            ELEVEN
-          </Typography>
-        </Stack>
+        />
 
         <Box sx={{ maxWidth: 600 }}>
           <Typography
@@ -143,7 +132,7 @@ function LoginPage() {
           <Typography
             variant="h6"
             sx={{
-              color: 'rgba(255,255,255,0.75)',
+              color: 'rgba(255,255,255,0.78)',
               lineHeight: 1.7,
               fontWeight: 400,
             }}
@@ -156,7 +145,7 @@ function LoginPage() {
         <Typography
           variant="body2"
           sx={{
-            color: 'rgba(255,255,255,0.5)',
+            color: 'rgba(255,255,255,0.55)',
             letterSpacing: 2,
             fontWeight: 700,
           }}
@@ -190,13 +179,24 @@ function LoginPage() {
                 xs: 3,
                 sm: 4,
               },
-              borderRadius: 2,
+              borderRadius: 3,
             }}
           >
+            <BrandLogo
+              variant="stacked"
+              sx={{
+                width: 150,
+                maxHeight: 115,
+                mx: 'auto',
+                mb: 2,
+              }}
+            />
+
             <Typography
               variant="h4"
               sx={{
                 fontWeight: 750,
+                textAlign: 'center',
               }}
             >
               Welcome Back
@@ -205,6 +205,8 @@ function LoginPage() {
             <Typography
               sx={{
                 color: 'text.secondary',
+                textAlign: 'center',
+                mt: 0.5,
                 mb: 4,
               }}
             >

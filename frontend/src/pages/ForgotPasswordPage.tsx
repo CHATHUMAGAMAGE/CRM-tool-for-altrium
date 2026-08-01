@@ -12,10 +12,10 @@ import {
 import {
   ArrowBackRounded,
   EmailOutlined,
-  GridViewRounded,
 } from '@mui/icons-material'
 import { Link as RouterLink } from 'react-router'
 
+import BrandLogo from '../components/BrandLogo'
 import { forgotPassword } from '../services/auth'
 
 function ForgotPasswordPage() {
@@ -35,6 +35,7 @@ function ForgotPasswordPage() {
 
     try {
       const response = await forgotPassword(email)
+
       setSuccessMessage(response.detail)
     } catch (requestError) {
       setError(
@@ -57,47 +58,46 @@ function ForgotPasswordPage() {
     >
       <Box
         sx={{
-          display: { xs: 'none', md: 'flex' },
+          display: {
+            xs: 'none',
+            md: 'flex',
+          },
           width: '50%',
           position: 'relative',
           overflow: 'hidden',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          padding: 8,
+          padding: {
+            md: 6,
+            lg: 8,
+          },
           color: 'white',
           background:
             'radial-gradient(circle at 70% 35%, rgba(45, 125, 255, 0.45), transparent 35%), linear-gradient(145deg, #06152e 0%, #0b2a59 55%, #06162f 100%)',
         }}
       >
-        <Stack
-          direction="row"
-          spacing={2}
-          sx={{ alignItems: 'center' }}
-        >
-          <Box
-            sx={{
-              width: 50,
-              height: 50,
-              borderRadius: 2,
-              display: 'grid',
-              placeItems: 'center',
-              backgroundColor: '#0866e5',
-            }}
-          >
-            <GridViewRounded fontSize="large" />
-          </Box>
-
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>
-            ELEVEN
-          </Typography>
-        </Stack>
+        <BrandLogo
+          variant="horizontal"
+          tone="light"
+          sx={{
+            width: {
+              md: 235,
+              lg: 270,
+            },
+            filter:
+              'drop-shadow(0 8px 18px rgba(0,0,0,0.2))',
+          }}
+        />
 
         <Box sx={{ maxWidth: 600 }}>
           <Typography
             variant="h2"
             sx={{
               fontWeight: 800,
-              fontSize: { md: '3rem', lg: '4rem' },
+              fontSize: {
+                md: '3rem',
+                lg: '4rem',
+              },
               lineHeight: 1.05,
               mb: 3,
             }}
@@ -110,7 +110,7 @@ function ForgotPasswordPage() {
           <Typography
             variant="h6"
             sx={{
-              color: 'rgba(255,255,255,0.75)',
+              color: 'rgba(255,255,255,0.78)',
               lineHeight: 1.7,
               fontWeight: 400,
             }}
@@ -123,7 +123,7 @@ function ForgotPasswordPage() {
         <Typography
           variant="body2"
           sx={{
-            color: 'rgba(255,255,255,0.5)',
+            color: 'rgba(255,255,255,0.55)',
             letterSpacing: 2,
             fontWeight: 700,
           }}
@@ -134,28 +134,56 @@ function ForgotPasswordPage() {
 
       <Box
         sx={{
-          width: { xs: '100%', md: '50%' },
+          width: {
+            xs: '100%',
+            md: '50%',
+          },
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           padding: 3,
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: 440 }}>
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: 440,
+          }}
+        >
           <Paper
             elevation={2}
             sx={{
-              padding: { xs: 3, sm: 4 },
-              borderRadius: 2,
+              padding: {
+                xs: 3,
+                sm: 4,
+              },
+              borderRadius: 3,
             }}
           >
-            <Typography variant="h4" sx={{ fontWeight: 750 }}>
+            <BrandLogo
+              variant="stacked"
+              sx={{
+                width: 145,
+                maxHeight: 110,
+                mx: 'auto',
+                mb: 2,
+              }}
+            />
+
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 750,
+                textAlign: 'center',
+              }}
+            >
               Forgot Password?
             </Typography>
 
             <Typography
               sx={{
                 color: 'text.secondary',
+                textAlign: 'center',
                 mt: 1,
                 mb: 4,
               }}
@@ -164,7 +192,10 @@ function ForgotPasswordPage() {
               the account exists, we will send you a reset link.
             </Typography>
 
-            <Box component="form" onSubmit={handleSubmit}>
+            <Box
+              component="form"
+              onSubmit={handleSubmit}
+            >
               <Stack spacing={2.5}>
                 {error && (
                   <Alert severity="error">
@@ -183,9 +214,12 @@ function ForgotPasswordPage() {
                   type="email"
                   placeholder="Enter your work email"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(event) =>
+                    setEmail(event.target.value)
+                  }
                   required
                   fullWidth
+                  autoComplete="email"
                   slotProps={{
                     input: {
                       startAdornment: (
