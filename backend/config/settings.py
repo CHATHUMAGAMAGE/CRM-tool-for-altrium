@@ -329,7 +329,30 @@ DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL",
     default="no-reply@eleven.local",
 )
+PASSWORD_RESET_EMAIL_PROVIDER = env(
+    "PASSWORD_RESET_EMAIL_PROVIDER",
+    default="django",
+)
 
+BREVO_API_KEY = env(
+    "BREVO_API_KEY",
+    default="",
+)
+
+BREVO_SENDER_NAME = env(
+    "BREVO_SENDER_NAME",
+    default="ELEVEN CRM",
+)
+
+BREVO_SENDER_EMAIL = env(
+    "BREVO_SENDER_EMAIL",
+    default="",
+)
+
+BREVO_TIMEOUT_SECONDS = env.int(
+    "BREVO_TIMEOUT_SECONDS",
+    default=10,
+)
 
 # ---------------------------------------------------------------------
 # Production HTTPS and browser security

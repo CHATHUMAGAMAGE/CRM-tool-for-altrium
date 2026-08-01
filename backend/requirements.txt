@@ -1,5 +1,9 @@
+annotated-types==0.8.0
+anyio==4.14.2
 asgiref==3.12.1
+brevo-python==5.0.1
 brotli==1.2.0
+certifi==2026.7.22
 click==8.4.2
 colorama==0.4.6
 Django==5.2.16
@@ -9,11 +13,17 @@ djangorestframework==3.17.1
 djangorestframework_simplejwt==5.5.1
 gunicorn==26.0.0
 h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.18
 packaging==26.2
 psycopg==3.3.4
 psycopg-binary==3.3.4
+pydantic==2.13.4
+pydantic_core==2.46.4
 PyJWT==2.13.0
 sqlparse==0.5.5
+typing-inspection==0.4.2
 typing_extensions==4.16.0
 tzdata==2026.3
 uvicorn==0.52.0

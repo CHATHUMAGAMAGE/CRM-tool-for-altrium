@@ -1,7 +1,8 @@
+import logging
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
 from django.utils.encoding import force_bytes
 from django.utils.http import (
     urlsafe_base64_decode,
@@ -21,12 +22,19 @@ from rest_framework_simplejwt.token_blacklist.models import (
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .email_service import (
+    PasswordResetEmailError,
+    send_password_reset_email,
+)
 from .serializers import (
     CurrentUserSerializer,
     ForgotPasswordSerializer,
     LogoutSerializer,
     ResetPasswordSerializer,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class CurrentUserView(RetrieveAPIView):
@@ -61,6 +69,7 @@ class LogoutView(APIView):
         token_user_id = refresh_token.get(
             api_settings.USER_ID_CLAIM,
         )
+
         authenticated_user_id = getattr(
             request.user,
             api_settings.USER_ID_FIELD,
@@ -103,7 +112,10 @@ class ForgotPasswordView(APIView):
         )
 
         for user in users.iterator():
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            uid = urlsafe_base64_encode(
+                force_bytes(user.pk),
+            )
+
             token = default_token_generator.make_token(user)
 
             reset_url = (
@@ -111,24 +123,20 @@ class ForgotPasswordView(APIView):
                 f"/reset-password?uid={uid}&token={token}"
             )
 
-            message = (
-                f"Hello {user.first_name or user.username},\n\n"
-                "A password reset was requested for your "
-                "ELEVEN CRM account.\n\n"
-                f"Reset your password using this link:\n{reset_url}\n\n"
-                "This link expires after one hour and becomes unusable "
-                "after your password is changed.\n\n"
-                "If you did not request this reset, you can ignore "
-                "this email."
-            )
-
-            send_mail(
-                subject="Reset your ELEVEN CRM password",
-                message=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=True,
-            )
+            try:
+                send_password_reset_email(
+                    recipient_email=user.email,
+                    recipient_name=(
+                        user.first_name or user.username
+                    ),
+                    reset_url=reset_url,
+                )
+            except PasswordResetEmailError:
+                logger.exception(
+                    "Password-reset email delivery failed "
+                    "for user_id=%s.",
+                    user.pk,
+                )
 
         return Response(
             {"detail": self.response_message},
@@ -152,7 +160,11 @@ class ResetPasswordView(APIView):
 
         try:
             user_id = urlsafe_base64_decode(uid).decode()
-            user = User.objects.get(pk=user_id, is_active=True)
+
+            user = User.objects.get(
+                pk=user_id,
+                is_active=True,
+            )
         except (
             TypeError,
             ValueError,
@@ -165,7 +177,10 @@ class ResetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if not default_token_generator.check_token(user, token):
+        if not default_token_generator.check_token(
+            user,
+            token,
+        ):
             return Response(
                 {"detail": self.invalid_link_message},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -173,14 +188,22 @@ class ResetPasswordView(APIView):
 
         serializer = ResetPasswordSerializer(
             data=request.data,
-            context={"user": user},
+            context={
+                "user": user,
+            },
         )
+
         serializer.is_valid(raise_exception=True)
 
         user.set_password(
             serializer.validated_data["new_password"],
         )
-        user.save(update_fields=["password"])
+
+        user.save(
+            update_fields=[
+                "password",
+            ],
+        )
 
         for outstanding_token in OutstandingToken.objects.filter(
             user=user,
