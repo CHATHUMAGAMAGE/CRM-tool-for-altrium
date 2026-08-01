@@ -21,6 +21,7 @@ import {
   Typography,
 } from '@mui/material'
 
+import AdminUserTable from '../components/admin/AdminUserTable'
 import {
   getAdminDashboardSummary,
   type AdminDashboardSummary,
@@ -261,6 +262,8 @@ function AdminPage() {
           ))}
         </Box>
       )}
+
+      <AdminUserTable />
     </Box>
   )
 }
