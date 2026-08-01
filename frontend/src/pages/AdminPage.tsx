@@ -7,6 +7,7 @@ import {
   AdminPanelSettingsOutlined,
   BlockOutlined,
   PeopleAltOutlined,
+  PersonAddOutlined,
   PersonOutlineOutlined,
   RefreshOutlined,
 } from '@mui/icons-material'
@@ -21,6 +22,7 @@ import {
   Typography,
 } from '@mui/material'
 
+import AdminCreateUserDialog from '../components/admin/AdminCreateUserDialog'
 import AdminUserTable from '../components/admin/AdminUserTable'
 import {
   getAdminDashboardSummary,
@@ -39,6 +41,9 @@ function AdminPage() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [isCreateDialogOpen, setIsCreateDialogOpen] =
+    useState(false)
+  const [userTableKey, setUserTableKey] = useState(0)
 
   const loadSummary = useCallback(async () => {
     setIsLoading(true)
@@ -87,6 +92,11 @@ function AdminPage() {
       isMounted = false
     }
   }, [])
+
+  const handleUserCreated = () => {
+    setUserTableKey((currentKey) => currentKey + 1)
+    void loadSummary()
+  }
 
   const summaryCards = [
     {
@@ -150,14 +160,32 @@ function AdminPage() {
           </Typography>
         </Box>
 
-        <Button
-          variant="outlined"
-          startIcon={<RefreshOutlined />}
-          onClick={() => void loadSummary()}
-          disabled={isLoading}
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 1.5,
+          }}
         >
-          Refresh
-        </Button>
+          <Button
+            variant="contained"
+            startIcon={<PersonAddOutlined />}
+            onClick={() => {
+              setIsCreateDialogOpen(true)
+            }}
+          >
+            Create employee
+          </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<RefreshOutlined />}
+            onClick={() => void loadSummary()}
+            disabled={isLoading}
+          >
+            Refresh
+          </Button>
+        </Box>
       </Stack>
 
       {errorMessage && (
@@ -263,7 +291,15 @@ function AdminPage() {
         </Box>
       )}
 
-      <AdminUserTable />
+      <AdminUserTable key={userTableKey} />
+
+      <AdminCreateUserDialog
+        open={isCreateDialogOpen}
+        onClose={() => {
+          setIsCreateDialogOpen(false)
+        }}
+        onUserCreated={handleUserCreated}
+      />
     </Box>
   )
 }
