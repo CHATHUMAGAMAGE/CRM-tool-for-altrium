@@ -1,0 +1,43 @@
+import * as SecureStore from 'expo-secure-store';
+
+const ACCESS_TOKEN_KEY = 'eleven_access_token';
+const REFRESH_TOKEN_KEY = 'eleven_refresh_token';
+
+export type StoredTokens = {
+  access: string;
+  refresh: string;
+};
+
+export async function saveTokens(tokens: StoredTokens): Promise<void> {
+  await Promise.all([
+    SecureStore.setItemAsync(ACCESS_TOKEN_KEY, tokens.access),
+    SecureStore.setItemAsync(REFRESH_TOKEN_KEY, tokens.refresh),
+  ]);
+}
+
+export async function getAccessToken(): Promise<string | null> {
+  return SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+}
+
+export async function getRefreshToken(): Promise<string | null> {
+  return SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+}
+
+export async function getStoredTokens(): Promise<{
+  access: string | null;
+  refresh: string | null;
+}> {
+  const [access, refresh] = await Promise.all([
+    getAccessToken(),
+    getRefreshToken(),
+  ]);
+
+  return { access, refresh };
+}
+
+export async function clearTokens(): Promise<void> {
+  await Promise.all([
+    SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY),
+    SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
+  ]);
+}
