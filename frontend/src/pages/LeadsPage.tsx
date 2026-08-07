@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
+  Alert,
   Box,
   Button,
   Card,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -24,31 +26,29 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { AddRounded, SearchRounded } from '@mui/icons-material'
+import {
+  AddRounded,
+  RefreshRounded,
+  SearchRounded,
+} from '@mui/icons-material'
 
-type LeadStatus =
-  | 'NEW'
-  | 'CONTACTED'
-  | 'FOLLOW_UP_REQUIRED'
-  | 'QUALIFIED'
-  | 'PROPOSAL_SENT'
-  | 'NEGOTIATION'
-  | 'CONVERTED'
-  | 'LOST'
+import {
+  hasRequiredRole,
+  type UserRole,
+} from '../auth/roles'
+import {
+  getCurrentUser,
+  type CurrentUser,
+} from '../services/auth'
+import {
+  createLead,
+  getLeads,
+  updateLead,
+  type Lead,
+  type LeadStatus,
+} from '../services/crm'
 
 type LeadView = 'ACTIVE' | 'CLOSED' | 'ALL'
-
-type Lead = {
-  id: number
-  name: string
-  company: string
-  email: string
-  source: string
-  status: LeadStatus
-  assignedTo: string
-  createdAt: string
-  lostReason: string
-}
 
 const activeStatuses: LeadStatus[] = [
   'NEW',
@@ -59,99 +59,189 @@ const activeStatuses: LeadStatus[] = [
   'NEGOTIATION',
 ]
 
-const closedStatuses: LeadStatus[] = ['CONVERTED', 'LOST']
+const closedStatuses: LeadStatus[] = [
+  'CONVERTED',
+  'LOST',
+]
 
-const initialLeads: Lead[] = [
-  {
-    id: 1,
-    name: 'Amal Perera',
-    company: 'Nova Solutions',
-    email: 'amal@novasolutions.lk',
-    source: 'Website',
-    status: 'NEW',
-    assignedTo: 'Nuwan Perera',
-    createdAt: '30 Jul 2026',
-    lostReason: '',
-  },
-  {
-    id: 2,
-    name: 'Dinithi Silva',
-    company: 'Vertex Holdings',
-    email: 'dinithi@vertex.lk',
-    source: 'Referral',
-    status: 'FOLLOW_UP_REQUIRED',
-    assignedTo: 'Nuwan Perera',
-    createdAt: '29 Jul 2026',
-    lostReason: '',
-  },
-  {
-    id: 3,
-    name: 'Kasun Jayawardena',
-    company: 'Peak Digital',
-    email: 'kasun@peakdigital.lk',
-    source: 'Campaign',
-    status: 'PROPOSAL_SENT',
-    assignedTo: 'Kasun Fernando',
-    createdAt: '28 Jul 2026',
-    lostReason: '',
-  },
-  {
-    id: 4,
-    name: 'Tharushi Fernando',
-    company: 'Lanka Commerce',
-    email: 'tharushi@lankacommerce.lk',
-    source: 'Referral',
-    status: 'CONVERTED',
-    assignedTo: 'Kasun Fernando',
-    createdAt: '24 Jul 2026',
-    lostReason: '',
-  },
-  {
-    id: 5,
-    name: 'Nimal Silva',
-    company: 'Brightway Solutions',
-    email: 'nimal@brightway.lk',
-    source: 'Website',
-    status: 'LOST',
-    assignedTo: 'Nuwan Perera',
-    createdAt: '21 Jul 2026',
-    lostReason: 'Customer selected another service provider.',
-  },
+const leadCreatorRoles: UserRole[] = [
+  'ADMIN',
+  'MARKETING',
+  'SALES_MANAGER',
+  'PROJECT_MANAGER',
+]
+
+const leadManagerRoles: UserRole[] = [
+  'ADMIN',
+  'SALES_MANAGER',
+  'PROJECT_MANAGER',
 ]
 
 function LeadsPage() {
-  const [leads, setLeads] = useState<Lead[]>(initialLeads)
+  const [currentUser, setCurrentUser] =
+    useState<CurrentUser | null>(null)
+
+  const [leads, setLeads] = useState<Lead[]>([])
+
+  const [isLoading, setIsLoading] = useState(true)
+  const [isCreating, setIsCreating] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+
   const [search, setSearch] = useState('')
-  const [leadView, setLeadView] = useState<LeadView>('ACTIVE')
+  const [leadView, setLeadView] =
+    useState<LeadView>('ACTIVE')
+
   const [statusFilter, setStatusFilter] =
     useState<LeadStatus | 'ALL'>('ALL')
 
-  const [addDialogOpen, setAddDialogOpen] = useState(false)
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [addDialogOpen, setAddDialogOpen] =
+    useState(false)
 
-  const [draftStatus, setDraftStatus] = useState<LeadStatus>('NEW')
+  const [selectedLead, setSelectedLead] =
+    useState<Lead | null>(null)
+
+  const [draftStatus, setDraftStatus] =
+    useState<LeadStatus>('NEW')
+
   const [lostReason, setLostReason] = useState('')
-  const [lostReasonError, setLostReasonError] = useState(false)
+  const [lostReasonError, setLostReasonError] =
+    useState(false)
 
   const [form, setForm] = useState({
-    name: '',
-    company: '',
+    contactName: '',
+    companyName: '',
     email: '',
+    phone: '',
     source: '',
-    assignedTo: '',
   })
+
+  const loadPageData = async () => {
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const [user, leadData] = await Promise.all([
+        getCurrentUser(),
+        getLeads(),
+      ])
+
+      setCurrentUser(user)
+      setLeads(leadData)
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to load leads.',
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadInitialData = async () => {
+      try {
+        const [user, leadData] = await Promise.all([
+          getCurrentUser(),
+          getLeads(),
+        ])
+
+        if (!isMounted) {
+          return
+        }
+
+        setCurrentUser(user)
+        setLeads(leadData)
+      } catch (requestError) {
+        if (!isMounted) {
+          return
+        }
+
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : 'Unable to load leads.',
+        )
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadInitialData()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const isSalesRepresentative =
+    currentUser?.role === 'SALES_REP'
+
+  const canCreateLead =
+    currentUser !== null &&
+    hasRequiredRole(
+      currentUser.role,
+      leadCreatorRoles,
+    )
+
+  const canManageAllLeads =
+    currentUser !== null &&
+    hasRequiredRole(
+      currentUser.role,
+      leadManagerRoles,
+    )
+
+  const canEditSelectedLead = useMemo(() => {
+    if (!currentUser || !selectedLead) {
+      return false
+    }
+
+    if (canManageAllLeads) {
+      return true
+    }
+
+    if (currentUser.role === 'SALES_REP') {
+      return (
+        selectedLead.assigned_to ===
+        currentUser.id
+      )
+    }
+
+    if (currentUser.role === 'MARKETING') {
+      return (
+        selectedLead.created_by ===
+          currentUser.id &&
+        selectedLead.status === 'NEW'
+      )
+    }
+
+    return false
+  }, [
+    currentUser,
+    selectedLead,
+    canManageAllLeads,
+  ])
 
   const activeLeadCount = useMemo(
     () =>
-      leads.filter((lead) => activeStatuses.includes(lead.status))
-        .length,
+      leads.filter((lead) =>
+        activeStatuses.includes(lead.status),
+      ).length,
     [leads],
   )
 
   const closedLeadCount = useMemo(
     () =>
-      leads.filter((lead) => closedStatuses.includes(lead.status))
-        .length,
+      leads.filter((lead) =>
+        closedStatuses.includes(lead.status),
+      ).length,
     [leads],
   )
 
@@ -160,12 +250,22 @@ function LeadsPage() {
 
     return leads.filter((lead) => {
       const matchesSearch =
-        lead.name.toLowerCase().includes(query) ||
-        lead.company.toLowerCase().includes(query) ||
-        lead.email.toLowerCase().includes(query)
+        lead.contact_name
+          .toLowerCase()
+          .includes(query) ||
+        lead.company_name
+          .toLowerCase()
+          .includes(query) ||
+        lead.email
+          .toLowerCase()
+          .includes(query) ||
+        lead.phone
+          .toLowerCase()
+          .includes(query)
 
       const matchesStatus =
-        statusFilter === 'ALL' || lead.status === statusFilter
+        statusFilter === 'ALL' ||
+        lead.status === statusFilter
 
       const matchesLeadView =
         leadView === 'ALL' ||
@@ -174,11 +274,22 @@ function LeadsPage() {
         (leadView === 'CLOSED' &&
           closedStatuses.includes(lead.status))
 
-      return matchesSearch && matchesStatus && matchesLeadView
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesLeadView
+      )
     })
-  }, [leads, search, statusFilter, leadView])
+  }, [
+    leads,
+    search,
+    statusFilter,
+    leadView,
+  ])
 
-  const handleLeadViewChange = (view: LeadView) => {
+  const handleLeadViewChange = (
+    view: LeadView,
+  ) => {
     setLeadView(view)
     setStatusFilter('ALL')
   }
@@ -186,88 +297,158 @@ function LeadsPage() {
   const handleOpenLead = (lead: Lead) => {
     setSelectedLead(lead)
     setDraftStatus(lead.status)
-    setLostReason(lead.lostReason)
+    setLostReason(lead.lost_reason)
     setLostReasonError(false)
+    setError('')
+    setSuccessMessage('')
   }
 
   const handleCloseLead = () => {
+    if (isUpdating) {
+      return
+    }
+
     setSelectedLead(null)
     setLostReasonError(false)
   }
 
-  const handleAddLead = () => {
-    if (!form.name.trim() || !form.email.trim()) {
-      return
-    }
-
-    const newLead: Lead = {
-      id: Date.now(),
-      name: form.name.trim(),
-      company: form.company.trim() || 'Not provided',
-      email: form.email.trim(),
-      source: form.source.trim() || 'Manual',
-      assignedTo: form.assignedTo.trim() || 'Unassigned',
-      status: 'NEW',
-      createdAt: new Date().toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }),
-      lostReason: '',
-    }
-
-    setLeads((currentLeads) => [newLead, ...currentLeads])
-
+  const resetCreateForm = () => {
     setForm({
-      name: '',
-      company: '',
+      contactName: '',
+      companyName: '',
       email: '',
+      phone: '',
       source: '',
-      assignedTo: '',
     })
-
-    setLeadView('ACTIVE')
-    setStatusFilter('ALL')
-    setAddDialogOpen(false)
   }
 
-  const handleSaveLeadChanges = () => {
-    if (!selectedLead) {
+  const handleAddLead = async () => {
+    if (!canCreateLead) {
       return
     }
 
-    if (draftStatus === 'LOST' && !lostReason.trim()) {
+    if (
+      !form.contactName.trim() ||
+      !form.companyName.trim() ||
+      !form.phone.trim()
+    ) {
+      return
+    }
+
+    setIsCreating(true)
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const createdLead = await createLead({
+        contact_name: form.contactName.trim(),
+        company_name: form.companyName.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        source: form.source.trim(),
+      })
+
+      setLeads((currentLeads) => [
+        createdLead,
+        ...currentLeads,
+      ])
+
+      resetCreateForm()
+
+      setLeadView('ACTIVE')
+      setStatusFilter('ALL')
+      setAddDialogOpen(false)
+
+      setSuccessMessage(
+        `${createdLead.contact_name} was added successfully.`,
+      )
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to create the lead.',
+      )
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const handleSaveLeadChanges = async () => {
+    if (
+      !selectedLead ||
+      !canEditSelectedLead
+    ) {
+      return
+    }
+
+    if (
+      draftStatus === 'LOST' &&
+      !lostReason.trim()
+    ) {
       setLostReasonError(true)
       return
     }
 
-    const updatedLead: Lead = {
-      ...selectedLead,
-      status: draftStatus,
-      lostReason: draftStatus === 'LOST' ? lostReason.trim() : '',
+    setIsUpdating(true)
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const updatedLead = await updateLead(
+        selectedLead.id,
+        {
+          status: draftStatus,
+          lost_reason:
+            draftStatus === 'LOST'
+              ? lostReason.trim()
+              : '',
+        },
+      )
+
+      setLeads((currentLeads) =>
+        currentLeads.map((lead) =>
+          lead.id === updatedLead.id
+            ? updatedLead
+            : lead,
+        ),
+      )
+
+      setSelectedLead(null)
+
+      setSuccessMessage(
+        `${updatedLead.contact_name} was updated successfully.`,
+      )
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to update the lead.',
+      )
+    } finally {
+      setIsUpdating(false)
     }
-
-    setLeads((currentLeads) =>
-      currentLeads.map((lead) =>
-        lead.id === selectedLead.id ? updatedLead : lead,
-      ),
-    )
-
-    handleCloseLead()
   }
 
-  const getStatusLabel = (status: LeadStatus) =>
+  const getStatusLabel = (
+    status: LeadStatus,
+  ) =>
     status
       .split('_')
       .map(
         (word) =>
-          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+          word.charAt(0).toUpperCase() +
+          word.slice(1).toLowerCase(),
       )
       .join(' ')
 
   const getStatusColor = (
     status: LeadStatus,
-  ): 'default' | 'info' | 'warning' | 'success' | 'error' => {
+  ):
+    | 'default'
+    | 'info'
+    | 'warning'
+    | 'success'
+    | 'error' => {
     switch (status) {
       case 'CONTACTED':
       case 'PROPOSAL_SENT':
@@ -289,7 +470,35 @@ function LeadsPage() {
     }
   }
 
+  const formatDate = (
+    dateValue: string | null,
+  ) => {
+    if (!dateValue) {
+      return '—'
+    }
+
+    return new Date(
+      dateValue,
+    ).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+
   const getEmptyMessage = () => {
+    if (isSalesRepresentative) {
+      if (leadView === 'ACTIVE') {
+        return 'No active leads assigned to you'
+      }
+
+      if (leadView === 'CLOSED') {
+        return 'No closed leads assigned to you'
+      }
+
+      return 'No leads assigned to you'
+    }
+
     if (leadView === 'ACTIVE') {
       return 'No active leads found'
     }
@@ -301,10 +510,22 @@ function LeadsPage() {
     return 'No leads found'
   }
 
+  const pageTitle = isSalesRepresentative
+    ? 'My Leads'
+    : 'Leads'
+
+  const pageDescription =
+    isSalesRepresentative
+      ? 'View and manage leads assigned to you.'
+      : 'Manage and track Altrium’s potential customers.'
+
   return (
     <Box sx={{ p: { xs: 3, md: 5 } }}>
       <Stack
-        direction={{ xs: 'column', sm: 'row' }}
+        direction={{
+          xs: 'column',
+          sm: 'row',
+        }}
         sx={{
           justifyContent: 'space-between',
           alignItems: {
@@ -316,71 +537,161 @@ function LeadsPage() {
         }}
       >
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>
-            Leads
+          <Typography
+            variant="h4"
+            sx={{ fontWeight: 800 }}
+          >
+            {pageTitle}
           </Typography>
 
-          <Typography sx={{ color: 'text.secondary' }}>
-            Manage and track Altrium&apos;s potential customers.
+          <Typography
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
+            {pageDescription}
           </Typography>
         </Box>
 
-        <Button
-          variant="contained"
-          startIcon={<AddRounded />}
-          onClick={() => setAddDialogOpen(true)}
-        >
-          Add Lead
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button
+            startIcon={<RefreshRounded />}
+            onClick={() =>
+              void loadPageData()
+            }
+            disabled={isLoading}
+          >
+            Refresh
+          </Button>
+
+          {canCreateLead && (
+            <Button
+              variant="contained"
+              startIcon={<AddRounded />}
+              onClick={() => {
+                setError('')
+                setSuccessMessage('')
+                setAddDialogOpen(true)
+              }}
+            >
+              Add Lead
+            </Button>
+          )}
+        </Stack>
       </Stack>
 
+      {error && (
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+        >
+          {error}
+        </Alert>
+      )}
+
+      {successMessage && (
+        <Alert
+          severity="success"
+          sx={{ mb: 3 }}
+          onClose={() =>
+            setSuccessMessage('')
+          }
+        >
+          {successMessage}
+        </Alert>
+      )}
+
       <Stack
-        direction={{ xs: 'column', sm: 'row' }}
+        direction={{
+          xs: 'column',
+          sm: 'row',
+        }}
         spacing={2}
         sx={{ mb: 3 }}
       >
-        <Card variant="outlined" sx={{ flex: 1, p: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Active leads
+        <Card
+          variant="outlined"
+          sx={{ flex: 1, p: 2 }}
+        >
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            {isSalesRepresentative
+              ? 'My active leads'
+              : 'Active leads'}
           </Typography>
 
-          <Typography variant="h5" sx={{ fontWeight: 800 }}>
+          <Typography
+            variant="h5"
+            sx={{ fontWeight: 800 }}
+          >
             {activeLeadCount}
           </Typography>
         </Card>
 
-        <Card variant="outlined" sx={{ flex: 1, p: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Closed leads
+        <Card
+          variant="outlined"
+          sx={{ flex: 1, p: 2 }}
+        >
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            {isSalesRepresentative
+              ? 'My closed leads'
+              : 'Closed leads'}
           </Typography>
 
-          <Typography variant="h5" sx={{ fontWeight: 800 }}>
+          <Typography
+            variant="h5"
+            sx={{ fontWeight: 800 }}
+          >
             {closedLeadCount}
           </Typography>
         </Card>
 
-        <Card variant="outlined" sx={{ flex: 1, p: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Total leads
+        <Card
+          variant="outlined"
+          sx={{ flex: 1, p: 2 }}
+        >
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            {isSalesRepresentative
+              ? 'My total leads'
+              : 'Total leads'}
           </Typography>
 
-          <Typography variant="h5" sx={{ fontWeight: 800 }}>
+          <Typography
+            variant="h5"
+            sx={{ fontWeight: 800 }}
+          >
             {leads.length}
           </Typography>
         </Card>
       </Stack>
 
-      <Card variant="outlined" sx={{ mb: 3, p: 2 }}>
+      <Card
+        variant="outlined"
+        sx={{ mb: 3, p: 2 }}
+      >
         <Stack
-          direction={{ xs: 'column', lg: 'row' }}
+          direction={{
+            xs: 'column',
+            lg: 'row',
+          }}
           spacing={2}
         >
           <TextField
             fullWidth
             size="small"
-            placeholder="Search by name, company or email"
+            placeholder="Search by name, company, email or phone"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
             slotProps={{
               input: {
                 startAdornment: (
@@ -392,14 +703,21 @@ function LeadsPage() {
             }}
           />
 
-          <FormControl size="small" sx={{ minWidth: 180 }}>
-            <InputLabel>Lead view</InputLabel>
+          <FormControl
+            size="small"
+            sx={{ minWidth: 180 }}
+          >
+            <InputLabel>
+              Lead view
+            </InputLabel>
 
             <Select
               value={leadView}
               label="Lead view"
               onChange={(event) =>
-                handleLeadViewChange(event.target.value as LeadView)
+                handleLeadViewChange(
+                  event.target.value as LeadView,
+                )
               }
             >
               <MenuItem value="ACTIVE">
@@ -410,11 +728,16 @@ function LeadsPage() {
                 Closed ({closedLeadCount})
               </MenuItem>
 
-              <MenuItem value="ALL">All ({leads.length})</MenuItem>
+              <MenuItem value="ALL">
+                All ({leads.length})
+              </MenuItem>
             </Select>
           </FormControl>
 
-          <FormControl size="small" sx={{ minWidth: 220 }}>
+          <FormControl
+            size="small"
+            sx={{ minWidth: 220 }}
+          >
             <InputLabel>Status</InputLabel>
 
             <Select
@@ -422,98 +745,204 @@ function LeadsPage() {
               label="Status"
               onChange={(event) =>
                 setStatusFilter(
-                  event.target.value as LeadStatus | 'ALL',
+                  event.target.value as
+                    | LeadStatus
+                    | 'ALL',
                 )
               }
             >
-              <MenuItem value="ALL">All statuses</MenuItem>
-              <MenuItem value="NEW">New</MenuItem>
-              <MenuItem value="CONTACTED">Contacted</MenuItem>
+              <MenuItem value="ALL">
+                All statuses
+              </MenuItem>
+
+              <MenuItem value="NEW">
+                New
+              </MenuItem>
+
+              <MenuItem value="CONTACTED">
+                Contacted
+              </MenuItem>
 
               <MenuItem value="FOLLOW_UP_REQUIRED">
                 Follow-up Required
               </MenuItem>
 
-              <MenuItem value="QUALIFIED">Qualified</MenuItem>
-              <MenuItem value="PROPOSAL_SENT">Proposal Sent</MenuItem>
-              <MenuItem value="NEGOTIATION">Negotiation</MenuItem>
-              <MenuItem value="CONVERTED">Converted</MenuItem>
-              <MenuItem value="LOST">Lost</MenuItem>
+              <MenuItem value="QUALIFIED">
+                Qualified
+              </MenuItem>
+
+              <MenuItem value="PROPOSAL_SENT">
+                Proposal Sent
+              </MenuItem>
+
+              <MenuItem value="NEGOTIATION">
+                Negotiation
+              </MenuItem>
+
+              <MenuItem value="CONVERTED">
+                Converted
+              </MenuItem>
+
+              <MenuItem value="LOST">
+                Lost
+              </MenuItem>
             </Select>
           </FormControl>
         </Stack>
       </Card>
 
-      <TableContainer component={Card} variant="outlined">
+      <TableContainer
+        component={Card}
+        variant="outlined"
+      >
         <Table>
           <TableHead>
             <TableRow>
               <TableCell>Lead</TableCell>
               <TableCell>Company</TableCell>
+              <TableCell>Phone</TableCell>
               <TableCell>Source</TableCell>
-              <TableCell>Assigned to</TableCell>
+
+              {!isSalesRepresentative && (
+                <TableCell>
+                  Assigned to
+                </TableCell>
+              )}
+
               <TableCell>Status</TableCell>
               <TableCell>Created</TableCell>
             </TableRow>
           </TableHead>
 
           <TableBody>
-            {filteredLeads.map((lead) => (
-              <TableRow
-                key={lead.id}
-                hover
-                onClick={() => handleOpenLead(lead)}
-                sx={{ cursor: 'pointer' }}
-              >
-                <TableCell>
-                  <Typography sx={{ fontWeight: 700 }}>
-                    {lead.name}
-                  </Typography>
-
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    {lead.email}
-                  </Typography>
-                </TableCell>
-
-                <TableCell>{lead.company}</TableCell>
-                <TableCell>{lead.source}</TableCell>
-                <TableCell>{lead.assignedTo}</TableCell>
-
-                <TableCell>
-                  <Chip
-                    size="small"
-                    label={getStatusLabel(lead.status)}
-                    color={getStatusColor(lead.status)}
-                  />
-                </TableCell>
-
-                <TableCell>{lead.createdAt}</TableCell>
-              </TableRow>
-            ))}
-
-            {filteredLeads.length === 0 && (
+            {isLoading && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={
+                    isSalesRepresentative
+                      ? 6
+                      : 7
+                  }
                   align="center"
-                  sx={{ py: 6 }}
+                  sx={{ py: 7 }}
                 >
-                  <Typography sx={{ fontWeight: 700 }}>
-                    {getEmptyMessage()}
-                  </Typography>
+                  <CircularProgress
+                    size={32}
+                  />
 
                   <Typography
-                    variant="body2"
-                    color="text.secondary"
+                    sx={{
+                      mt: 2,
+                      color: 'text.secondary',
+                    }}
                   >
-                    Try changing your search or filters.
+                    Loading leads...
                   </Typography>
                 </TableCell>
               </TableRow>
             )}
+
+            {!isLoading &&
+              filteredLeads.map((lead) => (
+                <TableRow
+                  key={lead.id}
+                  hover
+                  onClick={() =>
+                    handleOpenLead(lead)
+                  }
+                  sx={{
+                    cursor: 'pointer',
+                  }}
+                >
+                  <TableCell>
+                    <Typography
+                      sx={{
+                        fontWeight: 700,
+                      }}
+                    >
+                      {lead.contact_name}
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                    >
+                      {lead.email || 'No email'}
+                    </Typography>
+                  </TableCell>
+
+                  <TableCell>
+                    {lead.company_name}
+                  </TableCell>
+
+                  <TableCell>
+                    {lead.phone}
+                  </TableCell>
+
+                  <TableCell>
+                    {lead.source || '—'}
+                  </TableCell>
+
+                  {!isSalesRepresentative && (
+                    <TableCell>
+                      {lead.assigned_to_name ||
+                        'Unassigned'}
+                    </TableCell>
+                  )}
+
+                  <TableCell>
+                    <Chip
+                      size="small"
+                      label={
+                        lead.status_display ||
+                        getStatusLabel(
+                          lead.status,
+                        )
+                      }
+                      color={getStatusColor(
+                        lead.status,
+                      )}
+                    />
+                  </TableCell>
+
+                  <TableCell>
+                    {formatDate(
+                      lead.created_at,
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+
+            {!isLoading &&
+              filteredLeads.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={
+                      isSalesRepresentative
+                        ? 6
+                        : 7
+                    }
+                    align="center"
+                    sx={{ py: 7 }}
+                  >
+                    <Typography
+                      sx={{
+                        fontWeight: 700,
+                      }}
+                    >
+                      {getEmptyMessage()}
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                    >
+                      Try changing your
+                      search or filters.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -530,28 +959,38 @@ function LeadsPage() {
               <Stack
                 direction="row"
                 sx={{
-                  justifyContent: 'space-between',
+                  justifyContent:
+                    'space-between',
                   alignItems: 'center',
                   gap: 2,
                 }}
               >
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                    {selectedLead.name}
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 800,
+                    }}
+                  >
+                    {selectedLead.contact_name}
                   </Typography>
 
                   <Typography
                     variant="body2"
                     color="text.secondary"
                   >
-                    {selectedLead.company}
+                    {selectedLead.company_name}
                   </Typography>
                 </Box>
 
                 <Chip
                   size="small"
-                  label={getStatusLabel(draftStatus)}
-                  color={getStatusColor(draftStatus)}
+                  label={getStatusLabel(
+                    draftStatus,
+                  )}
+                  color={getStatusColor(
+                    draftStatus,
+                  )}
                 />
               </Stack>
             </DialogTitle>
@@ -559,7 +998,10 @@ function LeadsPage() {
             <Divider />
 
             <DialogContent>
-              <Stack spacing={3} sx={{ mt: 1 }}>
+              <Stack
+                spacing={3}
+                sx={{ mt: 1 }}
+              >
                 <Box>
                   <Typography
                     variant="caption"
@@ -568,7 +1010,23 @@ function LeadsPage() {
                     Email address
                   </Typography>
 
-                  <Typography>{selectedLead.email}</Typography>
+                  <Typography>
+                    {selectedLead.email ||
+                      'Not provided'}
+                  </Typography>
+                </Box>
+
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Phone number
+                  </Typography>
+
+                  <Typography>
+                    {selectedLead.phone}
+                  </Typography>
                 </Box>
 
                 <Box>
@@ -579,7 +1037,10 @@ function LeadsPage() {
                     Lead source
                   </Typography>
 
-                  <Typography>{selectedLead.source}</Typography>
+                  <Typography>
+                    {selectedLead.source ||
+                      'Not provided'}
+                  </Typography>
                 </Box>
 
                 <Box>
@@ -587,10 +1048,26 @@ function LeadsPage() {
                     variant="caption"
                     color="text.secondary"
                   >
-                    Assigned sales representative
+                    Assigned Sales Representative
                   </Typography>
 
-                  <Typography>{selectedLead.assignedTo}</Typography>
+                  <Typography>
+                    {selectedLead.assigned_to_name ||
+                      'Unassigned'}
+                  </Typography>
+                </Box>
+
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Created by
+                  </Typography>
+
+                  <Typography>
+                    {selectedLead.created_by_name}
+                  </Typography>
                 </Box>
 
                 <Box>
@@ -601,174 +1078,305 @@ function LeadsPage() {
                     Created date
                   </Typography>
 
-                  <Typography>{selectedLead.createdAt}</Typography>
+                  <Typography>
+                    {formatDate(
+                      selectedLead.created_at,
+                    )}
+                  </Typography>
                 </Box>
 
-                <FormControl fullWidth>
-                  <InputLabel>Lead status</InputLabel>
+                {canEditSelectedLead &&
+                selectedLead.status !==
+                  'CONVERTED' ? (
+                  <FormControl fullWidth>
+                    <InputLabel>
+                      Lead status
+                    </InputLabel>
 
-                  <Select
-                    value={draftStatus}
-                    label="Lead status"
-                    onChange={(event) => {
-                      const newStatus = event.target.value as LeadStatus
+                    <Select
+                      value={draftStatus}
+                      label="Lead status"
+                      onChange={(event) => {
+                        const newStatus =
+                          event.target
+                            .value as LeadStatus
 
-                      setDraftStatus(newStatus)
-                      setLostReasonError(false)
-                    }}
-                  >
-                    <MenuItem value="NEW">New</MenuItem>
-                    <MenuItem value="CONTACTED">Contacted</MenuItem>
+                        setDraftStatus(
+                          newStatus,
+                        )
 
-                    <MenuItem value="FOLLOW_UP_REQUIRED">
-                      Follow-up Required
-                    </MenuItem>
+                        setLostReasonError(
+                          false,
+                        )
+                      }}
+                    >
+                      <MenuItem value="NEW">
+                        New
+                      </MenuItem>
 
-                    <MenuItem value="QUALIFIED">Qualified</MenuItem>
+                      <MenuItem value="CONTACTED">
+                        Contacted
+                      </MenuItem>
 
-                    <MenuItem value="PROPOSAL_SENT">
-                      Proposal Sent
-                    </MenuItem>
+                      <MenuItem value="FOLLOW_UP_REQUIRED">
+                        Follow-up Required
+                      </MenuItem>
 
-                    <MenuItem value="NEGOTIATION">
-                      Negotiation
-                    </MenuItem>
+                      <MenuItem value="QUALIFIED">
+                        Qualified
+                      </MenuItem>
 
-                    <MenuItem value="CONVERTED">Converted</MenuItem>
-                    <MenuItem value="LOST">Lost</MenuItem>
-                  </Select>
-                </FormControl>
+                      <MenuItem value="PROPOSAL_SENT">
+                        Proposal Sent
+                      </MenuItem>
 
-                {draftStatus === 'LOST' && (
-                  <TextField
-                    required
-                    multiline
-                    minRows={3}
-                    label="Reason the lead was lost"
-                    value={lostReason}
-                    error={lostReasonError}
-                    helperText={
-                      lostReasonError
-                        ? 'A lost reason is required.'
-                        : 'Record why this lead was unsuccessful.'
-                    }
-                    onChange={(event) => {
-                      setLostReason(event.target.value)
-                      setLostReasonError(false)
-                    }}
-                  />
+                      <MenuItem value="NEGOTIATION">
+                        Negotiation
+                      </MenuItem>
+
+                      <MenuItem value="LOST">
+                        Lost
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                ) : (
+                  <Alert severity="info">
+                    This lead is available in
+                    read-only mode for your role.
+                  </Alert>
                 )}
 
-                {closedStatuses.includes(draftStatus) && (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    Saving this status will move the lead to the
-                    Closed Leads view.
-                  </Typography>
+                {canEditSelectedLead &&
+                  draftStatus === 'LOST' && (
+                    <TextField
+                      required
+                      multiline
+                      minRows={3}
+                      label="Reason the lead was lost"
+                      value={lostReason}
+                      error={lostReasonError}
+                      helperText={
+                        lostReasonError
+                          ? 'A lost reason is required.'
+                          : 'Record why this lead was unsuccessful.'
+                      }
+                      onChange={(event) => {
+                        setLostReason(
+                          event.target.value,
+                        )
+
+                        setLostReasonError(
+                          false,
+                        )
+                      }}
+                    />
+                  )}
+
+                {selectedLead
+                  .qualification_notes && (
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        Qualification notes
+                      </Typography>
+
+                      <Typography>
+                        {
+                          selectedLead.qualification_notes
+                        }
+                      </Typography>
+                    </Box>
+                  )}
+
+                {selectedLead.status ===
+                  'CONVERTED' && (
+                  <Alert severity="success">
+                    This lead has already
+                    been converted into a
+                    customer.
+                  </Alert>
                 )}
               </Stack>
             </DialogContent>
 
-            <DialogActions sx={{ px: 3, pb: 3 }}>
-              <Button onClick={handleCloseLead}>Cancel</Button>
-
+            <DialogActions
+              sx={{
+                px: 3,
+                pb: 3,
+              }}
+            >
               <Button
-                variant="contained"
-                onClick={handleSaveLeadChanges}
+                onClick={
+                  handleCloseLead
+                }
+                disabled={
+                  isUpdating
+                }
               >
-                Save Changes
+                Close
               </Button>
+
+              {canEditSelectedLead &&
+                selectedLead.status !==
+                  'CONVERTED' && (
+                  <Button
+                    variant="contained"
+                    onClick={() =>
+                      void handleSaveLeadChanges()
+                    }
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? (
+                      <CircularProgress
+                        size={22}
+                        color="inherit"
+                      />
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </Button>
+                )}
             </DialogActions>
           </>
         )}
       </Dialog>
 
-      <Dialog
-        open={addDialogOpen}
-        onClose={() => setAddDialogOpen(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>Add New Lead</DialogTitle>
+      {canCreateLead && (
+        <Dialog
+          open={addDialogOpen}
+          onClose={() => {
+            if (!isCreating) {
+              setAddDialogOpen(false)
+            }
+          }}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>
+            Add New Lead
+          </DialogTitle>
 
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              required
-              label="Contact name"
-              value={form.name}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  name: event.target.value,
-                })
-              }
-            />
+          <DialogContent>
+            <Stack
+              spacing={2}
+              sx={{ mt: 1 }}
+            >
+              <TextField
+                required
+                label="Contact name"
+                value={form.contactName}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    contactName:
+                      event.target.value,
+                  })
+                }
+              />
 
-            <TextField
-              label="Company"
-              value={form.company}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  company: event.target.value,
-                })
-              }
-            />
+              <TextField
+                required
+                label="Company"
+                value={form.companyName}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    companyName:
+                      event.target.value,
+                  })
+                }
+              />
 
-            <TextField
-              required
-              type="email"
-              label="Email address"
-              value={form.email}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  email: event.target.value,
-                })
-              }
-            />
+              <TextField
+                label="Email address"
+                type="email"
+                value={form.email}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    email:
+                      event.target.value,
+                  })
+                }
+              />
 
-            <TextField
-              label="Lead source"
-              value={form.source}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  source: event.target.value,
-                })
-              }
-            />
+              <TextField
+                required
+                label="Phone number"
+                value={form.phone}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    phone:
+                      event.target.value,
+                  })
+                }
+              />
 
-            <TextField
-              label="Assigned sales representative"
-              value={form.assignedTo}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  assignedTo: event.target.value,
-                })
-              }
-            />
-          </Stack>
-        </DialogContent>
+              <TextField
+                label="Lead source"
+                placeholder="Website, Referral, Campaign..."
+                value={form.source}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    source:
+                      event.target.value,
+                  })
+                }
+              />
 
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setAddDialogOpen(false)}>
-            Cancel
-          </Button>
+              <Alert severity="info">
+                New leads are created
+                unassigned. Sales Managers
+                or Project Managers can
+                assign them to a Sales
+                Representative.
+              </Alert>
+            </Stack>
+          </DialogContent>
 
-          <Button
-            variant="contained"
-            onClick={handleAddLead}
-            disabled={!form.name.trim() || !form.email.trim()}
+          <DialogActions
+            sx={{
+              px: 3,
+              pb: 3,
+            }}
           >
-            Save Lead
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <Button
+              onClick={() =>
+                setAddDialogOpen(false)
+              }
+              disabled={isCreating}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="contained"
+              onClick={() =>
+                void handleAddLead()
+              }
+              disabled={
+                isCreating ||
+                !form.contactName.trim() ||
+                !form.companyName.trim() ||
+                !form.phone.trim()
+              }
+            >
+              {isCreating ? (
+                <CircularProgress
+                  size={22}
+                  color="inherit"
+                />
+              ) : (
+                'Save Lead'
+              )}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Box>
   )
 }
