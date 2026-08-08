@@ -2,6 +2,8 @@ from django.urls import path
 
 from .views import (
     CommunicationListCreateView,
+    FollowUpDetailView,
+    FollowUpListCreateView,
     LeadDetailView,
     LeadListCreateView,
 )
@@ -25,5 +27,15 @@ urlpatterns = [
         "leads/<int:lead_id>/communications/",
         CommunicationListCreateView.as_view(),
         name="communication-list-create",
+    ),
+    path(
+        "leads/<int:lead_id>/follow-ups/",
+        FollowUpListCreateView.as_view(),
+        name="follow-up-list-create",
+    ),
+    path(
+        "follow-ups/<int:pk>/",
+        FollowUpDetailView.as_view(),
+        name="follow-up-detail",
     ),
 ]
