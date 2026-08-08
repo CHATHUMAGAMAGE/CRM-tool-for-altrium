@@ -61,6 +61,33 @@ export type UpdateLeadInput = Partial<{
   assigned_to: number | null
 }>
 
+export type CommunicationType =
+  | 'CALL'
+  | 'EMAIL'
+  | 'MEETING'
+  | 'WHATSAPP'
+
+export type Communication = {
+  id: number
+  lead: number
+  communication_type: CommunicationType
+  communication_type_display: string
+  communication_date: string
+  summary: string
+  notes: string
+  created_by: number
+  created_by_name: string
+  created_by_username: string
+  created_at: string
+}
+
+export type CreateCommunicationInput = {
+  communication_type: CommunicationType
+  communication_date: string
+  summary: string
+  notes?: string
+}
+
 type PaginatedResponse<T> = {
   results: T[]
 }
@@ -244,4 +271,49 @@ export async function updateLead(
   }
 
   return (await response.json()) as Lead
+}
+
+export async function getLeadCommunications(
+  leadId: number,
+): Promise<Communication[]> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/leads/${leadId}/communications/`,
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response),
+    )
+  }
+
+  const data = (await response.json()) as
+    | Communication[]
+    | PaginatedResponse<Communication>
+
+  if (isPaginatedResponse(data)) {
+    return data.results
+  }
+
+  return data
+}
+
+export async function createLeadCommunication(
+  leadId: number,
+  communication: CreateCommunicationInput,
+): Promise<Communication> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/leads/${leadId}/communications/`,
+    {
+      method: 'POST',
+      body: JSON.stringify(communication),
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response),
+    )
+  }
+
+  return (await response.json()) as Communication
 }

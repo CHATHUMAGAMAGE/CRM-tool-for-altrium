@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import serializers
 
 from accounts.models import UserProfile
 
-from .models import Lead
+from .models import Communication, Lead
 
 
 User = get_user_model()
@@ -183,3 +184,62 @@ class LeadSerializer(serializers.ModelSerializer):
             instance,
             validated_data,
         )
+
+
+class CommunicationSerializer(serializers.ModelSerializer):
+    communication_type_display = serializers.CharField(
+        source="get_communication_type_display",
+        read_only=True,
+    )
+    created_by_name = serializers.SerializerMethodField()
+    created_by_username = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Communication
+        fields = [
+            "id",
+            "lead",
+            "communication_type",
+            "communication_type_display",
+            "communication_date",
+            "summary",
+            "notes",
+            "created_by",
+            "created_by_name",
+            "created_by_username",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "lead",
+            "created_by",
+            "created_at",
+        ]
+
+    def get_created_by_name(self, obj):
+        full_name = obj.created_by.get_full_name().strip()
+        return full_name or obj.created_by.username
+
+    def get_created_by_username(self, obj):
+        return obj.created_by.username
+
+    def validate_communication_date(self, value):
+        if value > timezone.now():
+            raise serializers.ValidationError(
+                "Communication date cannot be in the future."
+            )
+
+        return value
+
+    def validate_summary(self, value):
+        cleaned_value = value.strip()
+
+        if not cleaned_value:
+            raise serializers.ValidationError(
+                "Communication summary is required."
+            )
+
+        return cleaned_value
+
+    def validate_notes(self, value):
+        return value.strip()

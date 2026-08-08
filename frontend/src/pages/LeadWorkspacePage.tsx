@@ -6,10 +6,19 @@ import {
   Card,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
   Tab,
   Tabs,
+  TextField,
   Typography,
 } from '@mui/material'
 import {
@@ -29,7 +38,11 @@ import {
   type CurrentUser,
 } from '../services/auth'
 import {
+  createLeadCommunication,
   getLead,
+  getLeadCommunications,
+  type Communication,
+  type CommunicationType,
   type Lead,
   type LeadStatus,
 } from '../services/crm'
@@ -40,6 +53,13 @@ type WorkspaceTab =
   | 'follow-ups'
   | 'activity'
   | 'history'
+
+type CommunicationForm = {
+  communicationType: CommunicationType
+  communicationDate: string
+  summary: string
+  notes: string
+}
 
 function getStatusColor(
   status: LeadStatus,
@@ -70,6 +90,28 @@ function getStatusColor(
   }
 }
 
+function getCommunicationColor(
+  type: CommunicationType,
+):
+  | 'default'
+  | 'info'
+  | 'success'
+  | 'warning' {
+  switch (type) {
+    case 'CALL':
+      return 'info'
+
+    case 'EMAIL':
+      return 'success'
+
+    case 'MEETING':
+      return 'warning'
+
+    default:
+      return 'default'
+  }
+}
+
 function formatDate(
   value: string | null,
 ) {
@@ -87,6 +129,26 @@ function formatDate(
       minute: '2-digit',
     },
   )
+}
+
+function getDefaultCommunicationDateTime() {
+  const date = new Date(Date.now() - 60_000)
+  const localDate = new Date(
+    date.getTime() -
+      date.getTimezoneOffset() * 60_000,
+  )
+
+  return localDate.toISOString().slice(0, 16)
+}
+
+function createEmptyCommunicationForm(): CommunicationForm {
+  return {
+    communicationType: 'CALL',
+    communicationDate:
+      getDefaultCommunicationDateTime(),
+    summary: '',
+    notes: '',
+  }
 }
 
 function InformationItem({
@@ -128,11 +190,31 @@ function LeadWorkspacePage() {
   const [currentUser, setCurrentUser] =
     useState<CurrentUser | null>(null)
 
+  const [communications, setCommunications] =
+    useState<Communication[]>([])
+
   const [activeTab, setActiveTab] =
     useState<WorkspaceTab>('overview')
 
   const [isLoading, setIsLoading] =
     useState(true)
+
+  const [isCreatingCommunication, setIsCreatingCommunication] =
+    useState(false)
+
+  const [communicationDialogOpen, setCommunicationDialogOpen] =
+    useState(false)
+
+  const [communicationForm, setCommunicationForm] =
+    useState<CommunicationForm>(
+      createEmptyCommunicationForm,
+    )
+
+  const [communicationError, setCommunicationError] =
+    useState('')
+
+  const [successMessage, setSuccessMessage] =
+    useState('')
 
   const [error, setError] =
     useState('')
@@ -156,11 +238,15 @@ function LeadWorkspacePage() {
       }
 
       try {
-        const [leadData, user] =
-          await Promise.all([
-            getLead(numericLeadId),
-            getCurrentUser(),
-          ])
+        const [
+          leadData,
+          user,
+          communicationData,
+        ] = await Promise.all([
+          getLead(numericLeadId),
+          getCurrentUser(),
+          getLeadCommunications(numericLeadId),
+        ])
 
         if (!isMounted) {
           return
@@ -168,6 +254,7 @@ function LeadWorkspacePage() {
 
         setLead(leadData)
         setCurrentUser(user)
+        setCommunications(communicationData)
       } catch (requestError) {
         if (!isMounted) {
           return
@@ -238,6 +325,8 @@ function LeadWorkspacePage() {
     )
   }
 
+  const numericLeadId = lead.id
+
   const isSalesRep =
     currentUser?.role === 'SALES_REP'
 
@@ -251,6 +340,89 @@ function LeadWorkspacePage() {
       lead.assigned_to === currentUser?.id
     )
 
+  const isClosedLead =
+    lead.status === 'CONVERTED' ||
+    lead.status === 'LOST'
+
+  const canAddCommunication =
+    canWorkLead && !isClosedLead
+
+  const openCommunicationDialog = () => {
+    if (!canAddCommunication) {
+      return
+    }
+
+    setCommunicationError('')
+    setSuccessMessage('')
+    setCommunicationForm(
+      createEmptyCommunicationForm(),
+    )
+    setCommunicationDialogOpen(true)
+  }
+
+  const closeCommunicationDialog = () => {
+    if (isCreatingCommunication) {
+      return
+    }
+
+    setCommunicationDialogOpen(false)
+    setCommunicationError('')
+  }
+
+  const handleCreateCommunication = async () => {
+    if (
+      !canAddCommunication ||
+      !communicationForm.summary.trim() ||
+      !communicationForm.communicationDate
+    ) {
+      return
+    }
+
+    setIsCreatingCommunication(true)
+    setCommunicationError('')
+    setSuccessMessage('')
+
+    try {
+      const createdCommunication =
+        await createLeadCommunication(
+          numericLeadId,
+          {
+            communication_type:
+              communicationForm.communicationType,
+            communication_date: new Date(
+              communicationForm.communicationDate,
+            ).toISOString(),
+            summary:
+              communicationForm.summary.trim(),
+            notes:
+              communicationForm.notes.trim(),
+          },
+        )
+
+      setCommunications((current) => [
+        createdCommunication,
+        ...current,
+      ])
+
+      setCommunicationDialogOpen(false)
+      setCommunicationForm(
+        createEmptyCommunicationForm(),
+      )
+      setActiveTab('communications')
+      setSuccessMessage(
+        'Communication recorded successfully.',
+      )
+    } catch (requestError) {
+      setCommunicationError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to record the communication.',
+      )
+    } finally {
+      setIsCreatingCommunication(false)
+    }
+  }
+
   return (
     <Box sx={{ p: { xs: 3, md: 5 } }}>
       <Button
@@ -262,6 +434,16 @@ function LeadWorkspacePage() {
           ? 'Back to My Leads'
           : 'Back to Leads'}
       </Button>
+
+      {successMessage && (
+        <Alert
+          severity="success"
+          sx={{ mb: 3 }}
+          onClose={() => setSuccessMessage('')}
+        >
+          {successMessage}
+        </Alert>
+      )}
 
       <Stack
         direction={{
@@ -328,12 +510,15 @@ function LeadWorkspacePage() {
               Edit Lead
             </Button>
 
-            <Button
-              variant="outlined"
-              startIcon={<CallRounded />}
-            >
-              Add Communication
-            </Button>
+            {canAddCommunication && (
+              <Button
+                variant="outlined"
+                startIcon={<CallRounded />}
+                onClick={openCommunicationDialog}
+              >
+                Add Communication
+              </Button>
+            )}
 
             <Button
               variant="contained"
@@ -370,7 +555,7 @@ function LeadWorkspacePage() {
 
           <Tab
             value="communications"
-            label="Communications"
+            label={`Communications (${communications.length})`}
           />
 
           <Tab
@@ -672,26 +857,165 @@ function LeadWorkspacePage() {
       )}
 
       {activeTab === 'communications' && (
-        <Card
-          variant="outlined"
-          sx={{ p: 4 }}
-        >
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 800 }}
+        <Stack spacing={3}>
+          <Card
+            variant="outlined"
+            sx={{ p: 3 }}
           >
-            Communications
-          </Typography>
+            <Stack
+              direction={{
+                xs: 'column',
+                sm: 'row',
+              }}
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: {
+                  xs: 'flex-start',
+                  sm: 'center',
+                },
+                gap: 2,
+              }}
+            >
+              <Box>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 800 }}
+                >
+                  Communications
+                </Typography>
 
-          <Typography
-            color="text.secondary"
-            sx={{ mt: 1 }}
-          >
-            Calls, emails, meetings,
-            messages and notes for this
-            lead will appear here.
-          </Typography>
-        </Card>
+                <Typography
+                  color="text.secondary"
+                  sx={{ mt: 0.5 }}
+                >
+                  Calls, emails, meetings and
+                  WhatsApp conversations recorded
+                  for this lead.
+                </Typography>
+              </Box>
+
+              {canAddCommunication && (
+                <Button
+                  variant="contained"
+                  startIcon={<CallRounded />}
+                  onClick={openCommunicationDialog}
+                >
+                  Add Communication
+                </Button>
+              )}
+            </Stack>
+          </Card>
+
+          {communications.length === 0 ? (
+            <Card
+              variant="outlined"
+              sx={{
+                p: 5,
+                textAlign: 'center',
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 800 }}
+              >
+                No communications yet
+              </Typography>
+
+              <Typography
+                color="text.secondary"
+                sx={{ mt: 1 }}
+              >
+                {canAddCommunication
+                  ? 'Record the first customer interaction for this lead.'
+                  : 'No customer interactions have been recorded for this lead.'}
+              </Typography>
+            </Card>
+          ) : (
+            communications.map(
+              (communication) => (
+                <Card
+                  key={communication.id}
+                  variant="outlined"
+                  sx={{ p: 3 }}
+                >
+                  <Stack
+                    direction={{
+                      xs: 'column',
+                      sm: 'row',
+                    }}
+                    sx={{
+                      justifyContent: 'space-between',
+                      alignItems: {
+                        xs: 'flex-start',
+                        sm: 'center',
+                      },
+                      gap: 2,
+                      mb: 2,
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      spacing={1.5}
+                      sx={{
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <Chip
+                        size="small"
+                        label={
+                          communication.communication_type_display
+                        }
+                        color={getCommunicationColor(
+                          communication.communication_type,
+                        )}
+                      />
+
+                      <Typography
+                        sx={{ fontWeight: 800 }}
+                      >
+                        {communication.summary}
+                      </Typography>
+                    </Stack>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                    >
+                      {formatDate(
+                        communication.communication_date,
+                      )}
+                    </Typography>
+                  </Stack>
+
+                  {communication.notes && (
+                    <Typography
+                      sx={{
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      {communication.notes}
+                    </Typography>
+                  )}
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                  >
+                    Recorded by{' '}
+                    {communication.created_by_name}
+                    {' · '}
+                    {formatDate(
+                      communication.created_at,
+                    )}
+                  </Typography>
+                </Card>
+              ),
+            )
+          )}
+        </Stack>
       )}
 
       {activeTab === 'follow-ups' && (
@@ -760,6 +1084,164 @@ function LeadWorkspacePage() {
           </Typography>
         </Card>
       )}
+
+      <Dialog
+        open={communicationDialogOpen}
+        onClose={closeCommunicationDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          Record Communication
+        </DialogTitle>
+
+        <DialogContent>
+          <Stack
+            spacing={2.5}
+            sx={{ mt: 1 }}
+          >
+            {communicationError && (
+              <Alert severity="error">
+                {communicationError}
+              </Alert>
+            )}
+
+            <FormControl fullWidth>
+              <InputLabel>
+                Communication type
+              </InputLabel>
+
+              <Select
+                value={
+                  communicationForm.communicationType
+                }
+                label="Communication type"
+                onChange={(event) =>
+                  setCommunicationForm(
+                    (current) => ({
+                      ...current,
+                      communicationType:
+                        event.target
+                          .value as CommunicationType,
+                    }),
+                  )
+                }
+              >
+                <MenuItem value="CALL">
+                  Call
+                </MenuItem>
+
+                <MenuItem value="EMAIL">
+                  Email
+                </MenuItem>
+
+                <MenuItem value="MEETING">
+                  Meeting
+                </MenuItem>
+
+                <MenuItem value="WHATSAPP">
+                  WhatsApp
+                </MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              required
+              type="datetime-local"
+              label="Communication date and time"
+              value={
+                communicationForm.communicationDate
+              }
+              onChange={(event) =>
+                setCommunicationForm(
+                  (current) => ({
+                    ...current,
+                    communicationDate:
+                      event.target.value,
+                  }),
+                )
+              }
+              slotProps={{
+                inputLabel: {
+                  shrink: true,
+                },
+              }}
+            />
+
+            <TextField
+              required
+              label="Summary"
+              placeholder="Briefly describe the customer interaction"
+              value={communicationForm.summary}
+              onChange={(event) =>
+                setCommunicationForm(
+                  (current) => ({
+                    ...current,
+                    summary: event.target.value,
+                  }),
+                )
+              }
+              slotProps={{
+                htmlInput: {
+                  maxLength: 255,
+                },
+              }}
+              helperText={`${communicationForm.summary.length}/255`}
+            />
+
+            <TextField
+              multiline
+              minRows={4}
+              label="Notes"
+              placeholder="Add useful details, outcomes, requests or context"
+              value={communicationForm.notes}
+              onChange={(event) =>
+                setCommunicationForm(
+                  (current) => ({
+                    ...current,
+                    notes: event.target.value,
+                  }),
+                )
+              }
+            />
+          </Stack>
+        </DialogContent>
+
+        <DialogActions
+          sx={{
+            px: 3,
+            pb: 3,
+          }}
+        >
+          <Button
+            onClick={closeCommunicationDialog}
+            disabled={isCreatingCommunication}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={() =>
+              void handleCreateCommunication()
+            }
+            disabled={
+              isCreatingCommunication ||
+              !communicationForm.summary.trim() ||
+              !communicationForm.communicationDate
+            }
+          >
+            {isCreatingCommunication ? (
+              <CircularProgress
+                size={22}
+                color="inherit"
+              />
+            ) : (
+              'Save Communication'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
