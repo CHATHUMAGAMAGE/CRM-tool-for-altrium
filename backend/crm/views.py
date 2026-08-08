@@ -1,13 +1,15 @@
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from rest_framework import generics
+from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
 
 from accounts.models import UserProfile
 
-from .models import Lead
-from .permissions import LeadPermission
-from .serializers import LeadSerializer
+from .models import Communication, Lead
+from .permissions import CommunicationPermission, LeadPermission
+from .serializers import CommunicationSerializer, LeadSerializer
 
 
 class LeadQuerysetMixin:
@@ -162,3 +164,83 @@ class LeadDetailView(
         IsAuthenticated,
         LeadPermission,
     ]
+
+
+class CommunicationListCreateView(
+    generics.ListCreateAPIView,
+):
+    serializer_class = CommunicationSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        CommunicationPermission,
+    ]
+
+    def get_accessible_leads(self):
+        user = self.request.user
+        profile = getattr(user, "profile", None)
+
+        queryset = Lead.objects.select_related(
+            "assigned_to",
+            "created_by",
+        )
+
+        if profile is None:
+            return queryset.none()
+
+        role = profile.role
+
+        if role == UserProfile.Role.SOFTWARE_ENGINEER:
+            return queryset.none()
+
+        if role == UserProfile.Role.SALES_REP:
+            return queryset.filter(
+                assigned_to=user,
+            )
+
+        return queryset
+
+    def get_lead(self):
+        if hasattr(self, "_lead"):
+            return self._lead
+
+        self._lead = get_object_or_404(
+            self.get_accessible_leads(),
+            pk=self.kwargs["lead_id"],
+        )
+
+        return self._lead
+
+    def get_queryset(self):
+        lead = self.get_lead()
+
+        return Communication.objects.filter(
+            lead=lead,
+        ).select_related(
+            "created_by",
+            "created_by__profile",
+        ).order_by(
+            "-communication_date",
+            "-created_at",
+        )
+
+    def perform_create(self, serializer):
+        lead = self.get_lead()
+
+        if lead.status in {
+            Lead.Status.CONVERTED,
+            Lead.Status.LOST,
+        }:
+            raise ValidationError(
+                {
+                    "lead": (
+                        "Communications cannot be added to a "
+                        "closed lead."
+                    )
+                }
+            )
+
+        serializer.save(
+            lead=lead,
+            created_by=self.request.user,
+        )
