@@ -7,9 +7,17 @@ from rest_framework.permissions import IsAuthenticated
 
 from accounts.models import UserProfile
 
-from .models import Communication, Lead
-from .permissions import CommunicationPermission, LeadPermission
-from .serializers import CommunicationSerializer, LeadSerializer
+from .models import Communication, FollowUp, Lead
+from .permissions import (
+    CommunicationPermission,
+    FollowUpPermission,
+    LeadPermission,
+)
+from .serializers import (
+    CommunicationSerializer,
+    FollowUpSerializer,
+    LeadSerializer,
+)
 
 
 class LeadQuerysetMixin:
@@ -244,3 +252,133 @@ class CommunicationListCreateView(
             lead=lead,
             created_by=self.request.user,
         )
+
+
+class FollowUpListCreateView(generics.ListCreateAPIView):
+    serializer_class = FollowUpSerializer
+    permission_classes = [
+        IsAuthenticated,
+        FollowUpPermission,
+    ]
+
+    def get_accessible_leads(self):
+        user = self.request.user
+        profile = getattr(user, "profile", None)
+
+        queryset = Lead.objects.select_related(
+            "assigned_to",
+            "created_by",
+        )
+
+        if profile is None:
+            return queryset.none()
+
+        role = profile.role
+
+        if role == UserProfile.Role.SOFTWARE_ENGINEER:
+            return queryset.none()
+
+        if role == UserProfile.Role.SALES_REP:
+            return queryset.filter(assigned_to=user)
+
+        return queryset
+
+    def get_lead(self):
+        if hasattr(self, "_lead"):
+            return self._lead
+
+        self._lead = get_object_or_404(
+            self.get_accessible_leads(),
+            pk=self.kwargs["lead_id"],
+        )
+        return self._lead
+
+    def get_queryset(self):
+        lead = self.get_lead()
+
+        queryset = FollowUp.objects.filter(
+            lead=lead,
+        ).select_related(
+            "assigned_to",
+            "assigned_to__profile",
+            "created_by",
+            "created_by__profile",
+        )
+
+        status_value = self.request.query_params.get("status")
+        if status_value:
+            queryset = queryset.filter(status=status_value)
+
+        return queryset.order_by("due_date", "created_at")
+
+    def perform_create(self, serializer):
+        lead = self.get_lead()
+        user = self.request.user
+        profile = getattr(user, "profile", None)
+
+        if lead.status in {
+            Lead.Status.CONVERTED,
+            Lead.Status.LOST,
+        }:
+            raise ValidationError(
+                {
+                    "lead": (
+                        "Follow-ups cannot be scheduled for a closed lead."
+                    )
+                }
+            )
+
+        assigned_to = serializer.validated_data.get("assigned_to")
+
+        if profile.role == UserProfile.Role.SALES_REP:
+            assigned_to = user
+        elif assigned_to is None:
+            assigned_to = lead.assigned_to
+
+        serializer.save(
+            lead=lead,
+            assigned_to=assigned_to,
+            created_by=user,
+            status=FollowUp.Status.PENDING,
+        )
+
+
+class FollowUpDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = FollowUpSerializer
+    permission_classes = [
+        IsAuthenticated,
+        FollowUpPermission,
+    ]
+    http_method_names = [
+        "get",
+        "patch",
+        "head",
+        "options",
+    ]
+
+    def get_queryset(self):
+        user = self.request.user
+        profile = getattr(user, "profile", None)
+
+        queryset = FollowUp.objects.select_related(
+            "lead",
+            "lead__assigned_to",
+            "assigned_to",
+            "assigned_to__profile",
+            "created_by",
+            "created_by__profile",
+        )
+
+        if profile is None:
+            return queryset.none()
+
+        if profile.role == UserProfile.Role.SOFTWARE_ENGINEER:
+            return queryset.none()
+
+        if profile.role == UserProfile.Role.SALES_REP:
+            return queryset.filter(
+                lead__assigned_to=user,
+                assigned_to=user,
+            )
+
+        return queryset

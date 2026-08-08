@@ -125,3 +125,51 @@ class CommunicationPermission(BasePermission):
             }
 
         return False
+
+
+class FollowUpPermission(BasePermission):
+    message = "You do not have permission to perform this follow-up action."
+
+    def has_permission(self, request, view):
+        user = request.user
+
+        if not user or not user.is_authenticated:
+            return False
+
+        profile = getattr(user, "profile", None)
+
+        if profile is None:
+            return False
+
+        role = profile.role
+
+        if role == UserProfile.Role.SOFTWARE_ENGINEER:
+            return False
+
+        if request.method in SAFE_METHODS:
+            return role in {
+                UserProfile.Role.ADMIN,
+                UserProfile.Role.MARKETING,
+                UserProfile.Role.SALES_REP,
+                UserProfile.Role.SALES_MANAGER,
+                UserProfile.Role.PROJECT_MANAGER,
+                UserProfile.Role.DIRECTOR,
+            }
+
+        if request.method == "POST":
+            return role in {
+                UserProfile.Role.ADMIN,
+                UserProfile.Role.SALES_REP,
+                UserProfile.Role.SALES_MANAGER,
+                UserProfile.Role.PROJECT_MANAGER,
+            }
+
+        if request.method in {"PUT", "PATCH"}:
+            return role in {
+                UserProfile.Role.ADMIN,
+                UserProfile.Role.SALES_REP,
+                UserProfile.Role.SALES_MANAGER,
+                UserProfile.Role.PROJECT_MANAGER,
+            }
+
+        return False
