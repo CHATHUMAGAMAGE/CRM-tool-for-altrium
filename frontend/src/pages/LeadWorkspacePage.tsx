@@ -39,10 +39,15 @@ import {
 } from '../services/auth'
 import {
   createLeadCommunication,
+  createLeadFollowUp,
   getLead,
   getLeadCommunications,
+  getLeadFollowUps,
+  updateFollowUp,
   type Communication,
   type CommunicationType,
+  type FollowUp,
+  type FollowUpStatus,
   type Lead,
   type LeadStatus,
 } from '../services/crm'
@@ -59,6 +64,12 @@ type CommunicationForm = {
   communicationDate: string
   summary: string
   notes: string
+}
+
+type FollowUpForm = {
+  title: string
+  description: string
+  dueDate: string
 }
 
 function getStatusColor(
@@ -112,6 +123,68 @@ function getCommunicationColor(
   }
 }
 
+function getFollowUpColor(
+  followUp: FollowUp,
+):
+  | 'default'
+  | 'info'
+  | 'warning'
+  | 'success'
+  | 'error' {
+  if (followUp.is_overdue) {
+    return 'error'
+  }
+
+  switch (followUp.status) {
+    case 'PENDING':
+      return 'info'
+
+    case 'COMPLETED':
+      return 'success'
+
+    case 'CANCELLED':
+      return 'default'
+
+    default:
+      return 'default'
+  }
+}
+
+function getFollowUpLabel(
+  followUp: FollowUp,
+) {
+  if (followUp.is_overdue) {
+    return 'Overdue'
+  }
+
+  return followUp.status_display
+}
+
+function sortFollowUps(
+  items: FollowUp[],
+) {
+  const statusRank: Record<FollowUpStatus, number> = {
+    PENDING: 0,
+    COMPLETED: 1,
+    CANCELLED: 2,
+  }
+
+  return [...items].sort((a, b) => {
+    const statusDifference =
+      statusRank[a.status] -
+      statusRank[b.status]
+
+    if (statusDifference !== 0) {
+      return statusDifference
+    }
+
+    return (
+      new Date(a.due_date).getTime() -
+      new Date(b.due_date).getTime()
+    )
+  })
+}
+
 function formatDate(
   value: string | null,
 ) {
@@ -148,6 +221,26 @@ function createEmptyCommunicationForm(): CommunicationForm {
       getDefaultCommunicationDateTime(),
     summary: '',
     notes: '',
+  }
+}
+
+function getDefaultFollowUpDateTime() {
+  const date = new Date(
+    Date.now() + 60 * 60 * 1000,
+  )
+  const localDate = new Date(
+    date.getTime() -
+      date.getTimezoneOffset() * 60_000,
+  )
+
+  return localDate.toISOString().slice(0, 16)
+}
+
+function createEmptyFollowUpForm(): FollowUpForm {
+  return {
+    title: '',
+    description: '',
+    dueDate: getDefaultFollowUpDateTime(),
   }
 }
 
@@ -193,6 +286,9 @@ function LeadWorkspacePage() {
   const [communications, setCommunications] =
     useState<Communication[]>([])
 
+  const [followUps, setFollowUps] =
+    useState<FollowUp[]>([])
+
   const [activeTab, setActiveTab] =
     useState<WorkspaceTab>('overview')
 
@@ -211,6 +307,23 @@ function LeadWorkspacePage() {
     )
 
   const [communicationError, setCommunicationError] =
+    useState('')
+
+  const [isCreatingFollowUp, setIsCreatingFollowUp] =
+    useState(false)
+
+  const [updatingFollowUpId, setUpdatingFollowUpId] =
+    useState<number | null>(null)
+
+  const [followUpDialogOpen, setFollowUpDialogOpen] =
+    useState(false)
+
+  const [followUpForm, setFollowUpForm] =
+    useState<FollowUpForm>(
+      createEmptyFollowUpForm,
+    )
+
+  const [followUpError, setFollowUpError] =
     useState('')
 
   const [successMessage, setSuccessMessage] =
@@ -242,10 +355,12 @@ function LeadWorkspacePage() {
           leadData,
           user,
           communicationData,
+          followUpData,
         ] = await Promise.all([
           getLead(numericLeadId),
           getCurrentUser(),
           getLeadCommunications(numericLeadId),
+          getLeadFollowUps(numericLeadId),
         ])
 
         if (!isMounted) {
@@ -255,6 +370,9 @@ function LeadWorkspacePage() {
         setLead(leadData)
         setCurrentUser(user)
         setCommunications(communicationData)
+        setFollowUps(
+          sortFollowUps(followUpData),
+        )
       } catch (requestError) {
         if (!isMounted) {
           return
@@ -347,6 +465,30 @@ function LeadWorkspacePage() {
   const canAddCommunication =
     canWorkLead && !isClosedLead
 
+  const canScheduleFollowUp =
+    canWorkLead && !isClosedLead
+
+  const canUpdateFollowUp = (
+    followUp: FollowUp,
+  ) => {
+    if (!currentUser) {
+      return false
+    }
+
+    if (
+      currentUser.role === 'ADMIN' ||
+      currentUser.role === 'SALES_MANAGER' ||
+      currentUser.role === 'PROJECT_MANAGER'
+    ) {
+      return true
+    }
+
+    return (
+      currentUser.role === 'SALES_REP' &&
+      followUp.assigned_to === currentUser.id
+    )
+  }
+
   const openCommunicationDialog = () => {
     if (!canAddCommunication) {
       return
@@ -420,6 +562,147 @@ function LeadWorkspacePage() {
       )
     } finally {
       setIsCreatingCommunication(false)
+    }
+  }
+
+
+  const openFollowUpDialog = () => {
+    if (!canScheduleFollowUp) {
+      return
+    }
+
+    setFollowUpError('')
+    setSuccessMessage('')
+    setFollowUpForm(
+      createEmptyFollowUpForm(),
+    )
+    setFollowUpDialogOpen(true)
+  }
+
+  const closeFollowUpDialog = () => {
+    if (isCreatingFollowUp) {
+      return
+    }
+
+    setFollowUpDialogOpen(false)
+    setFollowUpError('')
+  }
+
+  const handleCreateFollowUp = async () => {
+    if (
+      !canScheduleFollowUp ||
+      !followUpForm.title.trim() ||
+      !followUpForm.dueDate
+    ) {
+      return
+    }
+
+    const dueDate = new Date(
+      followUpForm.dueDate,
+    )
+
+    if (
+      Number.isNaN(dueDate.getTime()) ||
+      dueDate <= new Date()
+    ) {
+      setFollowUpError(
+        'Follow-up due date must be in the future.',
+      )
+      return
+    }
+
+    setIsCreatingFollowUp(true)
+    setFollowUpError('')
+    setSuccessMessage('')
+
+    try {
+      const createdFollowUp =
+        await createLeadFollowUp(
+          numericLeadId,
+          {
+            title:
+              followUpForm.title.trim(),
+            description:
+              followUpForm.description.trim(),
+            due_date:
+              dueDate.toISOString(),
+          },
+        )
+
+      setFollowUps((current) =>
+        sortFollowUps([
+          ...current,
+          createdFollowUp,
+        ]),
+      )
+
+      setFollowUpDialogOpen(false)
+      setFollowUpForm(
+        createEmptyFollowUpForm(),
+      )
+      setActiveTab('follow-ups')
+      setSuccessMessage(
+        'Follow-up scheduled successfully.',
+      )
+    } catch (requestError) {
+      setFollowUpError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to schedule the follow-up.',
+      )
+    } finally {
+      setIsCreatingFollowUp(false)
+    }
+  }
+
+  const handleFollowUpStatusChange = async (
+    followUp: FollowUp,
+    status: Extract<
+      FollowUpStatus,
+      'COMPLETED' | 'CANCELLED'
+    >,
+  ) => {
+    if (
+      followUp.status !== 'PENDING' ||
+      !canUpdateFollowUp(followUp)
+    ) {
+      return
+    }
+
+    setUpdatingFollowUpId(followUp.id)
+    setFollowUpError('')
+    setSuccessMessage('')
+
+    try {
+      const updated =
+        await updateFollowUp(
+          followUp.id,
+          { status },
+        )
+
+      setFollowUps((current) =>
+        sortFollowUps(
+          current.map((item) =>
+            item.id === updated.id
+              ? updated
+              : item,
+          ),
+        ),
+      )
+
+      setSuccessMessage(
+        status === 'COMPLETED'
+          ? 'Follow-up marked as completed.'
+          : 'Follow-up cancelled.',
+      )
+    } catch (requestError) {
+      setFollowUpError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to update the follow-up.',
+      )
+    } finally {
+      setUpdatingFollowUpId(null)
     }
   }
 
@@ -520,12 +803,15 @@ function LeadWorkspacePage() {
               </Button>
             )}
 
-            <Button
-              variant="contained"
-              startIcon={<EventRounded />}
-            >
-              Schedule Follow-up
-            </Button>
+            {canScheduleFollowUp && (
+              <Button
+                variant="contained"
+                startIcon={<EventRounded />}
+                onClick={openFollowUpDialog}
+              >
+                Schedule Follow-up
+              </Button>
+            )}
           </Stack>
         )}
       </Stack>
@@ -560,7 +846,7 @@ function LeadWorkspacePage() {
 
           <Tab
             value="follow-ups"
-            label="Follow-ups"
+            label={`Follow-ups (${followUps.length})`}
           />
 
           <Tab
@@ -1019,25 +1305,273 @@ function LeadWorkspacePage() {
       )}
 
       {activeTab === 'follow-ups' && (
-        <Card
-          variant="outlined"
-          sx={{ p: 4 }}
-        >
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 800 }}
+        <Stack spacing={3}>
+          <Card
+            variant="outlined"
+            sx={{ p: 3 }}
           >
-            Follow-ups
-          </Typography>
+            <Stack
+              direction={{
+                xs: 'column',
+                sm: 'row',
+              }}
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: {
+                  xs: 'flex-start',
+                  sm: 'center',
+                },
+                gap: 2,
+              }}
+            >
+              <Box>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 800 }}
+                >
+                  Follow-ups
+                </Typography>
 
-          <Typography
-            color="text.secondary"
-            sx={{ mt: 1 }}
-          >
-            Upcoming, overdue and completed
-            follow-ups will appear here.
-          </Typography>
-        </Card>
+                <Typography
+                  color="text.secondary"
+                  sx={{ mt: 0.5 }}
+                >
+                  Track upcoming, overdue,
+                  completed and cancelled work
+                  for this lead.
+                </Typography>
+              </Box>
+
+              {canScheduleFollowUp && (
+                <Button
+                  variant="contained"
+                  startIcon={<EventRounded />}
+                  onClick={openFollowUpDialog}
+                >
+                  Schedule Follow-up
+                </Button>
+              )}
+            </Stack>
+          </Card>
+
+          {followUpError &&
+            !followUpDialogOpen && (
+              <Alert
+                severity="error"
+                onClose={() =>
+                  setFollowUpError('')
+                }
+              >
+                {followUpError}
+              </Alert>
+            )}
+
+          {followUps.length === 0 ? (
+            <Card
+              variant="outlined"
+              sx={{
+                p: 5,
+                textAlign: 'center',
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 800 }}
+              >
+                No follow-ups yet
+              </Typography>
+
+              <Typography
+                color="text.secondary"
+                sx={{ mt: 1 }}
+              >
+                {canScheduleFollowUp
+                  ? 'Schedule the next action for this lead.'
+                  : 'No follow-ups have been scheduled for this lead.'}
+              </Typography>
+            </Card>
+          ) : (
+            followUps.map((followUp) => {
+              const canUpdate =
+                followUp.status ===
+                  'PENDING' &&
+                canUpdateFollowUp(
+                  followUp,
+                )
+
+              return (
+                <Card
+                  key={followUp.id}
+                  variant="outlined"
+                  sx={{ p: 3 }}
+                >
+                  <Stack
+                    direction={{
+                      xs: 'column',
+                      md: 'row',
+                    }}
+                    sx={{
+                      justifyContent:
+                        'space-between',
+                      alignItems: {
+                        xs: 'flex-start',
+                        md: 'center',
+                      },
+                      gap: 2,
+                    }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Stack
+                        direction="row"
+                        spacing={1.5}
+                        sx={{
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          mb: 1,
+                        }}
+                      >
+                        <Chip
+                          size="small"
+                          label={getFollowUpLabel(
+                            followUp,
+                          )}
+                          color={getFollowUpColor(
+                            followUp,
+                          )}
+                        />
+
+                        <Typography
+                          sx={{
+                            fontWeight: 800,
+                          }}
+                        >
+                          {followUp.title}
+                        </Typography>
+                      </Stack>
+
+                      {followUp.description && (
+                        <Typography
+                          sx={{
+                            whiteSpace:
+                              'pre-wrap',
+                          }}
+                        >
+                          {
+                            followUp.description
+                          }
+                        </Typography>
+                      )}
+
+                      <Stack
+                        direction={{
+                          xs: 'column',
+                          sm: 'row',
+                        }}
+                        spacing={{
+                          xs: 0.5,
+                          sm: 2,
+                        }}
+                        sx={{ mt: 2 }}
+                      >
+                        <Typography
+                          variant="body2"
+                          color={
+                            followUp.is_overdue
+                              ? 'error'
+                              : 'text.secondary'
+                          }
+                        >
+                          Due:{' '}
+                          {formatDate(
+                            followUp.due_date,
+                          )}
+                        </Typography>
+
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                        >
+                          Assigned to:{' '}
+                          {followUp.assigned_to_name ||
+                            'Unassigned'}
+                        </Typography>
+                      </Stack>
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 0.5 }}
+                      >
+                        Created by{' '}
+                        {followUp.created_by_name}
+                        {' · '}
+                        {formatDate(
+                          followUp.created_at,
+                        )}
+                      </Typography>
+
+                      {followUp.completed_at && (
+                        <Typography
+                          variant="body2"
+                          color="success.main"
+                          sx={{ mt: 0.5 }}
+                        >
+                          Completed:{' '}
+                          {formatDate(
+                            followUp.completed_at,
+                          )}
+                        </Typography>
+                      )}
+                    </Box>
+
+                    {canUpdate && (
+                      <Stack
+                        direction={{
+                          xs: 'column',
+                          sm: 'row',
+                        }}
+                        spacing={1}
+                      >
+                        <Button
+                          variant="contained"
+                          onClick={() =>
+                            void handleFollowUpStatusChange(
+                              followUp,
+                              'COMPLETED',
+                            )
+                          }
+                          disabled={
+                            updatingFollowUpId ===
+                            followUp.id
+                          }
+                        >
+                          Mark Complete
+                        </Button>
+
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          onClick={() =>
+                            void handleFollowUpStatusChange(
+                              followUp,
+                              'CANCELLED',
+                            )
+                          }
+                          disabled={
+                            updatingFollowUpId ===
+                            followUp.id
+                          }
+                        >
+                          Cancel
+                        </Button>
+                      </Stack>
+                    )}
+                  </Stack>
+                </Card>
+              )
+            })
+          )}
+        </Stack>
       )}
 
       {activeTab === 'activity' && (
@@ -1238,6 +1772,133 @@ function LeadWorkspacePage() {
               />
             ) : (
               'Save Communication'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={followUpDialogOpen}
+        onClose={closeFollowUpDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          Schedule Follow-up
+        </DialogTitle>
+
+        <DialogContent>
+          <Stack
+            spacing={2.5}
+            sx={{ mt: 1 }}
+          >
+            {followUpError && (
+              <Alert severity="error">
+                {followUpError}
+              </Alert>
+            )}
+
+            <TextField
+              required
+              label="Title"
+              placeholder="e.g. Call about pricing decision"
+              value={followUpForm.title}
+              onChange={(event) =>
+                setFollowUpForm(
+                  (current) => ({
+                    ...current,
+                    title:
+                      event.target.value,
+                  }),
+                )
+              }
+              slotProps={{
+                htmlInput: {
+                  maxLength: 255,
+                },
+              }}
+              helperText={`${followUpForm.title.length}/255`}
+            />
+
+            <TextField
+              required
+              type="datetime-local"
+              label="Due date and time"
+              value={followUpForm.dueDate}
+              onChange={(event) =>
+                setFollowUpForm(
+                  (current) => ({
+                    ...current,
+                    dueDate:
+                      event.target.value,
+                  }),
+                )
+              }
+              slotProps={{
+                inputLabel: {
+                  shrink: true,
+                },
+              }}
+            />
+
+            <TextField
+              multiline
+              minRows={4}
+              label="Description"
+              placeholder="Add context or the action that needs to be completed"
+              value={
+                followUpForm.description
+              }
+              onChange={(event) =>
+                setFollowUpForm(
+                  (current) => ({
+                    ...current,
+                    description:
+                      event.target.value,
+                  }),
+                )
+              }
+            />
+
+            <Alert severity="info">
+              The follow-up will be assigned
+              to the Sales Representative
+              responsible for this lead.
+            </Alert>
+          </Stack>
+        </DialogContent>
+
+        <DialogActions
+          sx={{
+            px: 3,
+            pb: 3,
+          }}
+        >
+          <Button
+            onClick={closeFollowUpDialog}
+            disabled={isCreatingFollowUp}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={() =>
+              void handleCreateFollowUp()
+            }
+            disabled={
+              isCreatingFollowUp ||
+              !followUpForm.title.trim() ||
+              !followUpForm.dueDate
+            }
+          >
+            {isCreatingFollowUp ? (
+              <CircularProgress
+                size={22}
+                color="inherit"
+              />
+            ) : (
+              'Schedule Follow-up'
             )}
           </Button>
         </DialogActions>
