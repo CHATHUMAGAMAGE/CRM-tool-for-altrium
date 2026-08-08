@@ -10,7 +10,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   FormControl,
   InputAdornment,
   InputLabel,
@@ -31,6 +30,7 @@ import {
   RefreshRounded,
   SearchRounded,
 } from '@mui/icons-material'
+import { useNavigate } from 'react-router'
 
 import {
   hasRequiredRole,
@@ -43,7 +43,6 @@ import {
 import {
   createLead,
   getLeads,
-  updateLead,
   type Lead,
   type LeadStatus,
 } from '../services/crm'
@@ -71,13 +70,9 @@ const leadCreatorRoles: UserRole[] = [
   'PROJECT_MANAGER',
 ]
 
-const leadManagerRoles: UserRole[] = [
-  'ADMIN',
-  'SALES_MANAGER',
-  'PROJECT_MANAGER',
-]
-
 function LeadsPage() {
+  const navigate = useNavigate()
+
   const [currentUser, setCurrentUser] =
     useState<CurrentUser | null>(null)
 
@@ -85,7 +80,6 @@ function LeadsPage() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
-  const [isUpdating, setIsUpdating] = useState(false)
 
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -98,16 +92,6 @@ function LeadsPage() {
     useState<LeadStatus | 'ALL'>('ALL')
 
   const [addDialogOpen, setAddDialogOpen] =
-    useState(false)
-
-  const [selectedLead, setSelectedLead] =
-    useState<Lead | null>(null)
-
-  const [draftStatus, setDraftStatus] =
-    useState<LeadStatus>('NEW')
-
-  const [lostReason, setLostReason] = useState('')
-  const [lostReasonError, setLostReasonError] =
     useState(false)
 
   const [form, setForm] = useState({
@@ -191,44 +175,6 @@ function LeadsPage() {
       leadCreatorRoles,
     )
 
-  const canManageAllLeads =
-    currentUser !== null &&
-    hasRequiredRole(
-      currentUser.role,
-      leadManagerRoles,
-    )
-
-  const canEditSelectedLead = useMemo(() => {
-    if (!currentUser || !selectedLead) {
-      return false
-    }
-
-    if (canManageAllLeads) {
-      return true
-    }
-
-    if (currentUser.role === 'SALES_REP') {
-      return (
-        selectedLead.assigned_to ===
-        currentUser.id
-      )
-    }
-
-    if (currentUser.role === 'MARKETING') {
-      return (
-        selectedLead.created_by ===
-          currentUser.id &&
-        selectedLead.status === 'NEW'
-      )
-    }
-
-    return false
-  }, [
-    currentUser,
-    selectedLead,
-    canManageAllLeads,
-  ])
-
   const activeLeadCount = useMemo(
     () =>
       leads.filter((lead) =>
@@ -294,24 +240,6 @@ function LeadsPage() {
     setStatusFilter('ALL')
   }
 
-  const handleOpenLead = (lead: Lead) => {
-    setSelectedLead(lead)
-    setDraftStatus(lead.status)
-    setLostReason(lead.lost_reason)
-    setLostReasonError(false)
-    setError('')
-    setSuccessMessage('')
-  }
-
-  const handleCloseLead = () => {
-    if (isUpdating) {
-      return
-    }
-
-    setSelectedLead(null)
-    setLostReasonError(false)
-  }
-
   const resetCreateForm = () => {
     setForm({
       contactName: '',
@@ -354,7 +282,6 @@ function LeadsPage() {
       ])
 
       resetCreateForm()
-
       setLeadView('ACTIVE')
       setStatusFilter('ALL')
       setAddDialogOpen(false)
@@ -370,62 +297,6 @@ function LeadsPage() {
       )
     } finally {
       setIsCreating(false)
-    }
-  }
-
-  const handleSaveLeadChanges = async () => {
-    if (
-      !selectedLead ||
-      !canEditSelectedLead
-    ) {
-      return
-    }
-
-    if (
-      draftStatus === 'LOST' &&
-      !lostReason.trim()
-    ) {
-      setLostReasonError(true)
-      return
-    }
-
-    setIsUpdating(true)
-    setError('')
-    setSuccessMessage('')
-
-    try {
-      const updatedLead = await updateLead(
-        selectedLead.id,
-        {
-          status: draftStatus,
-          lost_reason:
-            draftStatus === 'LOST'
-              ? lostReason.trim()
-              : '',
-        },
-      )
-
-      setLeads((currentLeads) =>
-        currentLeads.map((lead) =>
-          lead.id === updatedLead.id
-            ? updatedLead
-            : lead,
-        ),
-      )
-
-      setSelectedLead(null)
-
-      setSuccessMessage(
-        `${updatedLead.contact_name} was updated successfully.`,
-      )
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Unable to update the lead.',
-      )
-    } finally {
-      setIsUpdating(false)
     }
   }
 
@@ -754,38 +625,26 @@ function LeadsPage() {
               <MenuItem value="ALL">
                 All statuses
               </MenuItem>
-
-              <MenuItem value="NEW">
-                New
-              </MenuItem>
-
+              <MenuItem value="NEW">New</MenuItem>
               <MenuItem value="CONTACTED">
                 Contacted
               </MenuItem>
-
               <MenuItem value="FOLLOW_UP_REQUIRED">
                 Follow-up Required
               </MenuItem>
-
               <MenuItem value="QUALIFIED">
                 Qualified
               </MenuItem>
-
               <MenuItem value="PROPOSAL_SENT">
                 Proposal Sent
               </MenuItem>
-
               <MenuItem value="NEGOTIATION">
                 Negotiation
               </MenuItem>
-
               <MenuItem value="CONVERTED">
                 Converted
               </MenuItem>
-
-              <MenuItem value="LOST">
-                Lost
-              </MenuItem>
+              <MenuItem value="LOST">Lost</MenuItem>
             </Select>
           </FormControl>
         </Stack>
@@ -826,9 +685,7 @@ function LeadsPage() {
                   align="center"
                   sx={{ py: 7 }}
                 >
-                  <CircularProgress
-                    size={32}
-                  />
+                  <CircularProgress size={32} />
 
                   <Typography
                     sx={{
@@ -848,7 +705,7 @@ function LeadsPage() {
                   key={lead.id}
                   hover
                   onClick={() =>
-                    handleOpenLead(lead)
+                    navigate(`/leads/${lead.id}`)
                   }
                   sx={{
                     cursor: 'pointer',
@@ -937,8 +794,7 @@ function LeadsPage() {
                       variant="body2"
                       color="text.secondary"
                     >
-                      Try changing your
-                      search or filters.
+                      Try changing your search or filters.
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -946,302 +802,6 @@ function LeadsPage() {
           </TableBody>
         </Table>
       </TableContainer>
-
-      <Dialog
-        open={Boolean(selectedLead)}
-        onClose={handleCloseLead}
-        fullWidth
-        maxWidth="sm"
-      >
-        {selectedLead && (
-          <>
-            <DialogTitle>
-              <Stack
-                direction="row"
-                sx={{
-                  justifyContent:
-                    'space-between',
-                  alignItems: 'center',
-                  gap: 2,
-                }}
-              >
-                <Box>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 800,
-                    }}
-                  >
-                    {selectedLead.contact_name}
-                  </Typography>
-
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    {selectedLead.company_name}
-                  </Typography>
-                </Box>
-
-                <Chip
-                  size="small"
-                  label={getStatusLabel(
-                    draftStatus,
-                  )}
-                  color={getStatusColor(
-                    draftStatus,
-                  )}
-                />
-              </Stack>
-            </DialogTitle>
-
-            <Divider />
-
-            <DialogContent>
-              <Stack
-                spacing={3}
-                sx={{ mt: 1 }}
-              >
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    Email address
-                  </Typography>
-
-                  <Typography>
-                    {selectedLead.email ||
-                      'Not provided'}
-                  </Typography>
-                </Box>
-
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    Phone number
-                  </Typography>
-
-                  <Typography>
-                    {selectedLead.phone}
-                  </Typography>
-                </Box>
-
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    Lead source
-                  </Typography>
-
-                  <Typography>
-                    {selectedLead.source ||
-                      'Not provided'}
-                  </Typography>
-                </Box>
-
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    Assigned Sales Representative
-                  </Typography>
-
-                  <Typography>
-                    {selectedLead.assigned_to_name ||
-                      'Unassigned'}
-                  </Typography>
-                </Box>
-
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    Created by
-                  </Typography>
-
-                  <Typography>
-                    {selectedLead.created_by_name}
-                  </Typography>
-                </Box>
-
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    Created date
-                  </Typography>
-
-                  <Typography>
-                    {formatDate(
-                      selectedLead.created_at,
-                    )}
-                  </Typography>
-                </Box>
-
-                {canEditSelectedLead &&
-                selectedLead.status !==
-                  'CONVERTED' ? (
-                  <FormControl fullWidth>
-                    <InputLabel>
-                      Lead status
-                    </InputLabel>
-
-                    <Select
-                      value={draftStatus}
-                      label="Lead status"
-                      onChange={(event) => {
-                        const newStatus =
-                          event.target
-                            .value as LeadStatus
-
-                        setDraftStatus(
-                          newStatus,
-                        )
-
-                        setLostReasonError(
-                          false,
-                        )
-                      }}
-                    >
-                      <MenuItem value="NEW">
-                        New
-                      </MenuItem>
-
-                      <MenuItem value="CONTACTED">
-                        Contacted
-                      </MenuItem>
-
-                      <MenuItem value="FOLLOW_UP_REQUIRED">
-                        Follow-up Required
-                      </MenuItem>
-
-                      <MenuItem value="QUALIFIED">
-                        Qualified
-                      </MenuItem>
-
-                      <MenuItem value="PROPOSAL_SENT">
-                        Proposal Sent
-                      </MenuItem>
-
-                      <MenuItem value="NEGOTIATION">
-                        Negotiation
-                      </MenuItem>
-
-                      <MenuItem value="LOST">
-                        Lost
-                      </MenuItem>
-                    </Select>
-                  </FormControl>
-                ) : (
-                  <Alert severity="info">
-                    This lead is available in
-                    read-only mode for your role.
-                  </Alert>
-                )}
-
-                {canEditSelectedLead &&
-                  draftStatus === 'LOST' && (
-                    <TextField
-                      required
-                      multiline
-                      minRows={3}
-                      label="Reason the lead was lost"
-                      value={lostReason}
-                      error={lostReasonError}
-                      helperText={
-                        lostReasonError
-                          ? 'A lost reason is required.'
-                          : 'Record why this lead was unsuccessful.'
-                      }
-                      onChange={(event) => {
-                        setLostReason(
-                          event.target.value,
-                        )
-
-                        setLostReasonError(
-                          false,
-                        )
-                      }}
-                    />
-                  )}
-
-                {selectedLead
-                  .qualification_notes && (
-                    <Box>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                      >
-                        Qualification notes
-                      </Typography>
-
-                      <Typography>
-                        {
-                          selectedLead.qualification_notes
-                        }
-                      </Typography>
-                    </Box>
-                  )}
-
-                {selectedLead.status ===
-                  'CONVERTED' && (
-                  <Alert severity="success">
-                    This lead has already
-                    been converted into a
-                    customer.
-                  </Alert>
-                )}
-              </Stack>
-            </DialogContent>
-
-            <DialogActions
-              sx={{
-                px: 3,
-                pb: 3,
-              }}
-            >
-              <Button
-                onClick={
-                  handleCloseLead
-                }
-                disabled={
-                  isUpdating
-                }
-              >
-                Close
-              </Button>
-
-              {canEditSelectedLead &&
-                selectedLead.status !==
-                  'CONVERTED' && (
-                  <Button
-                    variant="contained"
-                    onClick={() =>
-                      void handleSaveLeadChanges()
-                    }
-                    disabled={isUpdating}
-                  >
-                    {isUpdating ? (
-                      <CircularProgress
-                        size={22}
-                        color="inherit"
-                      />
-                    ) : (
-                      'Save Changes'
-                    )}
-                  </Button>
-                )}
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
 
       {canCreateLead && (
         <Dialog
