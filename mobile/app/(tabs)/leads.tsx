@@ -1,6 +1,8 @@
+import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -100,13 +102,16 @@ export default function LeadsScreen() {
           />
         }
       >
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Assigned Leads</Text>
+
           <Text style={styles.subtitle}>
             Manage and follow up with your assigned leads.
           </Text>
         </View>
 
+        {/* Search */}
         <View style={styles.searchContainer}>
           <TextInput
             value={search}
@@ -121,19 +126,36 @@ export default function LeadsScreen() {
           />
         </View>
 
+        {/* Loading */}
         {isLoading ? (
           <View style={styles.centerState}>
-            <ActivityIndicator size="large" color="#1557E8" />
-            <Text style={styles.stateText}>Loading leads...</Text>
+            <ActivityIndicator
+              size="large"
+              color="#1557E8"
+            />
+
+            <Text style={styles.stateText}>
+              Loading leads...
+            </Text>
           </View>
         ) : errorMessage ? (
+          /* Error */
           <View style={styles.stateCard}>
-            <Text style={styles.errorTitle}>Unable to load leads</Text>
-            <Text style={styles.errorText}>{errorMessage}</Text>
+            <Text style={styles.errorTitle}>
+              Unable to load leads
+            </Text>
+
+            <Text style={styles.errorText}>
+              {errorMessage}
+            </Text>
           </View>
         ) : leads.length === 0 ? (
+          /* Empty */
           <View style={styles.stateCard}>
-            <Text style={styles.emptyTitle}>No leads found</Text>
+            <Text style={styles.emptyTitle}>
+              No leads found
+            </Text>
+
             <Text style={styles.emptyText}>
               {search.trim()
                 ? 'No leads match your search.'
@@ -141,13 +163,28 @@ export default function LeadsScreen() {
             </Text>
           </View>
         ) : (
+          /* Lead list */
           <View style={styles.leadsContainer}>
             <Text style={styles.resultsText}>
-              {leads.length} {leads.length === 1 ? 'lead' : 'leads'}
+              {leads.length}{' '}
+              {leads.length === 1 ? 'lead' : 'leads'}
             </Text>
 
             {leads.map((lead) => (
-              <View key={lead.id} style={styles.leadCard}>
+              <Pressable
+                key={lead.id}
+                onPress={() =>
+                 router.push({
+                 pathname: '/lead/[id]',
+                params: { id: String(lead.id) },
+               })
+            }
+                style={({ pressed }) => [
+                  styles.leadCard,
+                  pressed && styles.leadCardPressed,
+                ]}
+              >
+                {/* Card Header */}
                 <View style={styles.cardHeader}>
                   <View style={styles.companyContainer}>
                     <Text style={styles.companyName}>
@@ -171,6 +208,7 @@ export default function LeadsScreen() {
                   </View>
                 </View>
 
+                {/* Lead Details */}
                 <View style={styles.detailsContainer}>
                   {lead.email ? (
                     <Text style={styles.detailText}>
@@ -190,7 +228,12 @@ export default function LeadsScreen() {
                     </Text>
                   ) : null}
                 </View>
-              </View>
+
+                {/* Tap hint */}
+                <Text style={styles.viewDetailsText}>
+                  Tap to view details
+                </Text>
+              </Pressable>
             ))}
           </View>
         )}
@@ -309,6 +352,10 @@ const styles = StyleSheet.create({
     padding: 18,
   },
 
+  leadCardPressed: {
+    opacity: 0.7,
+  },
+
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -371,5 +418,12 @@ const styles = StyleSheet.create({
   detailText: {
     color: '#6B7280',
     fontSize: 14,
+  },
+
+  viewDetailsText: {
+    color: '#1557E8',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 14,
   },
 });
