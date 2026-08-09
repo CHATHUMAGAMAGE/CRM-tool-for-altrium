@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Card,
@@ -12,6 +13,7 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -22,11 +24,20 @@ import {
   Typography,
 } from '@mui/material'
 import {
+  AddRounded,
   ArrowBackRounded,
   AssignmentIndRounded,
+  BusinessRounded,
+  CalendarTodayRounded,
   CallRounded,
+  ChatBubbleOutlineRounded,
+  CloseRounded,
   EditRounded,
   EventRounded,
+  FilterListRounded,
+  GroupsRounded,
+  MailOutlineRounded,
+  PersonOutlineRounded,
 } from '@mui/icons-material'
 import {
   useNavigate,
@@ -59,9 +70,14 @@ type WorkspaceTab =
   | 'activity'
   | 'history'
 
+type CommunicationFilter =
+  | 'ALL'
+  | CommunicationType
+
 type CommunicationForm = {
   communicationType: CommunicationType
   communicationDate: string
+  communicationTime: string
   summary: string
   notes: string
 }
@@ -101,25 +117,24 @@ function getStatusColor(
   }
 }
 
-function getCommunicationColor(
+function getCommunicationIcon(
   type: CommunicationType,
-):
-  | 'default'
-  | 'info'
-  | 'success'
-  | 'warning' {
+) {
   switch (type) {
     case 'CALL':
-      return 'info'
+      return <CallRounded fontSize="small" />
 
     case 'EMAIL':
-      return 'success'
+      return <MailOutlineRounded fontSize="small" />
 
     case 'MEETING':
-      return 'warning'
+      return <GroupsRounded fontSize="small" />
+
+    case 'WHATSAPP':
+      return <ChatBubbleOutlineRounded fontSize="small" />
 
     default:
-      return 'default'
+      return <CallRounded fontSize="small" />
   }
 }
 
@@ -204,21 +219,28 @@ function formatDate(
   )
 }
 
-function getDefaultCommunicationDateTime() {
+function getDefaultCommunicationDateParts() {
   const date = new Date(Date.now() - 60_000)
   const localDate = new Date(
     date.getTime() -
       date.getTimezoneOffset() * 60_000,
   )
+  const localValue = localDate.toISOString()
 
-  return localDate.toISOString().slice(0, 16)
+  return {
+    date: localValue.slice(0, 10),
+    time: localValue.slice(11, 16),
+  }
 }
 
 function createEmptyCommunicationForm(): CommunicationForm {
+  const defaultDateTime =
+    getDefaultCommunicationDateParts()
+
   return {
     communicationType: 'CALL',
-    communicationDate:
-      getDefaultCommunicationDateTime(),
+    communicationDate: defaultDateTime.date,
+    communicationTime: defaultDateTime.time,
     summary: '',
     notes: '',
   }
@@ -308,6 +330,9 @@ function LeadWorkspacePage() {
 
   const [communicationError, setCommunicationError] =
     useState('')
+
+  const [communicationFilter, setCommunicationFilter] =
+    useState<CommunicationFilter>('ALL')
 
   const [isCreatingFollowUp, setIsCreatingFollowUp] =
     useState(false)
@@ -465,6 +490,14 @@ function LeadWorkspacePage() {
   const canAddCommunication =
     canWorkLead && !isClosedLead
 
+  const filteredCommunications =
+    communications.filter(
+      (communication) =>
+        communicationFilter === 'ALL' ||
+        communication.communication_type ===
+          communicationFilter,
+    )
+
   const canScheduleFollowUp =
     canWorkLead && !isClosedLead
 
@@ -515,7 +548,8 @@ function LeadWorkspacePage() {
     if (
       !canAddCommunication ||
       !communicationForm.summary.trim() ||
-      !communicationForm.communicationDate
+      !communicationForm.communicationDate ||
+      !communicationForm.communicationTime
     ) {
       return
     }
@@ -532,7 +566,7 @@ function LeadWorkspacePage() {
             communication_type:
               communicationForm.communicationType,
             communication_date: new Date(
-              communicationForm.communicationDate,
+              `${communicationForm.communicationDate}T${communicationForm.communicationTime}`,
             ).toISOString(),
             summary:
               communicationForm.summary.trim(),
@@ -1143,165 +1177,429 @@ function LeadWorkspacePage() {
       )}
 
       {activeTab === 'communications' && (
-        <Stack spacing={3}>
-          <Card
-            variant="outlined"
-            sx={{ p: 3 }}
+        <Box>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            sx={{
+              justifyContent: 'space-between',
+              alignItems: { xs: 'flex-start', md: 'center' },
+              gap: 2,
+              mb: 3,
+            }}
           >
-            <Stack
-              direction={{
-                xs: 'column',
-                sm: 'row',
-              }}
-              sx={{
-                justifyContent: 'space-between',
-                alignItems: {
-                  xs: 'flex-start',
-                  sm: 'center',
-                },
-                gap: 2,
-              }}
-            >
-              <Box>
+            <Box>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 1 }}
+              >
+                Leads&nbsp;&nbsp;›&nbsp;&nbsp;
+                {lead.contact_name}
+                &nbsp;&nbsp;›&nbsp;&nbsp;
+                Communication History
+              </Typography>
+
+              <Stack
+                direction="row"
+                spacing={1.25}
+                sx={{ alignItems: 'center', flexWrap: 'wrap' }}
+              >
                 <Typography
-                  variant="h6"
+                  variant="h4"
                   sx={{ fontWeight: 800 }}
                 >
-                  Communications
+                  Communication History
                 </Typography>
 
+                <Chip
+                  size="small"
+                  label={`Lead #${lead.id}`}
+                  variant="outlined"
+                  sx={{ fontWeight: 700 }}
+                />
+              </Stack>
+
+              <Typography
+                color="text.secondary"
+                sx={{ mt: 0.75 }}
+              >
+                View previous interactions with{' '}
+                {lead.contact_name} from{' '}
+                {lead.company_name}.
+              </Typography>
+            </Box>
+
+            {canAddCommunication && (
+              <Button
+                variant="contained"
+                startIcon={<AddRounded />}
+                onClick={openCommunicationDialog}
+                sx={{
+                  px: 2.5,
+                  minHeight: 42,
+                  textTransform: 'none',
+                  fontWeight: 700,
+                }}
+              >
+                Add Communication
+              </Button>
+            )}
+          </Stack>
+
+          <Divider sx={{ mb: 2.5 }} />
+
+          <Stack
+            direction={{ xs: 'column', lg: 'row' }}
+            sx={{
+              justifyContent: 'space-between',
+              alignItems: { xs: 'stretch', lg: 'center' },
+              gap: 2,
+              mb: 3,
+            }}
+          >
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              sx={{
+                alignItems: { xs: 'stretch', sm: 'center' },
+              }}
+            >
+              <Stack
+                direction="row"
+                spacing={0.75}
+                sx={{ alignItems: 'center', color: 'text.secondary' }}
+              >
+                <FilterListRounded fontSize="small" />
                 <Typography
-                  color="text.secondary"
-                  sx={{ mt: 0.5 }}
+                  variant="body2"
+                  sx={{ fontWeight: 700 }}
                 >
-                  Calls, emails, meetings and
-                  WhatsApp conversations recorded
-                  for this lead.
+                  Filter by:
                 </Typography>
-              </Box>
+              </Stack>
 
-              {canAddCommunication && (
+              {(
+                [
+                  ['ALL', 'All Activities'],
+                  ['CALL', 'Calls'],
+                  ['EMAIL', 'Emails'],
+                  ['MEETING', 'Meetings'],
+                  ['WHATSAPP', 'WhatsApp'],
+                ] as const
+              ).map(([value, label]) => (
                 <Button
-                  variant="contained"
-                  startIcon={<CallRounded />}
-                  onClick={openCommunicationDialog}
+                  key={value}
+                  size="small"
+                  variant={
+                    communicationFilter === value
+                      ? 'outlined'
+                      : 'text'
+                  }
+                  onClick={() =>
+                    setCommunicationFilter(value)
+                  }
+                  sx={{
+                    minWidth: 0,
+                    px: 1.5,
+                    color:
+                      communicationFilter === value
+                        ? 'text.primary'
+                        : 'text.secondary',
+                    borderColor: 'divider',
+                    textTransform: 'none',
+                    fontWeight:
+                      communicationFilter === value
+                        ? 700
+                        : 500,
+                  }}
                 >
-                  Add Communication
+                  {label}
                 </Button>
-              )}
+              ))}
             </Stack>
-          </Card>
 
-          {communications.length === 0 ? (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+            >
+              Showing {filteredCommunications.length}{' '}
+              {filteredCommunications.length === 1
+                ? 'activity'
+                : 'activities'}
+            </Typography>
+          </Stack>
+
+          {filteredCommunications.length === 0 ? (
             <Card
               variant="outlined"
               sx={{
                 p: 5,
                 textAlign: 'center',
+                boxShadow: 'none',
               }}
             >
               <Typography
                 variant="h6"
                 sx={{ fontWeight: 800 }}
               >
-                No communications yet
+                No communications found
               </Typography>
 
               <Typography
                 color="text.secondary"
                 sx={{ mt: 1 }}
               >
-                {canAddCommunication
-                  ? 'Record the first customer interaction for this lead.'
-                  : 'No customer interactions have been recorded for this lead.'}
+                {communications.length === 0
+                  ? (
+                    canAddCommunication
+                      ? 'Record the first customer interaction for this lead.'
+                      : 'No customer interactions have been recorded for this lead.'
+                  )
+                  : 'There are no communications matching this filter.'}
               </Typography>
             </Card>
           ) : (
-            communications.map(
-              (communication) => (
-                <Card
-                  key={communication.id}
-                  variant="outlined"
-                  sx={{ p: 3 }}
-                >
-                  <Stack
-                    direction={{
-                      xs: 'column',
-                      sm: 'row',
-                    }}
-                    sx={{
-                      justifyContent: 'space-between',
-                      alignItems: {
-                        xs: 'flex-start',
-                        sm: 'center',
-                      },
-                      gap: 2,
-                      mb: 2,
-                    }}
-                  >
+            <Box
+              sx={{
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 20,
+                  top: 22,
+                  bottom: 22,
+                  width: '1px',
+                  bgcolor: 'divider',
+                },
+              }}
+            >
+              <Stack spacing={2.25}>
+                {filteredCommunications.map(
+                  (communication) => (
                     <Stack
+                      key={communication.id}
                       direction="row"
-                      spacing={1.5}
+                      spacing={2}
                       sx={{
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
+                        position: 'relative',
+                        alignItems: 'flex-start',
                       }}
                     >
-                      <Chip
-                        size="small"
-                        label={
-                          communication.communication_type_display
-                        }
-                        color={getCommunicationColor(
+                      <Box
+                        sx={{
+                          position: 'relative',
+                          zIndex: 1,
+                          width: 42,
+                          height: 42,
+                          borderRadius: 1.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          bgcolor:
+                            communication.communication_type === 'CALL'
+                              ? 'primary.main'
+                              : communication.communication_type === 'EMAIL'
+                                ? 'info.main'
+                                : communication.communication_type === 'MEETING'
+                                  ? 'success.main'
+                                  : 'warning.main',
+                          color: 'common.white',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {getCommunicationIcon(
                           communication.communication_type,
                         )}
-                      />
+                      </Box>
 
-                      <Typography
-                        sx={{ fontWeight: 800 }}
+                      <Card
+                        variant="outlined"
+                        sx={{
+                          flex: 1,
+                          p: { xs: 2, sm: 2.5 },
+                          boxShadow: 'none',
+                        }}
                       >
-                        {communication.summary}
-                      </Typography>
-                    </Stack>
+                        <Stack
+                          direction={{ xs: 'column', sm: 'row' }}
+                          sx={{
+                            justifyContent: 'space-between',
+                            gap: 2,
+                          }}
+                        >
+                          <Box sx={{ flex: 1 }}>
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              sx={{
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                mb: 1,
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  px: 1,
+                                  py: 0.35,
+                                  borderRadius: 1,
+                                  bgcolor: 'action.hover',
+                                  color: 'text.secondary',
+                                  fontWeight: 800,
+                                  letterSpacing: '0.05em',
+                                }}
+                              >
+                                {communication.communication_type_display.toUpperCase()}
+                              </Typography>
 
+                              <Typography
+                                sx={{ fontWeight: 800 }}
+                              >
+                                {communication.summary}
+                              </Typography>
+                            </Stack>
+
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{
+                                lineHeight: 1.65,
+                                whiteSpace: 'pre-wrap',
+                              }}
+                            >
+                              {communication.notes ||
+                                'No additional communication details were recorded.'}
+                            </Typography>
+
+                            <Stack
+                              direction={{ xs: 'column', sm: 'row' }}
+                              spacing={{ xs: 0.75, sm: 2 }}
+                              sx={{ mt: 2 }}
+                            >
+                              <Stack
+                                direction="row"
+                                spacing={0.75}
+                                sx={{
+                                  alignItems: 'center',
+                                  color: 'text.secondary',
+                                }}
+                              >
+                                <PersonOutlineRounded
+                                  sx={{ fontSize: 17 }}
+                                />
+                                <Typography variant="caption">
+                                  Recorded by{' '}
+                                  {communication.created_by_name}
+                                </Typography>
+                              </Stack>
+
+                              <Stack
+                                direction="row"
+                                spacing={0.75}
+                                sx={{
+                                  alignItems: 'center',
+                                  color: 'text.secondary',
+                                }}
+                              >
+                                <CalendarTodayRounded
+                                  sx={{ fontSize: 16 }}
+                                />
+                                <Typography variant="caption">
+                                  {formatDate(
+                                    communication.communication_date,
+                                  )}
+                                </Typography>
+                              </Stack>
+                            </Stack>
+                          </Box>
+                        </Stack>
+                      </Card>
+                    </Stack>
+                  ),
+                )}
+              </Stack>
+            </Box>
+          )}
+
+          <Divider sx={{ my: 4 }} />
+
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={2}
+          >
+            {canAddCommunication && (
+              <Card
+                variant="outlined"
+                onClick={openCommunicationDialog}
+                sx={{
+                  flex: 1,
+                  p: 2.25,
+                  cursor: 'pointer',
+                  boxShadow: 'none',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: 'action.hover',
+                  },
+                }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  sx={{ alignItems: 'center' }}
+                >
+                  <CallRounded color="primary" />
+                  <Box>
+                    <Typography sx={{ fontWeight: 800 }}>
+                      Log an Interaction
+                    </Typography>
                     <Typography
                       variant="body2"
                       color="text.secondary"
                     >
-                      {formatDate(
-                        communication.communication_date,
-                      )}
+                      Record the latest customer communication.
                     </Typography>
-                  </Stack>
+                  </Box>
+                </Stack>
+              </Card>
+            )}
 
-                  {communication.notes && (
+            {canScheduleFollowUp && (
+              <Card
+                variant="outlined"
+                onClick={openFollowUpDialog}
+                sx={{
+                  flex: 1,
+                  p: 2.25,
+                  cursor: 'pointer',
+                  boxShadow: 'none',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: 'action.hover',
+                  },
+                }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  sx={{ alignItems: 'center' }}
+                >
+                  <EventRounded color="primary" />
+                  <Box>
+                    <Typography sx={{ fontWeight: 800 }}>
+                      Schedule Follow-up
+                    </Typography>
                     <Typography
-                      sx={{
-                        whiteSpace: 'pre-wrap',
-                      }}
+                      variant="body2"
+                      color="text.secondary"
                     >
-                      {communication.notes}
+                      Set the next action for this lead.
                     </Typography>
-                  )}
-
-                  <Divider sx={{ my: 2 }} />
-
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    Recorded by{' '}
-                    {communication.created_by_name}
-                    {' · '}
-                    {formatDate(
-                      communication.created_at,
-                    )}
-                  </Typography>
-                </Card>
-              ),
-            )
-          )}
-        </Stack>
+                  </Box>
+                </Stack>
+              </Card>
+            )}
+          </Stack>
+        </Box>
       )}
 
       {activeTab === 'follow-ups' && (
@@ -1624,32 +1922,146 @@ function LeadWorkspacePage() {
         onClose={closeCommunicationDialog}
         fullWidth
         maxWidth="sm"
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 2,
+              overflow: 'hidden',
+            },
+          },
+        }}
       >
-        <DialogTitle>
-          Record Communication
+        <DialogTitle
+          sx={{
+            px: 3,
+            py: 2.25,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 2,
+            }}
+          >
+            <Box>
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 800 }}
+              >
+                Add Communication
+              </Typography>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.25 }}
+              >
+                Log a new interaction with this contact.
+              </Typography>
+            </Box>
+
+            <IconButton
+              size="small"
+              onClick={closeCommunicationDialog}
+              disabled={isCreatingCommunication}
+              aria-label="Close communication dialog"
+            >
+              <CloseRounded />
+            </IconButton>
+          </Stack>
         </DialogTitle>
 
-        <DialogContent>
-          <Stack
-            spacing={2.5}
-            sx={{ mt: 1 }}
-          >
+        <DialogContent
+          sx={{
+            px: 3,
+            pt: 3,
+            pb: 2,
+          }}
+        >
+          <Stack spacing={2.5}>
             {communicationError && (
               <Alert severity="error">
                 {communicationError}
               </Alert>
             )}
 
+            <Card
+              variant="outlined"
+              sx={{
+                p: 2,
+                bgcolor: 'action.hover',
+                boxShadow: 'none',
+              }}
+            >
+              <Stack
+                direction="row"
+                spacing={1.5}
+                sx={{ alignItems: 'center' }}
+              >
+                <Avatar
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    fontWeight: 800,
+                  }}
+                >
+                  {lead.contact_name
+                    .split(' ')
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((namePart) =>
+                      namePart.charAt(0).toUpperCase(),
+                    )
+                    .join('')}
+                </Avatar>
+
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ fontWeight: 800 }}>
+                    {lead.contact_name}
+                  </Typography>
+
+                  <Stack
+                    direction="row"
+                    spacing={0.75}
+                    sx={{
+                      alignItems: 'center',
+                      color: 'text.secondary',
+                      mt: 0.25,
+                    }}
+                  >
+                    <BusinessRounded
+                      sx={{ fontSize: 16 }}
+                    />
+
+                    <Typography variant="body2">
+                      {lead.company_name}
+                    </Typography>
+                  </Stack>
+                </Box>
+
+                <Chip
+                  size="small"
+                  label="Lead"
+                  variant="outlined"
+                  sx={{ fontWeight: 700 }}
+                />
+              </Stack>
+            </Card>
+
             <FormControl fullWidth>
               <InputLabel>
-                Communication type
+                Communication Type
               </InputLabel>
 
               <Select
                 value={
                   communicationForm.communicationType
                 }
-                label="Communication type"
+                label="Communication Type"
                 onChange={(event) =>
                   setCommunicationForm(
                     (current) => ({
@@ -1662,50 +2074,112 @@ function LeadWorkspacePage() {
                 }
               >
                 <MenuItem value="CALL">
-                  Call
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: 'center' }}
+                  >
+                    <CallRounded fontSize="small" />
+                    <span>Call</span>
+                  </Stack>
                 </MenuItem>
 
                 <MenuItem value="EMAIL">
-                  Email
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: 'center' }}
+                  >
+                    <MailOutlineRounded fontSize="small" />
+                    <span>Email</span>
+                  </Stack>
                 </MenuItem>
 
                 <MenuItem value="MEETING">
-                  Meeting
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: 'center' }}
+                  >
+                    <GroupsRounded fontSize="small" />
+                    <span>Meeting</span>
+                  </Stack>
                 </MenuItem>
 
                 <MenuItem value="WHATSAPP">
-                  WhatsApp
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: 'center' }}
+                  >
+                    <ChatBubbleOutlineRounded fontSize="small" />
+                    <span>WhatsApp</span>
+                  </Stack>
                 </MenuItem>
               </Select>
             </FormControl>
 
-            <TextField
-              required
-              type="datetime-local"
-              label="Communication date and time"
-              value={
-                communicationForm.communicationDate
-              }
-              onChange={(event) =>
-                setCommunicationForm(
-                  (current) => ({
-                    ...current,
-                    communicationDate:
-                      event.target.value,
-                  }),
-                )
-              }
-              slotProps={{
-                inputLabel: {
-                  shrink: true,
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: '1fr 1fr',
                 },
+                gap: 2,
               }}
-            />
+            >
+              <TextField
+                required
+                type="date"
+                label="Date"
+                value={
+                  communicationForm.communicationDate
+                }
+                onChange={(event) =>
+                  setCommunicationForm(
+                    (current) => ({
+                      ...current,
+                      communicationDate:
+                        event.target.value,
+                    }),
+                  )
+                }
+                slotProps={{
+                  inputLabel: {
+                    shrink: true,
+                  },
+                }}
+              />
+
+              <TextField
+                required
+                type="time"
+                label="Time"
+                value={
+                  communicationForm.communicationTime
+                }
+                onChange={(event) =>
+                  setCommunicationForm(
+                    (current) => ({
+                      ...current,
+                      communicationTime:
+                        event.target.value,
+                    }),
+                  )
+                }
+                slotProps={{
+                  inputLabel: {
+                    shrink: true,
+                  },
+                }}
+              />
+            </Box>
 
             <TextField
               required
-              label="Summary"
-              placeholder="Briefly describe the customer interaction"
+              label="Subject / Title"
+              placeholder="e.g. Initial discovery call"
               value={communicationForm.summary}
               onChange={(event) =>
                 setCommunicationForm(
@@ -1720,14 +2194,13 @@ function LeadWorkspacePage() {
                   maxLength: 255,
                 },
               }}
-              helperText={`${communicationForm.summary.length}/255`}
             />
 
             <TextField
               multiline
-              minRows={4}
-              label="Notes"
-              placeholder="Add useful details, outcomes, requests or context"
+              minRows={5}
+              label="Communication Details"
+              placeholder="Summarize the key points of the conversation..."
               value={communicationForm.notes}
               onChange={(event) =>
                 setCommunicationForm(
@@ -1744,36 +2217,69 @@ function LeadWorkspacePage() {
         <DialogActions
           sx={{
             px: 3,
-            pb: 3,
+            py: 2,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            justifyContent: 'space-between',
           }}
         >
-          <Button
-            onClick={closeCommunicationDialog}
-            disabled={isCreatingCommunication}
+          <Stack
+            direction="row"
+            spacing={0.75}
+            sx={{
+              alignItems: 'center',
+              color: 'text.secondary',
+            }}
           >
-            Cancel
-          </Button>
+            <PersonOutlineRounded
+              sx={{ fontSize: 17 }}
+            />
 
-          <Button
-            variant="contained"
-            onClick={() =>
-              void handleCreateCommunication()
-            }
-            disabled={
-              isCreatingCommunication ||
-              !communicationForm.summary.trim() ||
-              !communicationForm.communicationDate
-            }
+            <Typography variant="caption">
+              Visible to permitted CRM team members
+            </Typography>
+          </Stack>
+
+          <Stack
+            direction="row"
+            spacing={1}
           >
-            {isCreatingCommunication ? (
-              <CircularProgress
-                size={22}
-                color="inherit"
-              />
-            ) : (
-              'Save Communication'
-            )}
-          </Button>
+            <Button
+              variant="outlined"
+              onClick={closeCommunicationDialog}
+              disabled={isCreatingCommunication}
+              sx={{ textTransform: 'none' }}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="contained"
+              onClick={() =>
+                void handleCreateCommunication()
+              }
+              disabled={
+                isCreatingCommunication ||
+                !communicationForm.summary.trim() ||
+                !communicationForm.communicationDate ||
+                !communicationForm.communicationTime
+              }
+              sx={{
+                textTransform: 'none',
+                px: 2.5,
+                fontWeight: 700,
+              }}
+            >
+              {isCreatingCommunication ? (
+                <CircularProgress
+                  size={22}
+                  color="inherit"
+                />
+              ) : (
+                'Save Communication'
+              )}
+            </Button>
+          </Stack>
         </DialogActions>
       </Dialog>
 
