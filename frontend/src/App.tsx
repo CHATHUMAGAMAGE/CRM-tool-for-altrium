@@ -7,6 +7,7 @@ import AppShell from './layouts/AppShell'
 import AdminPage from './pages/AdminPage'
 import CustomersPage from './pages/CustomersPage'
 import DashboardPage from './pages/DashboardPage'
+import FollowUpDetailPage from './pages/FollowUpDetailPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import LeadWorkspacePage from './pages/LeadWorkspacePage'
 import LeadsPage from './pages/LeadsPage'
@@ -58,6 +59,11 @@ function App() {
           <Route
             path="/leads/:leadId"
             element={<LeadWorkspacePage />}
+          />
+
+          <Route
+            path="/follow-ups/:followUpId"
+            element={<FollowUpDetailPage />}
           />
 
           <Route

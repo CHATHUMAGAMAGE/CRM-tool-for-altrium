@@ -99,17 +99,26 @@ export type FollowUp = {
   title: string
   description: string
   due_date: string
+
   assigned_to: number | null
   assigned_to_name: string | null
   assigned_to_username: string | null
+
   status: FollowUpStatus
   status_display: string
   is_overdue: boolean
+
   completed_at: string | null
+  completed_by: number | null
+  completed_by_name: string | null
+  completed_by_username: string | null
+
   created_by: number
   created_by_name: string
   created_by_username: string
+
   created_at: string
+  updated_at: string
 }
 
 export type CreateFollowUpInput = {
@@ -379,6 +388,22 @@ export async function getLeadFollowUps(
   }
 
   return data
+}
+
+export async function getFollowUp(
+  followUpId: number,
+): Promise<FollowUp> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/follow-ups/${followUpId}/`,
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response),
+    )
+  }
+
+  return (await response.json()) as FollowUp
 }
 
 export async function createLeadFollowUp(

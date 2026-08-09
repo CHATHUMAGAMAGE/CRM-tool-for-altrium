@@ -303,6 +303,8 @@ class FollowUpListCreateView(generics.ListCreateAPIView):
             "assigned_to__profile",
             "created_by",
             "created_by__profile",
+            "completed_by",
+            "completed_by__profile",
         )
 
         status_value = self.request.query_params.get("status")
@@ -367,6 +369,8 @@ class FollowUpDetailView(generics.RetrieveUpdateAPIView):
             "assigned_to__profile",
             "created_by",
             "created_by__profile",
+            "completed_by",
+            "completed_by__profile",
         )
 
         if profile is None:

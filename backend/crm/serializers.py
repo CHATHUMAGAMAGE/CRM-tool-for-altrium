@@ -255,6 +255,8 @@ class FollowUpSerializer(serializers.ModelSerializer):
     assigned_to_username = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
     created_by_username = serializers.SerializerMethodField()
+    completed_by_name = serializers.SerializerMethodField()
+    completed_by_username = serializers.SerializerMethodField()
 
     assigned_to = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.filter(
@@ -280,17 +282,23 @@ class FollowUpSerializer(serializers.ModelSerializer):
             "status_display",
             "is_overdue",
             "completed_at",
+            "completed_by",
+            "completed_by_name",
+            "completed_by_username",
             "created_by",
             "created_by_name",
             "created_by_username",
             "created_at",
+            "updated_at",
         ]
         read_only_fields = [
             "id",
             "lead",
             "completed_at",
+            "completed_by",
             "created_by",
             "created_at",
+            "updated_at",
         ]
 
     def get_assigned_to_name(self, obj):
@@ -310,6 +318,19 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
     def get_created_by_username(self, obj):
         return obj.created_by.username
+
+    def get_completed_by_name(self, obj):
+        if obj.completed_by is None:
+            return None
+
+        full_name = obj.completed_by.get_full_name().strip()
+        return full_name or obj.completed_by.username
+
+    def get_completed_by_username(self, obj):
+        if obj.completed_by is None:
+            return None
+
+        return obj.completed_by.username
 
     def validate_title(self, value):
         cleaned_value = value.strip()
@@ -433,8 +454,13 @@ class FollowUpSerializer(serializers.ModelSerializer):
             instance.status == FollowUp.Status.PENDING
             and requested_status == FollowUp.Status.COMPLETED
         ):
+            request = self.context.get("request")
+            user = getattr(request, "user", None)
+
             validated_data["completed_at"] = timezone.now()
+            validated_data["completed_by"] = user
         elif requested_status != FollowUp.Status.COMPLETED:
             validated_data["completed_at"] = None
+            validated_data["completed_by"] = None
 
         return super().update(instance, validated_data)
