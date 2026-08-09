@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 
+import BrandLogo from '@/components/BrandLogo';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LoginScreen() {
@@ -55,14 +56,12 @@ export default function LoginScreen() {
       >
         <View style={styles.content}>
           <View style={styles.brandContainer}>
-            <View style={styles.logo}>
-              <Text style={styles.logoText}>11</Text>
-            </View>
-
-            <Text style={styles.brandText}>
-              <Text style={styles.elevenText}>ELEVEN</Text>
-              <Text style={styles.crmText}> CRM</Text>
-            </Text>
+            <BrandLogo
+              variant="horizontal"
+              tone="dark"
+              width={260}
+              style={styles.brandLogo}
+            />
 
             <Text style={styles.title}>Welcome Back!</Text>
 
@@ -116,11 +115,18 @@ export default function LoginScreen() {
                 </Text>
               </Pressable>
             </View>
+
             <Link href="/forgot-password" asChild>
-              <Pressable disabled={isSubmitting} style={styles.forgotPassword}>
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              <Pressable
+                disabled={isSubmitting}
+                style={styles.forgotPassword}
+              >
+                <Text style={styles.forgotPasswordText}>
+                  Forgot Password?
+                </Text>
               </Pressable>
             </Link>
+
             {errorMessage ? (
               <Text style={styles.errorText}>{errorMessage}</Text>
             ) : null}
@@ -146,7 +152,7 @@ export default function LoginScreen() {
         </View>
 
         <Text style={styles.footer}>
-          {'Copyright'} 2026 ELEVEN CRM. All rights reserved.
+          Copyright 2026 ELEVEN CRM. All rights reserved.
         </Text>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -174,35 +180,9 @@ const styles = StyleSheet.create({
     marginBottom: 42,
   },
 
-  logo: {
-    width: 92,
-    height: 92,
-    borderRadius: 24,
-    backgroundColor: '#1557E8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-
-  logoText: {
-    color: '#FFFFFF',
-    fontSize: 30,
-    fontWeight: '800',
-    letterSpacing: 3,
-  },
-
-  brandText: {
-    fontSize: 36,
-    fontWeight: '800',
-    marginBottom: 44,
-  },
-
-  elevenText: {
-    color: '#1557E8',
-  },
-
-  crmText: {
-    color: '#111827',
+  brandLogo: {
+    alignSelf: 'center',
+    marginBottom: 42,
   },
 
   title: {
@@ -269,6 +249,7 @@ const styles = StyleSheet.create({
     color: '#1557E8',
     fontWeight: '600',
   },
+
   forgotPassword: {
     alignSelf: 'flex-end',
     marginTop: 12,
