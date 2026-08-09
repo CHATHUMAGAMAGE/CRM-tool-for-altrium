@@ -126,6 +126,10 @@ class FollowUpApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["id"], self.follow_up.id)
+        self.assertIsNone(response.data[0]["completed_by"])
+        self.assertIsNone(response.data[0]["completed_by_name"])
+        self.assertIsNone(response.data[0]["completed_by_username"])
+        self.assertIn("updated_at", response.data[0])
 
     def test_sales_rep_cannot_access_another_reps_lead(self):
         self.client.force_authenticate(self.sales_rep)
@@ -225,13 +229,61 @@ class FollowUpApiTests(APITestCase):
         self.client.force_authenticate(self.sales_rep)
         response = self.client.patch(
             self.detail_url(self.follow_up),
-            {"status": FollowUp.Status.COMPLETED},
+            {
+                "status": FollowUp.Status.COMPLETED,
+                "completed_by": self.other_sales_rep.id,
+            },
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
         self.follow_up.refresh_from_db()
-        self.assertEqual(self.follow_up.status, FollowUp.Status.COMPLETED)
+
+        self.assertEqual(
+            self.follow_up.status,
+            FollowUp.Status.COMPLETED,
+        )
         self.assertIsNotNone(self.follow_up.completed_at)
+        self.assertEqual(
+            self.follow_up.completed_by,
+            self.sales_rep,
+        )
+
+        self.assertEqual(
+            response.data["completed_by"],
+            self.sales_rep.id,
+        )
+        self.assertEqual(
+            response.data["completed_by_name"],
+            self.sales_rep.username,
+        )
+        self.assertEqual(
+            response.data["completed_by_username"],
+            self.sales_rep.username,
+        )
+        self.assertIn("updated_at", response.data)
+
+    def test_completed_by_cannot_be_spoofed_without_completion(self):
+        self.client.force_authenticate(self.sales_rep)
+
+        response = self.client.patch(
+            self.detail_url(self.follow_up),
+            {
+                "title": "Updated follow-up title",
+                "completed_by": self.other_sales_rep.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.follow_up.refresh_from_db()
+
+        self.assertIsNone(self.follow_up.completed_by)
+        self.assertIsNone(response.data["completed_by"])
 
     def test_sales_rep_cannot_update_other_reps_follow_up(self):
         other_follow_up = FollowUp.objects.create(
