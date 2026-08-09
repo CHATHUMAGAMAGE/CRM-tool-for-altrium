@@ -73,6 +73,7 @@ export async function loginUser(
   }
 
   const tokens: LoginResponse = await response.json();
+
   await saveTokens(tokens);
 }
 
@@ -148,6 +149,7 @@ export async function authenticatedRequest(
   }
 
   const refreshedAccessToken = await refreshAccessToken();
+
   response = await sendRequest(refreshedAccessToken);
 
   return response;
@@ -161,4 +163,74 @@ export async function getCurrentUser(): Promise<CurrentUser> {
   }
 
   return response.json();
+}
+
+export async function logoutUser(): Promise<void> {
+  const refreshToken = await getRefreshToken();
+
+  try {
+    if (refreshToken) {
+      await authenticatedRequest('/api/v1/auth/logout/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          refresh: refreshToken,
+        }),
+      });
+    }
+  } finally {
+    await clearTokens();
+  }
+}
+
+export async function requestPasswordReset(email: string): Promise<string> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/auth/forgot-password/`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response));
+  }
+
+  const data = await response.json();
+  return data.detail;
+}
+
+export async function resetPassword(
+  uid: string,
+  token: string,
+  newPassword: string,
+  confirmPassword: string,
+): Promise<string> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/auth/reset-password/`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        uid,
+        token,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response));
+  }
+
+  const data = await response.json();
+  return data.detail;
 }
