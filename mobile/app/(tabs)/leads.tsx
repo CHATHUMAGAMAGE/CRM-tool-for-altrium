@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
-  Pressable,
   RefreshControl,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -20,11 +19,11 @@ export default function LeadsScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const loadLeads = useCallback(async (searchValue = '') => {
+  const loadLeads = useCallback(async (searchTerm = '') => {
     try {
       setErrorMessage('');
 
-      const data = await getLeads(searchValue);
+      const data = await getLeads(searchTerm);
       setLeads(data);
     } catch (error) {
       setErrorMessage(
@@ -32,90 +31,79 @@ export default function LeadsScreen() {
           ? error.message
           : 'Unable to load assigned leads.',
       );
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadLeads();
+    const loadInitialLeads = async () => {
+      setIsLoading(true);
+
+      try {
+        await loadLeads();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadInitialLeads();
   }, [loadLeads]);
 
-  const handleSearch = () => {
-    void loadLeads(search);
-  };
-
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    void loadLeads(search);
+
+    try {
+      await loadLeads(search);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
-  const renderLead = ({ item }: { item: Lead }) => (
-    <Pressable style={styles.leadCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.companyContainer}>
-          <Text style={styles.companyName} numberOfLines={1}>
-            {item.company_name}
-          </Text>
+  const handleSearch = async () => {
+    setIsLoading(true);
 
-          <Text style={styles.contactName} numberOfLines={1}>
-            {item.contact_name}
-          </Text>
-        </View>
+    try {
+      await loadLeads(search);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>
-            {item.status_display}
-          </Text>
-        </View>
-      </View>
+  const getStatusStyle = (status: Lead['status']) => {
+    switch (status) {
+      case 'QUALIFIED':
+      case 'CONVERTED':
+        return styles.statusSuccess;
 
-      <View style={styles.details}>
-        {item.email ? (
-          <Text style={styles.detailText} numberOfLines={1}>
-            {item.email}
-          </Text>
-        ) : null}
+      case 'LOST':
+        return styles.statusLost;
 
-        <Text style={styles.detailText}>
-          {item.phone}
-        </Text>
+      case 'CONTACTED':
+      case 'FOLLOW_UP_REQUIRED':
+      case 'PROPOSAL_SENT':
+      case 'NEGOTIATION':
+        return styles.statusActive;
 
-        {item.source ? (
-          <Text style={styles.sourceText}>
-            Source: {item.source}
-          </Text>
-        ) : null}
-      </View>
-    </Pressable>
-  );
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" />
-          <Text style={styles.loadingText}>
-            Loading assigned leads...
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+      case 'NEW':
+      default:
+        return styles.statusNew;
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+          />
+        }
+      >
         <View style={styles.header}>
-          <Text style={styles.brandText}>
-            <Text style={styles.elevenText}>ELEVEN</Text>
-            <Text style={styles.crmText}> CRM</Text>
-          </Text>
-
           <Text style={styles.title}>Assigned Leads</Text>
           <Text style={styles.subtitle}>
-            Leads assigned to you
+            Manage and follow up with your assigned leads.
           </Text>
         </View>
 
@@ -127,64 +115,86 @@ export default function LeadsScreen() {
             placeholderTextColor="#8A919F"
             autoCapitalize="none"
             autoCorrect={false}
-            style={styles.searchInput}
             returnKeyType="search"
             onSubmitEditing={handleSearch}
+            style={styles.searchInput}
           />
-
-          <Pressable
-            onPress={handleSearch}
-            style={styles.searchButton}
-          >
-            <Text style={styles.searchButtonText}>Search</Text>
-          </Pressable>
         </View>
 
-        {errorMessage ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>
-              {errorMessage}
-            </Text>
-
-            <Pressable
-              onPress={() => loadLeads(search)}
-              style={styles.retryButton}
-            >
-              <Text style={styles.retryButtonText}>
-                Try Again
-              </Text>
-            </Pressable>
+        {isLoading ? (
+          <View style={styles.centerState}>
+            <ActivityIndicator size="large" color="#1557E8" />
+            <Text style={styles.stateText}>Loading leads...</Text>
           </View>
-        ) : null}
-
-        {!errorMessage && leads.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyTitle}>
-              No assigned leads
-            </Text>
-
+        ) : errorMessage ? (
+          <View style={styles.stateCard}>
+            <Text style={styles.errorTitle}>Unable to load leads</Text>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        ) : leads.length === 0 ? (
+          <View style={styles.stateCard}>
+            <Text style={styles.emptyTitle}>No leads found</Text>
             <Text style={styles.emptyText}>
-              You currently have no leads assigned to you.
+              {search.trim()
+                ? 'No leads match your search.'
+                : 'You currently have no assigned leads.'}
             </Text>
           </View>
-        ) : null}
+        ) : (
+          <View style={styles.leadsContainer}>
+            <Text style={styles.resultsText}>
+              {leads.length} {leads.length === 1 ? 'lead' : 'leads'}
+            </Text>
 
-        {!errorMessage && leads.length > 0 ? (
-          <FlatList
-            data={leads}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={renderLead}
-            contentContainerStyle={styles.listContent}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={handleRefresh}
-              />
-            }
-            showsVerticalScrollIndicator={false}
-          />
-        ) : null}
-      </View>
+            {leads.map((lead) => (
+              <View key={lead.id} style={styles.leadCard}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.companyContainer}>
+                    <Text style={styles.companyName}>
+                      {lead.company_name}
+                    </Text>
+
+                    <Text style={styles.contactName}>
+                      {lead.contact_name}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      getStatusStyle(lead.status),
+                    ]}
+                  >
+                    <Text style={styles.statusText}>
+                      {lead.status_display}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailsContainer}>
+                  {lead.email ? (
+                    <Text style={styles.detailText}>
+                      {lead.email}
+                    </Text>
+                  ) : null}
+
+                  {lead.phone ? (
+                    <Text style={styles.detailText}>
+                      {lead.phone}
+                    </Text>
+                  ) : null}
+
+                  {lead.source ? (
+                    <Text style={styles.detailText}>
+                      Source: {lead.source}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -196,91 +206,113 @@ const styles = StyleSheet.create({
   },
 
   container: {
-    flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
+    paddingTop: 24,
+    paddingBottom: 30,
   },
 
   header: {
-    paddingTop: 20,
-    paddingBottom: 20,
-  },
-
-  brandText: {
-    fontSize: 26,
-    fontWeight: '800',
     marginBottom: 22,
-  },
-
-  elevenText: {
-    color: '#1557E8',
-  },
-
-  crmText: {
-    color: '#111827',
   },
 
   title: {
     color: '#111827',
-    fontSize: 30,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
+    marginBottom: 6,
   },
 
   subtitle: {
     color: '#6B7280',
     fontSize: 15,
-    marginTop: 5,
+    lineHeight: 21,
   },
 
   searchContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 18,
+    height: 52,
+    borderWidth: 1,
+    borderColor: '#D7DBE3',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 22,
   },
 
   searchInput: {
     flex: 1,
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#D7DBE3',
-    borderRadius: 12,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     fontSize: 16,
     color: '#111827',
-    backgroundColor: '#FFFFFF',
   },
 
-  searchButton: {
-    height: 50,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: '#1557E8',
+  centerState: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 60,
   },
 
-  searchButtonText: {
-    color: '#FFFFFF',
+  stateText: {
+    color: '#6B7280',
     fontSize: 15,
-    fontWeight: '700',
+    marginTop: 12,
   },
 
-  listContent: {
-    paddingBottom: 25,
-    gap: 12,
-  },
-
-  leadCard: {
+  stateCard: {
     borderWidth: 1,
     borderColor: '#E1E5EC',
     borderRadius: 16,
-    padding: 16,
+    padding: 22,
+    backgroundColor: '#F8FAFC',
+  },
+
+  errorTitle: {
+    color: '#B42318',
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+
+  errorText: {
+    color: '#7A271A',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  emptyTitle: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  leadsContainer: {
+    gap: 12,
+  },
+
+  resultsText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+
+  leadCard: {
     backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E1E5EC',
+    borderRadius: 16,
+    padding: 18,
   },
 
   cardHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
     gap: 12,
   },
 
@@ -290,99 +322,54 @@ const styles = StyleSheet.create({
 
   companyName: {
     color: '#111827',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
+    marginBottom: 5,
   },
 
   contactName: {
     color: '#6B7280',
-    fontSize: 15,
-    marginTop: 4,
+    fontSize: 14,
   },
 
   statusBadge: {
-    backgroundColor: '#EEF4FF',
-    borderRadius: 20,
+    borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
 
+  statusNew: {
+    backgroundColor: '#E8EEFF',
+  },
+
+  statusActive: {
+    backgroundColor: '#FFF4D6',
+  },
+
+  statusSuccess: {
+    backgroundColor: '#DCFCE7',
+  },
+
+  statusLost: {
+    backgroundColor: '#FEE2E2',
+  },
+
   statusText: {
-    color: '#1557E8',
+    color: '#374151',
     fontSize: 12,
     fontWeight: '700',
   },
 
-  details: {
-    marginTop: 15,
-    gap: 5,
+  detailsContainer: {
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#EEF0F4',
+    gap: 6,
   },
 
   detailText: {
-    color: '#374151',
+    color: '#6B7280',
     fontSize: 14,
-  },
-
-  sourceText: {
-    color: '#6B7280',
-    fontSize: 13,
-    marginTop: 3,
-  },
-
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  loadingText: {
-    color: '#6B7280',
-    fontSize: 15,
-    marginTop: 12,
-  },
-
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 30,
-  },
-
-  emptyTitle: {
-    color: '#111827',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-
-  emptyText: {
-    color: '#6B7280',
-    fontSize: 15,
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 22,
-  },
-
-  errorContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-
-  errorText: {
-    color: '#D32F2F',
-    fontSize: 15,
-    textAlign: 'center',
-  },
-
-  retryButton: {
-    marginTop: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#1557E8',
-  },
-
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
   },
 });
