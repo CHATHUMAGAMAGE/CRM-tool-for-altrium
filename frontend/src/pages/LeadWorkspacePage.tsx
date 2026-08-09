@@ -17,6 +17,7 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  Snackbar,
   Stack,
   Tab,
   Tabs,
@@ -37,11 +38,13 @@ import {
   FilterListRounded,
   GroupsRounded,
   MailOutlineRounded,
+  MoreVertRounded,
   PersonOutlineRounded,
 } from '@mui/icons-material'
 import {
   useNavigate,
   useParams,
+  useSearchParams,
 } from 'react-router'
 
 import {
@@ -54,7 +57,6 @@ import {
   getLead,
   getLeadCommunications,
   getLeadFollowUps,
-  updateFollowUp,
   type Communication,
   type CommunicationType,
   type FollowUp,
@@ -170,6 +172,10 @@ function getFollowUpLabel(
 ) {
   if (followUp.is_overdue) {
     return 'Overdue'
+  }
+
+  if (followUp.status === 'PENDING') {
+    return 'Upcoming'
   }
 
   return followUp.status_display
@@ -296,6 +302,7 @@ function InformationItem({
 
 function LeadWorkspacePage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const { leadId } = useParams()
 
@@ -312,7 +319,11 @@ function LeadWorkspacePage() {
     useState<FollowUp[]>([])
 
   const [activeTab, setActiveTab] =
-    useState<WorkspaceTab>('overview')
+    useState<WorkspaceTab>(() =>
+      searchParams.get('tab') === 'follow-ups'
+        ? 'follow-ups'
+        : 'overview',
+    )
 
   const [isLoading, setIsLoading] =
     useState(true)
@@ -337,9 +348,6 @@ function LeadWorkspacePage() {
   const [isCreatingFollowUp, setIsCreatingFollowUp] =
     useState(false)
 
-  const [updatingFollowUpId, setUpdatingFollowUpId] =
-    useState<number | null>(null)
-
   const [followUpDialogOpen, setFollowUpDialogOpen] =
     useState(false)
 
@@ -350,6 +358,11 @@ function LeadWorkspacePage() {
 
   const [followUpError, setFollowUpError] =
     useState('')
+
+  const [
+    followUpSuccessMessage,
+    setFollowUpSuccessMessage,
+  ] = useState('')
 
   const [successMessage, setSuccessMessage] =
     useState('')
@@ -501,27 +514,6 @@ function LeadWorkspacePage() {
   const canScheduleFollowUp =
     canWorkLead && !isClosedLead
 
-  const canUpdateFollowUp = (
-    followUp: FollowUp,
-  ) => {
-    if (!currentUser) {
-      return false
-    }
-
-    if (
-      currentUser.role === 'ADMIN' ||
-      currentUser.role === 'SALES_MANAGER' ||
-      currentUser.role === 'PROJECT_MANAGER'
-    ) {
-      return true
-    }
-
-    return (
-      currentUser.role === 'SALES_REP' &&
-      followUp.assigned_to === currentUser.id
-    )
-  }
-
   const openCommunicationDialog = () => {
     if (!canAddCommunication) {
       return
@@ -607,6 +599,7 @@ function LeadWorkspacePage() {
 
     setFollowUpError('')
     setSuccessMessage('')
+    setFollowUpSuccessMessage('')
     setFollowUpForm(
       createEmptyFollowUpForm(),
     )
@@ -675,7 +668,7 @@ function LeadWorkspacePage() {
         createEmptyFollowUpForm(),
       )
       setActiveTab('follow-ups')
-      setSuccessMessage(
+      setFollowUpSuccessMessage(
         'Follow-up scheduled successfully.',
       )
     } catch (requestError) {
@@ -686,57 +679,6 @@ function LeadWorkspacePage() {
       )
     } finally {
       setIsCreatingFollowUp(false)
-    }
-  }
-
-  const handleFollowUpStatusChange = async (
-    followUp: FollowUp,
-    status: Extract<
-      FollowUpStatus,
-      'COMPLETED' | 'CANCELLED'
-    >,
-  ) => {
-    if (
-      followUp.status !== 'PENDING' ||
-      !canUpdateFollowUp(followUp)
-    ) {
-      return
-    }
-
-    setUpdatingFollowUpId(followUp.id)
-    setFollowUpError('')
-    setSuccessMessage('')
-
-    try {
-      const updated =
-        await updateFollowUp(
-          followUp.id,
-          { status },
-        )
-
-      setFollowUps((current) =>
-        sortFollowUps(
-          current.map((item) =>
-            item.id === updated.id
-              ? updated
-              : item,
-          ),
-        ),
-      )
-
-      setSuccessMessage(
-        status === 'COMPLETED'
-          ? 'Follow-up marked as completed.'
-          : 'Follow-up cancelled.',
-      )
-    } catch (requestError) {
-      setFollowUpError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Unable to update the follow-up.',
-      )
-    } finally {
-      setUpdatingFollowUpId(null)
     }
   }
 
@@ -1603,10 +1545,13 @@ function LeadWorkspacePage() {
       )}
 
       {activeTab === 'follow-ups' && (
-        <Stack spacing={3}>
+        <Stack spacing={2.5}>
           <Card
             variant="outlined"
-            sx={{ p: 3 }}
+            sx={{
+              p: { xs: 2.25, sm: 2.75 },
+              boxShadow: 'none',
+            }}
           >
             <Stack
               direction={{
@@ -1631,12 +1576,12 @@ function LeadWorkspacePage() {
                 </Typography>
 
                 <Typography
+                  variant="body2"
                   color="text.secondary"
                   sx={{ mt: 0.5 }}
                 >
-                  Track upcoming, overdue,
-                  completed and cancelled work
-                  for this lead.
+                  Track upcoming, overdue, completed and
+                  cancelled work for this lead.
                 </Typography>
               </Box>
 
@@ -1645,6 +1590,11 @@ function LeadWorkspacePage() {
                   variant="contained"
                   startIcon={<EventRounded />}
                   onClick={openFollowUpDialog}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    px: 2,
+                  }}
                 >
                   Schedule Follow-up
                 </Button>
@@ -1670,6 +1620,7 @@ function LeadWorkspacePage() {
               sx={{
                 p: 5,
                 textAlign: 'center',
+                boxShadow: 'none',
               }}
             >
               <Typography
@@ -1689,185 +1640,200 @@ function LeadWorkspacePage() {
               </Typography>
             </Card>
           ) : (
-            followUps.map((followUp) => {
-              const canUpdate =
-                followUp.status ===
-                  'PENDING' &&
-                canUpdateFollowUp(
-                  followUp,
-                )
-
-              return (
-                <Card
-                  key={followUp.id}
-                  variant="outlined"
-                  sx={{ p: 3 }}
+            followUps.map((followUp) => (
+              <Card
+                key={followUp.id}
+                variant="outlined"
+                onClick={() =>
+                  navigate(`/follow-ups/${followUp.id}`)
+                }
+                sx={{
+                  p: { xs: 2.25, sm: 2.75 },
+                  boxShadow: 'none',
+                  cursor: 'pointer',
+                  transition:
+                    'border-color 120ms ease, background-color 120ms ease',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: 'action.hover',
+                  },
+                }}
+              >
+                <Stack
+                  direction="row"
+                  sx={{
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: 2,
+                  }}
                 >
-                  <Stack
-                    direction={{
-                      xs: 'column',
-                      md: 'row',
-                    }}
-                    sx={{
-                      justifyContent:
-                        'space-between',
-                      alignItems: {
-                        xs: 'flex-start',
-                        md: 'center',
-                      },
-                      gap: 2,
-                    }}
-                  >
-                    <Box sx={{ flex: 1 }}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Stack
+                      direction="row"
+                      spacing={1.25}
+                      sx={{
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        mb: 1.25,
+                      }}
+                    >
+                      <Chip
+                        size="small"
+                        label={getFollowUpLabel(
+                          followUp,
+                        )}
+                        color={getFollowUpColor(
+                          followUp,
+                        )}
+                        sx={{ fontWeight: 700 }}
+                      />
+
+                      <Typography
+                        sx={{
+                          fontWeight: 800,
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {followUp.title}
+                      </Typography>
+                    </Stack>
+
+                    {followUp.description && (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          whiteSpace: 'pre-wrap',
+                          mb: 2,
+                        }}
+                      >
+                        {followUp.description}
+                      </Typography>
+                    )}
+
+                    <Stack
+                      direction={{
+                        xs: 'column',
+                        md: 'row',
+                      }}
+                      spacing={{
+                        xs: 0.75,
+                        md: 2.5,
+                      }}
+                      sx={{ mb: 1 }}
+                    >
                       <Stack
                         direction="row"
-                        spacing={1.5}
+                        spacing={0.75}
                         sx={{
                           alignItems: 'center',
-                          flexWrap: 'wrap',
-                          mb: 1,
+                          color: followUp.is_overdue
+                            ? 'error.main'
+                            : 'text.secondary',
                         }}
                       >
-                        <Chip
-                          size="small"
-                          label={getFollowUpLabel(
-                            followUp,
-                          )}
-                          color={getFollowUpColor(
-                            followUp,
-                          )}
+                        <CalendarTodayRounded
+                          sx={{ fontSize: 17 }}
                         />
-
-                        <Typography
-                          sx={{
-                            fontWeight: 800,
-                          }}
-                        >
-                          {followUp.title}
-                        </Typography>
-                      </Stack>
-
-                      {followUp.description && (
-                        <Typography
-                          sx={{
-                            whiteSpace:
-                              'pre-wrap',
-                          }}
-                        >
-                          {
-                            followUp.description
-                          }
-                        </Typography>
-                      )}
-
-                      <Stack
-                        direction={{
-                          xs: 'column',
-                          sm: 'row',
-                        }}
-                        spacing={{
-                          xs: 0.5,
-                          sm: 2,
-                        }}
-                        sx={{ mt: 2 }}
-                      >
-                        <Typography
-                          variant="body2"
-                          color={
-                            followUp.is_overdue
-                              ? 'error'
-                              : 'text.secondary'
-                          }
-                        >
+                        <Typography variant="body2">
                           Due:{' '}
                           {formatDate(
                             followUp.due_date,
                           )}
                         </Typography>
+                      </Stack>
 
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
+                      <Stack
+                        direction="row"
+                        spacing={0.75}
+                        sx={{
+                          alignItems: 'center',
+                          color: 'text.secondary',
+                        }}
+                      >
+                        <PersonOutlineRounded
+                          sx={{ fontSize: 18 }}
+                        />
+                        <Typography variant="body2">
                           Assigned to:{' '}
                           {followUp.assigned_to_name ||
                             'Unassigned'}
                         </Typography>
                       </Stack>
+                    </Stack>
 
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ mt: 0.5 }}
+                    <Stack
+                      direction={{
+                        xs: 'column',
+                        md: 'row',
+                      }}
+                      spacing={{
+                        xs: 0.75,
+                        md: 2.5,
+                      }}
+                    >
+                      <Stack
+                        direction="row"
+                        spacing={0.75}
+                        sx={{
+                          alignItems: 'center',
+                          color: 'text.secondary',
+                        }}
                       >
-                        Created by{' '}
-                        {followUp.created_by_name}
-                        {' · '}
-                        {formatDate(
-                          followUp.created_at,
-                        )}
-                      </Typography>
-
-                      {followUp.completed_at && (
-                        <Typography
-                          variant="body2"
-                          color="success.main"
-                          sx={{ mt: 0.5 }}
-                        >
-                          Completed:{' '}
+                        <PersonOutlineRounded
+                          sx={{ fontSize: 18 }}
+                        />
+                        <Typography variant="body2">
+                          Created by:{' '}
+                          {followUp.created_by_name}
+                          {' · '}
                           {formatDate(
-                            followUp.completed_at,
+                            followUp.created_at,
                           )}
                         </Typography>
-                      )}
-                    </Box>
-
-                    {canUpdate && (
-                      <Stack
-                        direction={{
-                          xs: 'column',
-                          sm: 'row',
-                        }}
-                        spacing={1}
-                      >
-                        <Button
-                          variant="contained"
-                          onClick={() =>
-                            void handleFollowUpStatusChange(
-                              followUp,
-                              'COMPLETED',
-                            )
-                          }
-                          disabled={
-                            updatingFollowUpId ===
-                            followUp.id
-                          }
-                        >
-                          Mark Complete
-                        </Button>
-
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          onClick={() =>
-                            void handleFollowUpStatusChange(
-                              followUp,
-                              'CANCELLED',
-                            )
-                          }
-                          disabled={
-                            updatingFollowUpId ===
-                            followUp.id
-                          }
-                        >
-                          Cancel
-                        </Button>
                       </Stack>
-                    )}
-                  </Stack>
-                </Card>
-              )
-            })
+
+                      {followUp.completed_at && (
+                        <Stack
+                          direction="row"
+                          spacing={0.75}
+                          sx={{
+                            alignItems: 'center',
+                            color: 'text.secondary',
+                          }}
+                        >
+                          <EventRounded
+                            sx={{ fontSize: 18 }}
+                          />
+                          <Typography variant="body2">
+                            Completed:{' '}
+                            {formatDate(
+                              followUp.completed_at,
+                            )}
+                            {followUp.completed_by_name
+                              ? ` · ${followUp.completed_by_name}`
+                              : ''}
+                          </Typography>
+                        </Stack>
+                      )}
+                    </Stack>
+                  </Box>
+
+                  <IconButton
+                    size="small"
+                    aria-label={`View ${followUp.title} details`}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      navigate(
+                        `/follow-ups/${followUp.id}`,
+                      )
+                    }}
+                  >
+                    <MoreVertRounded />
+                  </IconButton>
+                </Stack>
+              </Card>
+            ))
           )}
         </Stack>
       )}
@@ -2283,21 +2249,92 @@ function LeadWorkspacePage() {
         </DialogActions>
       </Dialog>
 
+      <Snackbar
+        open={Boolean(followUpSuccessMessage)}
+        autoHideDuration={5000}
+        onClose={() =>
+          setFollowUpSuccessMessage('')
+        }
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <Alert
+          severity="success"
+          variant="outlined"
+          onClose={() =>
+            setFollowUpSuccessMessage('')
+          }
+          sx={{
+            bgcolor: 'background.paper',
+            boxShadow: 3,
+            minWidth: {
+              xs: 'auto',
+              sm: 320,
+            },
+          }}
+        >
+          {followUpSuccessMessage}
+        </Alert>
+      </Snackbar>
+
       <Dialog
         open={followUpDialogOpen}
         onClose={closeFollowUpDialog}
         fullWidth
         maxWidth="sm"
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 2,
+              overflow: 'hidden',
+            },
+          },
+        }}
       >
-        <DialogTitle>
-          Schedule Follow-up
+        <DialogTitle
+          sx={{
+            px: 3,
+            py: 2.25,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 800 }}
+            >
+              Schedule Follow-up
+            </Typography>
+
+            <IconButton
+              size="small"
+              onClick={closeFollowUpDialog}
+              disabled={isCreatingFollowUp}
+              aria-label="Close follow-up dialog"
+            >
+              <CloseRounded />
+            </IconButton>
+          </Stack>
         </DialogTitle>
 
-        <DialogContent>
-          <Stack
-            spacing={2.5}
-            sx={{ mt: 1 }}
-          >
+        <DialogContent
+          sx={{
+            px: 3,
+            pt: 3,
+            pb: 2.5,
+          }}
+        >
+          <Stack spacing={2.5}>
             {followUpError && (
               <Alert severity="error">
                 {followUpError}
@@ -2307,7 +2344,7 @@ function LeadWorkspacePage() {
             <TextField
               required
               label="Title"
-              placeholder="e.g. Call about pricing decision"
+              placeholder="e.g. Call client for requirement discussion"
               value={followUpForm.title}
               onChange={(event) =>
                 setFollowUpForm(
@@ -2349,9 +2386,9 @@ function LeadWorkspacePage() {
 
             <TextField
               multiline
-              minRows={4}
+              minRows={5}
               label="Description"
-              placeholder="Add context or the action that needs to be completed"
+              placeholder="Add details about the follow-up..."
               value={
                 followUpForm.description
               }
@@ -2364,12 +2401,17 @@ function LeadWorkspacePage() {
                   }),
                 )
               }
+              slotProps={{
+                htmlInput: {
+                  maxLength: 1000,
+                },
+              }}
+              helperText={`${followUpForm.description.length}/1000`}
             />
 
             <Alert severity="info">
-              The follow-up will be assigned
-              to the Sales Representative
-              responsible for this lead.
+              The follow-up will be assigned to the Sales
+              Representative responsible for this lead.
             </Alert>
           </Stack>
         </DialogContent>
@@ -2377,12 +2419,16 @@ function LeadWorkspacePage() {
         <DialogActions
           sx={{
             px: 3,
-            pb: 3,
+            py: 2,
+            borderTop: '1px solid',
+            borderColor: 'divider',
           }}
         >
           <Button
+            variant="outlined"
             onClick={closeFollowUpDialog}
             disabled={isCreatingFollowUp}
+            sx={{ textTransform: 'none' }}
           >
             Cancel
           </Button>
@@ -2397,6 +2443,11 @@ function LeadWorkspacePage() {
               !followUpForm.title.trim() ||
               !followUpForm.dueDate
             }
+            sx={{
+              textTransform: 'none',
+              px: 2.5,
+              fontWeight: 700,
+            }}
           >
             {isCreatingFollowUp ? (
               <CircularProgress
