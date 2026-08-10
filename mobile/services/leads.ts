@@ -32,7 +32,26 @@ export type Lead = {
   converted_at: string | null;
 };
 
-async function getErrorMessage(response: Response): Promise<string> {
+export type Customer = {
+  id: number;
+  company_name: string;
+  contact_name: string;
+  email: string;
+  phone: string;
+  source_lead: number;
+  assigned_to: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeadConversionResponse = {
+  lead: Lead;
+  customer: Customer;
+};
+
+async function getErrorMessage(
+  response: Response,
+): Promise<string> {
   try {
     const data = await response.json();
 
@@ -40,10 +59,16 @@ async function getErrorMessage(response: Response): Promise<string> {
       return data.detail;
     }
 
-    if (typeof data === 'object' && data !== null) {
+    if (
+      typeof data === 'object' &&
+      data !== null
+    ) {
       return Object.values(data)
         .flat()
-        .filter((value): value is string => typeof value === 'string')
+        .filter(
+          (value): value is string =>
+            typeof value === 'string',
+        )
         .join(' ');
     }
   } catch {
@@ -65,7 +90,9 @@ export async function getLeads(
   );
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
+    throw new Error(
+      await getErrorMessage(response),
+    );
   }
 
   return response.json();
@@ -79,7 +106,28 @@ export async function getLead(
   );
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
+    throw new Error(
+      await getErrorMessage(response),
+    );
+  }
+
+  return response.json();
+}
+
+export async function convertLead(
+  id: number,
+): Promise<LeadConversionResponse> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/leads/${id}/convert/`,
+    {
+      method: 'POST',
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response),
+    );
   }
 
   return response.json();

@@ -1,7 +1,15 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import {
+  router,
+  useLocalSearchParams,
+} from 'expo-router';
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -10,14 +18,27 @@ import {
   View,
 } from 'react-native';
 
-import { getLead, type Lead } from '@/services/leads';
+import {
+  convertLead,
+  getLead,
+  type Lead,
+} from '@/services/leads';
 
 export default function LeadDetailsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } =
+    useLocalSearchParams<{ id: string }>();
 
-  const [lead, setLead] = useState<Lead | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [lead, setLead] =
+    useState<Lead | null>(null);
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [isConverting, setIsConverting] =
+    useState(false);
+
+  const [errorMessage, setErrorMessage] =
+    useState('');
 
   const loadLead = useCallback(async () => {
     if (!id) {
@@ -38,6 +59,7 @@ export default function LeadDetailsScreen() {
       setErrorMessage('');
 
       const data = await getLead(leadId);
+
       setLead(data);
     } catch (error) {
       setErrorMessage(
@@ -54,7 +76,63 @@ export default function LeadDetailsScreen() {
     void loadLead();
   }, [loadLead]);
 
-  const getStatusStyle = (status: Lead['status']) => {
+  const handleConvert = () => {
+    if (!lead) {
+      return;
+    }
+
+    Alert.alert(
+      'Convert Lead',
+      `Convert ${lead.company_name} into a customer?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Convert',
+          style: 'default',
+          onPress: () => {
+            void performConversion();
+          },
+        },
+      ],
+    );
+  };
+
+  const performConversion = async () => {
+    if (!lead) {
+      return;
+    }
+
+    setIsConverting(true);
+    setErrorMessage('');
+
+    try {
+      const result = await convertLead(
+        lead.id,
+      );
+
+      setLead(result.lead);
+
+      Alert.alert(
+        'Conversion Successful',
+        `${result.customer.company_name} has been converted into a customer.`,
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to convert this lead.',
+      );
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
+  const getStatusStyle = (
+    status: Lead['status'],
+  ) => {
     switch (status) {
       case 'QUALIFIED':
       case 'CONVERTED':
@@ -111,7 +189,8 @@ export default function LeadDetailsScreen() {
             </Text>
 
             <Text style={styles.errorText}>
-              {errorMessage || 'Lead not found.'}
+              {errorMessage ||
+                'Lead details are unavailable.'}
             </Text>
 
             <Pressable
@@ -121,7 +200,9 @@ export default function LeadDetailsScreen() {
               }}
               style={styles.retryButton}
             >
-              <Text style={styles.retryButtonText}>
+              <Text
+                style={styles.retryButtonText}
+              >
                 Try Again
               </Text>
             </Pressable>
@@ -142,13 +223,15 @@ export default function LeadDetailsScreen() {
           style={styles.backButton}
         >
           <Text style={styles.backButtonText}>
-            ← Back to Assigned Leads
+            ← Back
           </Text>
         </Pressable>
 
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerTextContainer}>
+          <View
+            style={styles.headerTextContainer}
+          >
             <Text style={styles.companyName}>
               {lead.company_name}
             </Text>
@@ -170,6 +253,72 @@ export default function LeadDetailsScreen() {
           </View>
         </View>
 
+        {/* Conversion Action */}
+        {lead.status !== 'CONVERTED' &&
+        lead.status !== 'LOST' ? (
+          <View style={styles.actionSection}>
+            <Text style={styles.actionTitle}>
+              Lead Action
+            </Text>
+
+            <Text style={styles.actionDescription}>
+              Convert this lead into a customer
+              once the opportunity is confirmed.
+            </Text>
+
+            <Pressable
+              onPress={handleConvert}
+              disabled={isConverting}
+              style={({ pressed }) => [
+                styles.convertButton,
+                pressed &&
+                  !isConverting &&
+                  styles.convertButtonPressed,
+                isConverting &&
+                  styles.convertButtonDisabled,
+              ]}
+            >
+              {isConverting ? (
+                <ActivityIndicator
+                  color="#FFFFFF"
+                />
+              ) : (
+                <Text
+                  style={styles.convertButtonText}
+                >
+                  Convert to Customer
+                </Text>
+              )}
+            </Pressable>
+
+            {errorMessage ? (
+              <Text style={styles.actionError}>
+                {errorMessage}
+              </Text>
+            ) : null}
+          </View>
+        ) : lead.status === 'CONVERTED' ? (
+          <View style={styles.convertedCard}>
+            <Text style={styles.convertedTitle}>
+              ✓ Customer Converted
+            </Text>
+
+            <Text
+              style={styles.convertedDescription}
+            >
+              This lead has already been converted
+              into a customer.
+            </Text>
+
+            {lead.converted_at ? (
+              <Text style={styles.convertedDate}>
+                Converted on{' '}
+                {formatDate(lead.converted_at)}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* Contact Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
@@ -179,17 +328,23 @@ export default function LeadDetailsScreen() {
           <View style={styles.infoCard}>
             <InfoRow
               label="Email"
-              value={lead.email || 'Not provided'}
+              value={
+                lead.email || 'Not provided'
+              }
             />
 
             <InfoRow
               label="Phone"
-              value={lead.phone || 'Not provided'}
+              value={
+                lead.phone || 'Not provided'
+              }
             />
 
             <InfoRow
               label="Source"
-              value={lead.source || 'Not provided'}
+              value={
+                lead.source || 'Not provided'
+              }
               isLast
             />
           </View>
@@ -249,19 +404,25 @@ export default function LeadDetailsScreen() {
           <View style={styles.infoCard}>
             <InfoRow
               label="Created"
-              value={formatDate(lead.created_at)}
+              value={formatDate(
+                lead.created_at,
+              )}
             />
 
             <InfoRow
               label="Last Updated"
-              value={formatDate(lead.updated_at)}
+              value={formatDate(
+                lead.updated_at,
+              )}
             />
 
             <InfoRow
               label="Converted"
               value={
                 lead.converted_at
-                  ? formatDate(lead.converted_at)
+                  ? formatDate(
+                      lead.converted_at,
+                    )
                   : 'Not converted'
               }
               isLast
@@ -270,7 +431,8 @@ export default function LeadDetailsScreen() {
         </View>
 
         {/* Lost Reason */}
-        {lead.status === 'LOST' && lead.lost_reason ? (
+        {lead.status === 'LOST' &&
+        lead.lost_reason ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
               Lost Reason
@@ -421,6 +583,86 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontSize: 12,
     fontWeight: '700',
+  },
+
+  actionSection: {
+    marginTop: 22,
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E1E5EC',
+  },
+
+  actionTitle: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+
+  actionDescription: {
+    color: '#6B7280',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+
+  convertButton: {
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: '#1557E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  convertButtonPressed: {
+    opacity: 0.8,
+  },
+
+  convertButtonDisabled: {
+    opacity: 0.6,
+  },
+
+  convertButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  actionError: {
+    color: '#B42318',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 10,
+  },
+
+  convertedCard: {
+    marginTop: 22,
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+
+  convertedTitle: {
+    color: '#166534',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+
+  convertedDescription: {
+    color: '#166534',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  convertedDate: {
+    color: '#166534',
+    fontSize: 13,
+    marginTop: 8,
   },
 
   section: {
