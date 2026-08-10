@@ -15,13 +15,16 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 
 import {
   convertLead,
   getLead,
+  updateLead,
   type Lead,
+  type LeadStatus,
 } from '@/services/leads';
 
 export default function LeadDetailsScreen() {
@@ -37,8 +40,30 @@ export default function LeadDetailsScreen() {
   const [isConverting, setIsConverting] =
     useState(false);
 
+  const [isUpdatingStatus, setIsUpdatingStatus] =
+    useState(false);
+
+  const [statusModalVisible, setStatusModalVisible] =
+    useState(false);
+
+  const [selectedStatus, setSelectedStatus] =
+    useState<LeadStatus | null>(null);
+
+  const [lostReason, setLostReason] =
+    useState('');
+
   const [errorMessage, setErrorMessage] =
     useState('');
+
+  const lifecycleStatuses: LeadStatus[] = [
+    'NEW',
+    'CONTACTED',
+    'FOLLOW_UP_REQUIRED',
+    'QUALIFIED',
+    'PROPOSAL_SENT',
+    'NEGOTIATION',
+    'LOST',
+  ];
 
   const loadLead = useCallback(async () => {
     if (!id) {
@@ -75,6 +100,114 @@ export default function LeadDetailsScreen() {
   useEffect(() => {
     void loadLead();
   }, [loadLead]);
+
+  const getStatusLabel = (
+    status: LeadStatus,
+  ): string => {
+    switch (status) {
+      case 'NEW':
+        return 'New';
+
+      case 'CONTACTED':
+        return 'Contacted';
+
+      case 'FOLLOW_UP_REQUIRED':
+        return 'Follow-up Required';
+
+      case 'QUALIFIED':
+        return 'Qualified';
+
+      case 'PROPOSAL_SENT':
+        return 'Proposal Sent';
+
+      case 'NEGOTIATION':
+        return 'Negotiation';
+
+      case 'LOST':
+        return 'Lost';
+
+      case 'CONVERTED':
+        return 'Converted';
+
+      default:
+        return status;
+    }
+  };
+
+  const handleOpenStatusModal = () => {
+    if (!lead) {
+      return;
+    }
+
+    setSelectedStatus(lead.status);
+    setLostReason('');
+    setErrorMessage('');
+    setStatusModalVisible(true);
+  };
+
+  const handleCloseStatusModal = () => {
+    if (isUpdatingStatus) {
+      return;
+    }
+
+    setStatusModalVisible(false);
+    setSelectedStatus(null);
+    setLostReason('');
+    setErrorMessage('');
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!lead || !selectedStatus) {
+      return;
+    }
+
+    if (
+      selectedStatus === 'LOST' &&
+      !lostReason.trim()
+    ) {
+      setErrorMessage(
+        'Please provide a reason before marking the lead as lost.',
+      );
+      return;
+    }
+
+    setIsUpdatingStatus(true);
+    setErrorMessage('');
+
+    try {
+      const updatedLead = await updateLead(
+        lead.id,
+        {
+          status: selectedStatus,
+          ...(selectedStatus === 'LOST'
+            ? {
+                lost_reason:
+                  lostReason.trim(),
+              }
+            : {}),
+        },
+      );
+
+      setLead(updatedLead);
+
+      setStatusModalVisible(false);
+      setSelectedStatus(null);
+      setLostReason('');
+
+      Alert.alert(
+        'Status Updated',
+        `Lead status changed to ${updatedLead.status_display}.`,
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to update lead status.',
+      );
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   const handleConvert = () => {
     if (!lead) {
@@ -170,7 +303,7 @@ export default function LeadDetailsScreen() {
     );
   }
 
-  if (errorMessage || !lead) {
+  if (errorMessage && !lead) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.errorContainer}>
@@ -189,8 +322,7 @@ export default function LeadDetailsScreen() {
             </Text>
 
             <Text style={styles.errorText}>
-              {errorMessage ||
-                'Lead details are unavailable.'}
+              {errorMessage}
             </Text>
 
             <Pressable
@@ -207,6 +339,18 @@ export default function LeadDetailsScreen() {
               </Text>
             </Pressable>
           </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!lead) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerState}>
+          <Text style={styles.stateText}>
+            Lead details are unavailable.
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -252,6 +396,42 @@ export default function LeadDetailsScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Lifecycle Action */}
+        {lead.status !== 'CONVERTED' &&
+        lead.status !== 'LOST' ? (
+          <View style={styles.actionSection}>
+            <Text style={styles.actionTitle}>
+              Lead Status
+            </Text>
+
+            <Text style={styles.actionDescription}>
+              Update the current stage of this
+              lead.
+            </Text>
+
+            <Pressable
+              onPress={handleOpenStatusModal}
+              disabled={
+                isUpdatingStatus ||
+                isConverting
+              }
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                pressed &&
+                  !isUpdatingStatus &&
+                  !isConverting &&
+                  styles.secondaryButtonPressed,
+              ]}
+            >
+              <Text
+                style={styles.secondaryButtonText}
+              >
+                Update Lead Status
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         {/* Conversion Action */}
         {lead.status !== 'CONVERTED' &&
@@ -316,6 +496,21 @@ export default function LeadDetailsScreen() {
                 {formatDate(lead.converted_at)}
               </Text>
             ) : null}
+          </View>
+        ) : null}
+
+        {/* Lost Lead */}
+        {lead.status === 'LOST' ? (
+          <View style={styles.lostCard}>
+            <Text style={styles.lostCardTitle}>
+              Lead Lost
+            </Text>
+
+            <Text style={styles.lostCardText}>
+              This lead is closed and can no longer
+              be progressed through the normal
+              lifecycle.
+            </Text>
           </View>
         ) : null}
 
@@ -448,6 +643,136 @@ export default function LeadDetailsScreen() {
           </View>
         ) : null}
       </ScrollView>
+
+      {/* Status Modal */}
+      {statusModalVisible ? (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              Update Lead Status
+            </Text>
+
+            <Text style={styles.modalSubtitle}>
+              Select the new lifecycle stage.
+            </Text>
+
+            <ScrollView
+              style={styles.statusOptions}
+              showsVerticalScrollIndicator={false}
+            >
+              {lifecycleStatuses.map(
+                (status) => {
+                  const isSelected =
+                    selectedStatus === status;
+
+                  return (
+                    <Pressable
+                      key={status}
+                      onPress={() => {
+                        setSelectedStatus(
+                          status,
+                        );
+
+                        if (
+                          status !== 'LOST'
+                        ) {
+                          setLostReason('');
+                          setErrorMessage('');
+                        }
+                      }}
+                      style={[
+                        styles.statusOption,
+                        isSelected &&
+                          styles.statusOptionSelected,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusOptionText,
+                          isSelected &&
+                            styles.statusOptionTextSelected,
+                        ]}
+                      >
+                        {getStatusLabel(status)}
+                      </Text>
+                    </Pressable>
+                  );
+                },
+              )}
+            </ScrollView>
+
+            {selectedStatus === 'LOST' ? (
+              <View
+                style={styles.lostReasonContainer}
+              >
+                <Text
+                  style={styles.lostReasonLabel}
+                >
+                  Reason for losing this lead
+                </Text>
+
+                <TextInput
+                  value={lostReason}
+                  onChangeText={setLostReason}
+                  placeholder="Enter the reason..."
+                  placeholderTextColor="#8A919F"
+                  multiline
+                  editable={!isUpdatingStatus}
+                  style={styles.lostReasonInput}
+                />
+              </View>
+            ) : null}
+
+            {errorMessage ? (
+              <Text style={styles.actionError}>
+                {errorMessage}
+              </Text>
+            ) : null}
+
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={handleCloseStatusModal}
+                disabled={isUpdatingStatus}
+                style={styles.modalCancelButton}
+              >
+                <Text
+                  style={styles.modalCancelText}
+                >
+                  Cancel
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  void handleStatusUpdate();
+                }}
+                disabled={
+                  isUpdatingStatus ||
+                  !selectedStatus
+                }
+                style={[
+                  styles.modalConfirmButton,
+                  (isUpdatingStatus ||
+                    !selectedStatus) &&
+                    styles.modalConfirmButtonDisabled,
+                ]}
+              >
+                {isUpdatingStatus ? (
+                  <ActivityIndicator
+                    color="#FFFFFF"
+                  />
+                ) : (
+                  <Text
+                    style={styles.modalConfirmText}
+                  >
+                    Update
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -608,6 +933,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
+  secondaryButton: {
+    height: 50,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1557E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  secondaryButtonPressed: {
+    opacity: 0.7,
+  },
+
+  secondaryButtonText: {
+    color: '#1557E8',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
   convertButton: {
     height: 50,
     borderRadius: 12,
@@ -663,6 +1007,28 @@ const styles = StyleSheet.create({
     color: '#166534',
     fontSize: 13,
     marginTop: 8,
+  },
+
+  lostCard: {
+    marginTop: 22,
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+
+  lostCardTitle: {
+    color: '#991B1B',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+
+  lostCardText: {
+    color: '#991B1B',
+    fontSize: 14,
+    lineHeight: 20,
   },
 
   section: {
@@ -737,6 +1103,132 @@ const styles = StyleSheet.create({
   },
 
   retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
+
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 22,
+    paddingTop: 24,
+    paddingBottom: 28,
+    maxHeight: '85%',
+  },
+
+  modalTitle: {
+    color: '#111827',
+    fontSize: 21,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+
+  modalSubtitle: {
+    color: '#6B7280',
+    fontSize: 14,
+    marginBottom: 18,
+  },
+
+  statusOptions: {
+    maxHeight: 300,
+  },
+
+  statusOption: {
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#E1E5EC',
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+
+  statusOptionSelected: {
+    backgroundColor: '#E8EEFF',
+    borderColor: '#1557E8',
+  },
+
+  statusOptionText: {
+    color: '#374151',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+
+  statusOptionTextSelected: {
+    color: '#1557E8',
+    fontWeight: '700',
+  },
+
+  lostReasonContainer: {
+    marginTop: 8,
+  },
+
+  lostReasonLabel: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+
+  lostReasonInput: {
+    minHeight: 90,
+    borderWidth: 1,
+    borderColor: '#D7DBE3',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#111827',
+    textAlignVertical: 'top',
+  },
+
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 18,
+  },
+
+  modalCancelButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#D7DBE3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  modalCancelText: {
+    color: '#374151',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  modalConfirmButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: '#1557E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  modalConfirmButtonDisabled: {
+    opacity: 0.5,
+  },
+
+  modalConfirmText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',

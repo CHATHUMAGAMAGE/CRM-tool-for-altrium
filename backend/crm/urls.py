@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    DashboardStatsView,
     LeadConvertView,
     LeadDetailView,
     LeadListCreateView,
@@ -11,6 +12,13 @@ app_name = "crm"
 
 
 urlpatterns = [
+
+    path(
+    "dashboard/",
+    DashboardStatsView.as_view(),
+    name="dashboard-stats",
+    ),
+
     path(
         "leads/",
         LeadListCreateView.as_view(),
@@ -22,10 +30,12 @@ urlpatterns = [
         name="lead-detail",
     ),
 
-path(
-    "leads/<int:pk>/convert/",
-    LeadConvertView.as_view(),
-    name="lead-convert",
-),
+    path(
+        "leads/<int:pk>/convert/",
+        LeadConvertView.as_view(),
+        name="lead-convert",
+    ),
+
+
 
 ]

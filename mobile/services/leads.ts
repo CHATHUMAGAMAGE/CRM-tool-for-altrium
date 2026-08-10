@@ -132,3 +132,31 @@ export async function convertLead(
 
   return response.json();
 }
+
+export async function updateLead(
+  id: number,
+  updates: {
+    status?: LeadStatus;
+    lost_reason?: string;
+    qualification_notes?: string;
+  },
+): Promise<Lead> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/leads/${id}/`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response),
+    );
+  }
+
+  return response.json();
+}

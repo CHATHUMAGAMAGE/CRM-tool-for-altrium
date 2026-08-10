@@ -118,7 +118,66 @@ class LeadQuerysetMixin:
             )
 
         return queryset
+class DashboardStatsView(generics.GenericAPIView):
+    permission_classes = [
+        IsAuthenticated,
+    ]
 
+    def get(self, request):
+        user = request.user
+        profile = getattr(user, "profile", None)
+
+        if profile is None:
+            return Response(
+                {
+                    "customers": 0,
+                    "leads": 0,
+                    "opportunities": 0,
+                    "projects": 0,
+                }
+            )
+
+        role = profile.role
+
+        if role == UserProfile.Role.SALES_REP:
+            customers_count = Customer.objects.filter(
+                assigned_to=user,
+            ).count()
+
+            leads_count = Lead.objects.filter(
+                assigned_to=user,
+                status__in=[
+                    Lead.Status.NEW,
+                    Lead.Status.CONTACTED,
+                    Lead.Status.FOLLOW_UP_REQUIRED,
+                    Lead.Status.QUALIFIED,
+                    Lead.Status.PROPOSAL_SENT,
+                    Lead.Status.NEGOTIATION,
+                ],
+            ).count()
+
+        else:
+            customers_count = Customer.objects.count()
+
+            leads_count = Lead.objects.filter(
+                status__in=[
+                    Lead.Status.NEW,
+                    Lead.Status.CONTACTED,
+                    Lead.Status.FOLLOW_UP_REQUIRED,
+                    Lead.Status.QUALIFIED,
+                    Lead.Status.PROPOSAL_SENT,
+                    Lead.Status.NEGOTIATION,
+                ],
+            ).count()
+
+        return Response(
+            {
+                "customers": customers_count,
+                "leads": leads_count,
+                "opportunities": 0,
+                "projects": 0,
+            }
+        )
 
 class LeadListCreateView(
     LeadQuerysetMixin,
