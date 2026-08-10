@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from accounts.models import UserProfile
 
-from .models import Communication, FollowUp, Lead
+from .models import Communication, Customer, FollowUp, Lead
 
 
 User = get_user_model()
@@ -464,3 +464,57 @@ class FollowUpSerializer(serializers.ModelSerializer):
             validated_data["completed_by"] = None
 
         return super().update(instance, validated_data)
+
+class CustomerSerializer(serializers.ModelSerializer):
+    assigned_to_name = serializers.SerializerMethodField()
+    assigned_to_username = serializers.SerializerMethodField()
+
+    source_lead_company = serializers.CharField(
+        source="source_lead.company_name",
+        read_only=True,
+    )
+
+    source_lead_contact = serializers.CharField(
+        source="source_lead.contact_name",
+        read_only=True,
+    )
+
+    class Meta:
+        model = Customer
+        fields = [
+            "id",
+            "company_name",
+            "contact_name",
+            "email",
+            "phone",
+            "source_lead",
+            "source_lead_company",
+            "source_lead_contact",
+            "assigned_to",
+            "assigned_to_name",
+            "assigned_to_username",
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "source_lead",
+            "source_lead_company",
+            "source_lead_contact",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_assigned_to_name(self, obj):
+        if obj.assigned_to is None:
+            return None
+
+        full_name = obj.assigned_to.get_full_name().strip()
+        return full_name or obj.assigned_to.username
+
+    def get_assigned_to_username(self, obj):
+        if obj.assigned_to is None:
+            return None
+
+        return obj.assigned_to.username

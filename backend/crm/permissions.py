@@ -22,6 +22,14 @@ class LeadPermission(BasePermission):
         if role == UserProfile.Role.SOFTWARE_ENGINEER:
             return False
 
+        if getattr(view, "is_lead_conversion", False):
+            return role in {
+            UserProfile.Role.ADMIN,
+            UserProfile.Role.SALES_REP,
+            UserProfile.Role.SALES_MANAGER,
+            UserProfile.Role.PROJECT_MANAGER,
+        }
+
         if request.method in SAFE_METHODS:
             return role in {
                 UserProfile.Role.ADMIN,
@@ -38,7 +46,7 @@ class LeadPermission(BasePermission):
                 UserProfile.Role.MARKETING,
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.PROJECT_MANAGER,
-            }
+        }
 
         if request.method in {"PUT", "PATCH"}:
             return role in {

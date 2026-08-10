@@ -1,15 +1,16 @@
-import { Box, type SxProps, type Theme } from '@mui/material'
+import Box from '@mui/material/Box';
+import type { SxProps, Theme } from '@mui/material/styles';
 
-import horizontalLogo from '../assets/eleven-logo-horizontal.png'
-import horizontalLightLogo from '../assets/eleven-logo-horizontal-light.png'
-import stackedLogo from '../assets/eleven-logo-stacked.png'
+import horizontalLogo from '../assets/eleven-logo-horizontal.png';
+import horizontalLightLogo from '../assets/eleven-logo-horizontal-light.png';
+import stackedLogo from '../assets/eleven-logo-stacked.png';
 
 type BrandLogoProps = {
-  variant?: 'horizontal' | 'stacked'
-  tone?: 'dark' | 'light'
-  alt?: string
-  sx?: SxProps<Theme>
-}
+  variant?: 'horizontal' | 'stacked';
+  tone?: 'dark' | 'light';
+  alt?: string;
+  sx?: SxProps<Theme>;
+};
 
 function BrandLogo({
   variant = 'horizontal',
@@ -17,12 +18,12 @@ function BrandLogo({
   alt = 'ELEVEN CRM',
   sx,
 }: BrandLogoProps) {
-  let source = horizontalLogo
+  let source = horizontalLogo;
 
   if (variant === 'stacked') {
-    source = stackedLogo
+    source = stackedLogo;
   } else if (tone === 'light') {
-    source = horizontalLightLogo
+    source = horizontalLightLogo;
   }
 
   return (
@@ -40,7 +41,7 @@ function BrandLogo({
         ...sx,
       }}
     />
-  )
+  );
 }
 
-export default BrandLogo
+export default BrandLogo;
