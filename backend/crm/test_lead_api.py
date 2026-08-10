@@ -413,3 +413,136 @@ class LeadApiTests(APITestCase):
             "status",
             response.data,
         )
+
+    def test_sales_rep_can_convert_assigned_lead(self):
+        self.client.force_authenticate(
+            user=self.sales_rep,
+        )
+
+        convert_url = reverse(
+            "crm:lead-convert",
+            kwargs={"pk": self.lead.pk},
+        )
+
+        response = self.client.post(
+            convert_url,
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        self.lead.refresh_from_db()
+
+        self.assertEqual(
+            self.lead.status,
+            Lead.Status.CONVERTED,
+        )
+
+        self.assertIsNotNone(
+            self.lead.converted_at,
+        )
+
+        self.assertTrue(
+            hasattr(self.lead, "customer"),
+        )
+
+        customer = self.lead.customer
+
+        self.assertEqual(
+            customer.company_name,
+            self.lead.company_name,
+        )
+
+        self.assertEqual(
+            customer.contact_name,
+            self.lead.contact_name,
+        )
+
+        self.assertEqual(
+            customer.email,
+            self.lead.email,
+        )
+
+        self.assertEqual(
+            customer.phone,
+            self.lead.phone,
+        )
+
+        self.assertEqual(
+            customer.source_lead,
+            self.lead,
+        )
+
+        self.assertEqual(
+            customer.assigned_to,
+            self.sales_rep,
+        )
+
+    def test_sales_rep_cannot_convert_another_sales_reps_lead(self):
+        self.client.force_authenticate(
+            user=self.sales_rep,
+        )
+
+        convert_url = reverse(
+            "crm:lead-convert",
+            kwargs={"pk": self.other_lead.pk},
+        )
+
+        response = self.client.post(
+            convert_url,
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+
+        self.assertFalse(
+            hasattr(self.other_lead, "customer"),
+        )
+
+        self.other_lead.refresh_from_db()
+
+        self.assertEqual(
+            self.other_lead.status,
+            Lead.Status.NEW,
+        )
+
+    def test_converted_lead_cannot_be_converted_again(self):
+        self.client.force_authenticate(
+            user=self.sales_rep,
+        )
+
+        convert_url = reverse(
+            "crm:lead-convert",
+            kwargs={"pk": self.lead.pk},
+        )
+
+        first_response = self.client.post(
+            convert_url,
+            format="json",
+        )
+
+        self.assertEqual(
+            first_response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        second_response = self.client.post(
+            convert_url,
+            format="json",
+        )
+
+        self.assertEqual(
+            second_response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.assertIn(
+            "detail",
+            second_response.data,
+        )

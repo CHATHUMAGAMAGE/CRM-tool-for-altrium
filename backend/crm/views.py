@@ -1,13 +1,16 @@
+from django.db import transaction
 from django.db.models import Q
-from rest_framework import generics
+from django.utils import timezone
+from rest_framework import generics, status
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from accounts.models import UserProfile
 
-from .models import Lead
+from .models import Customer, Lead
 from .permissions import LeadPermission
-from .serializers import LeadSerializer
+from .serializers import CustomerSerializer, LeadSerializer
 
 
 class LeadQuerysetMixin:
@@ -48,10 +51,12 @@ class LeadQuerysetMixin:
                 | Q(phone__icontains=search)
             )
 
-        status = self.request.query_params.get("status")
+        status_param = self.request.query_params.get("status")
 
-        if status:
-            queryset = queryset.filter(status=status)
+        if status_param:
+            queryset = queryset.filter(
+                status=status_param,
+            )
 
         source = self.request.query_params.get("source")
 
@@ -162,3 +167,94 @@ class LeadDetailView(
         IsAuthenticated,
         LeadPermission,
     ]
+
+
+class LeadConvertView(
+    LeadQuerysetMixin,
+    generics.GenericAPIView,
+):
+    serializer_class = CustomerSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        LeadPermission,
+    ]
+
+    is_lead_conversion = True
+
+    @transaction.atomic
+    def post(self, request, pk):
+        try:
+            lead = (
+                self.get_queryset()
+                .select_related(None)
+                .select_for_update()
+                .get(pk=pk)
+            )
+        except Lead.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound("Lead not found.")
+
+        self.check_object_permissions(
+            request,
+            lead,
+        )
+
+        if lead.status == Lead.Status.CONVERTED:
+            return Response(
+                {
+                    "detail": (
+                        "This lead has already been converted."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if hasattr(lead, "customer"):
+            return Response(
+                {
+                    "detail": (
+                        "A customer already exists for this lead."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        customer = Customer.objects.create(
+            company_name=lead.company_name,
+            contact_name=lead.contact_name,
+            email=lead.email,
+            phone=lead.phone,
+            source_lead=lead,
+            assigned_to=lead.assigned_to,
+        )
+
+        lead.status = Lead.Status.CONVERTED
+        lead.converted_at = timezone.now()
+
+        lead.save(
+            update_fields=[
+                "status",
+                "converted_at",
+                "updated_at",
+            ]
+        )
+
+        return Response(
+            {
+                "lead": LeadSerializer(
+                    lead,
+                    context={
+                        "request": request,
+                    },
+                ).data,
+                "customer": CustomerSerializer(
+                    customer,
+                    context={
+                        "request": request,
+                    },
+                ).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )

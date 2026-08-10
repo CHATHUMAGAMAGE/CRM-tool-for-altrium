@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    LeadConvertView,
     LeadDetailView,
     LeadListCreateView,
 )
@@ -20,4 +21,11 @@ urlpatterns = [
         LeadDetailView.as_view(),
         name="lead-detail",
     ),
+
+path(
+    "leads/<int:pk>/convert/",
+    LeadConvertView.as_view(),
+    name="lead-convert",
+),
+
 ]
