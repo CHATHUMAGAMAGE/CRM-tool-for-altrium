@@ -61,6 +61,81 @@ export type UpdateLeadInput = Partial<{
   assigned_to: number | null
 }>
 
+export type CommunicationType =
+  | 'CALL'
+  | 'EMAIL'
+  | 'MEETING'
+  | 'WHATSAPP'
+
+export type Communication = {
+  id: number
+  lead: number
+  communication_type: CommunicationType
+  communication_type_display: string
+  communication_date: string
+  summary: string
+  notes: string
+  created_by: number
+  created_by_name: string
+  created_by_username: string
+  created_at: string
+}
+
+export type CreateCommunicationInput = {
+  communication_type: CommunicationType
+  communication_date: string
+  summary: string
+  notes?: string
+}
+
+export type FollowUpStatus =
+  | 'PENDING'
+  | 'COMPLETED'
+  | 'CANCELLED'
+
+export type FollowUp = {
+  id: number
+  lead: number
+  title: string
+  description: string
+  due_date: string
+
+  assigned_to: number | null
+  assigned_to_name: string | null
+  assigned_to_username: string | null
+
+  status: FollowUpStatus
+  status_display: string
+  is_overdue: boolean
+
+  completed_at: string | null
+  completed_by: number | null
+  completed_by_name: string | null
+  completed_by_username: string | null
+
+  created_by: number
+  created_by_name: string
+  created_by_username: string
+
+  created_at: string
+  updated_at: string
+}
+
+export type CreateFollowUpInput = {
+  title: string
+  description?: string
+  due_date: string
+  assigned_to?: number | null
+}
+
+export type UpdateFollowUpInput = Partial<{
+  title: string
+  description: string
+  due_date: string
+  assigned_to: number | null
+  status: FollowUpStatus
+}>
+
 type PaginatedResponse<T> = {
   results: T[]
 }
@@ -244,4 +319,131 @@ export async function updateLead(
   }
 
   return (await response.json()) as Lead
+}
+
+export async function getLeadCommunications(
+  leadId: number,
+): Promise<Communication[]> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/leads/${leadId}/communications/`,
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response),
+    )
+  }
+
+  const data = (await response.json()) as
+    | Communication[]
+    | PaginatedResponse<Communication>
+
+  if (isPaginatedResponse(data)) {
+    return data.results
+  }
+
+  return data
+}
+
+export async function createLeadCommunication(
+  leadId: number,
+  communication: CreateCommunicationInput,
+): Promise<Communication> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/leads/${leadId}/communications/`,
+    {
+      method: 'POST',
+      body: JSON.stringify(communication),
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response),
+    )
+  }
+
+  return (await response.json()) as Communication
+}
+
+export async function getLeadFollowUps(
+  leadId: number,
+): Promise<FollowUp[]> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/leads/${leadId}/follow-ups/`,
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response),
+    )
+  }
+
+  const data = (await response.json()) as
+    | FollowUp[]
+    | PaginatedResponse<FollowUp>
+
+  if (isPaginatedResponse(data)) {
+    return data.results
+  }
+
+  return data
+}
+
+export async function getFollowUp(
+  followUpId: number,
+): Promise<FollowUp> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/follow-ups/${followUpId}/`,
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response),
+    )
+  }
+
+  return (await response.json()) as FollowUp
+}
+
+export async function createLeadFollowUp(
+  leadId: number,
+  followUp: CreateFollowUpInput,
+): Promise<FollowUp> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/leads/${leadId}/follow-ups/`,
+    {
+      method: 'POST',
+      body: JSON.stringify(followUp),
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response),
+    )
+  }
+
+  return (await response.json()) as FollowUp
+}
+
+export async function updateFollowUp(
+  followUpId: number,
+  updates: UpdateFollowUpInput,
+): Promise<FollowUp> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/follow-ups/${followUpId}/`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response),
+    )
+  }
+
+  return (await response.json()) as FollowUp
 }

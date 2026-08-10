@@ -1,16 +1,28 @@
 from django.db import transaction
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
+
 from rest_framework import generics, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import UserProfile
 
-from .models import Customer, Lead
-from .permissions import LeadPermission
-from .serializers import CustomerSerializer, LeadSerializer
+from .models import Communication, Customer, FollowUp, Lead
+from .permissions import (
+    CommunicationPermission,
+    FollowUpPermission,
+    LeadPermission,
+)
+from .serializers import (
+    CommunicationSerializer,
+    CustomerSerializer,
+    FollowUpSerializer,
+    LeadSerializer,
+)
 
 
 class LeadQuerysetMixin:
@@ -51,11 +63,11 @@ class LeadQuerysetMixin:
                 | Q(phone__icontains=search)
             )
 
-        status_param = self.request.query_params.get("status")
+        status_value = self.request.query_params.get("status")
 
-        if status_param:
+        if status_value:
             queryset = queryset.filter(
-                status=status_param,
+                status=status_value,
             )
 
         source = self.request.query_params.get("source")
@@ -118,66 +130,7 @@ class LeadQuerysetMixin:
             )
 
         return queryset
-class DashboardStatsView(generics.GenericAPIView):
-    permission_classes = [
-        IsAuthenticated,
-    ]
 
-    def get(self, request):
-        user = request.user
-        profile = getattr(user, "profile", None)
-
-        if profile is None:
-            return Response(
-                {
-                    "customers": 0,
-                    "leads": 0,
-                    "opportunities": 0,
-                    "projects": 0,
-                }
-            )
-
-        role = profile.role
-
-        if role == UserProfile.Role.SALES_REP:
-            customers_count = Customer.objects.filter(
-                assigned_to=user,
-            ).count()
-
-            leads_count = Lead.objects.filter(
-                assigned_to=user,
-                status__in=[
-                    Lead.Status.NEW,
-                    Lead.Status.CONTACTED,
-                    Lead.Status.FOLLOW_UP_REQUIRED,
-                    Lead.Status.QUALIFIED,
-                    Lead.Status.PROPOSAL_SENT,
-                    Lead.Status.NEGOTIATION,
-                ],
-            ).count()
-
-        else:
-            customers_count = Customer.objects.count()
-
-            leads_count = Lead.objects.filter(
-                status__in=[
-                    Lead.Status.NEW,
-                    Lead.Status.CONTACTED,
-                    Lead.Status.FOLLOW_UP_REQUIRED,
-                    Lead.Status.QUALIFIED,
-                    Lead.Status.PROPOSAL_SENT,
-                    Lead.Status.NEGOTIATION,
-                ],
-            ).count()
-
-        return Response(
-            {
-                "customers": customers_count,
-                "leads": leads_count,
-                "opportunities": 0,
-                "projects": 0,
-            }
-        )
 
 class LeadListCreateView(
     LeadQuerysetMixin,
@@ -226,6 +179,293 @@ class LeadDetailView(
         IsAuthenticated,
         LeadPermission,
     ]
+
+
+class CommunicationListCreateView(
+    generics.ListCreateAPIView,
+):
+    serializer_class = CommunicationSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        CommunicationPermission,
+    ]
+
+    def get_accessible_leads(self):
+        user = self.request.user
+        profile = getattr(user, "profile", None)
+
+        queryset = Lead.objects.select_related(
+            "assigned_to",
+            "created_by",
+        )
+
+        if profile is None:
+            return queryset.none()
+
+        role = profile.role
+
+        if role == UserProfile.Role.SOFTWARE_ENGINEER:
+            return queryset.none()
+
+        if role == UserProfile.Role.SALES_REP:
+            return queryset.filter(
+                assigned_to=user,
+            )
+
+        return queryset
+
+    def get_lead(self):
+        if hasattr(self, "_lead"):
+            return self._lead
+
+        self._lead = get_object_or_404(
+            self.get_accessible_leads(),
+            pk=self.kwargs["lead_id"],
+        )
+
+        return self._lead
+
+    def get_queryset(self):
+        lead = self.get_lead()
+
+        return Communication.objects.filter(
+            lead=lead,
+        ).select_related(
+            "created_by",
+            "created_by__profile",
+        ).order_by(
+            "-communication_date",
+            "-created_at",
+        )
+
+    def perform_create(self, serializer):
+        lead = self.get_lead()
+
+        if lead.status in {
+            Lead.Status.CONVERTED,
+            Lead.Status.LOST,
+        }:
+            raise ValidationError(
+                {
+                    "lead": (
+                        "Communications cannot be added to a "
+                        "closed lead."
+                    )
+                }
+            )
+
+        serializer.save(
+            lead=lead,
+            created_by=self.request.user,
+        )
+
+
+class FollowUpListCreateView(generics.ListCreateAPIView):
+    serializer_class = FollowUpSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        FollowUpPermission,
+    ]
+
+    def get_accessible_leads(self):
+        user = self.request.user
+        profile = getattr(user, "profile", None)
+
+        queryset = Lead.objects.select_related(
+            "assigned_to",
+            "created_by",
+        )
+
+        if profile is None:
+            return queryset.none()
+
+        role = profile.role
+
+        if role == UserProfile.Role.SOFTWARE_ENGINEER:
+            return queryset.none()
+
+        if role == UserProfile.Role.SALES_REP:
+            return queryset.filter(
+                assigned_to=user,
+            )
+
+        return queryset
+
+    def get_lead(self):
+        if hasattr(self, "_lead"):
+            return self._lead
+
+        self._lead = get_object_or_404(
+            self.get_accessible_leads(),
+            pk=self.kwargs["lead_id"],
+        )
+
+        return self._lead
+
+    def get_queryset(self):
+        lead = self.get_lead()
+
+        queryset = FollowUp.objects.filter(
+            lead=lead,
+        ).select_related(
+            "assigned_to",
+            "assigned_to__profile",
+            "created_by",
+            "created_by__profile",
+            "completed_by",
+            "completed_by__profile",
+        )
+
+        status_value = self.request.query_params.get("status")
+
+        if status_value:
+            queryset = queryset.filter(
+                status=status_value,
+            )
+
+        return queryset.order_by(
+            "due_date",
+            "created_at",
+        )
+
+    def perform_create(self, serializer):
+        lead = self.get_lead()
+        user = self.request.user
+        profile = getattr(user, "profile", None)
+
+        if lead.status in {
+            Lead.Status.CONVERTED,
+            Lead.Status.LOST,
+        }:
+            raise ValidationError(
+                {
+                    "lead": (
+                        "Follow-ups cannot be scheduled for a "
+                        "closed lead."
+                    )
+                }
+            )
+
+        assigned_to = serializer.validated_data.get(
+            "assigned_to",
+        )
+
+        if profile.role == UserProfile.Role.SALES_REP:
+            assigned_to = user
+
+        elif assigned_to is None:
+            assigned_to = lead.assigned_to
+
+        serializer.save(
+            lead=lead,
+            assigned_to=assigned_to,
+            created_by=user,
+            status=FollowUp.Status.PENDING,
+        )
+
+
+class FollowUpDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = FollowUpSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        FollowUpPermission,
+    ]
+
+    http_method_names = [
+        "get",
+        "patch",
+        "head",
+        "options",
+    ]
+
+    def get_queryset(self):
+        user = self.request.user
+        profile = getattr(user, "profile", None)
+
+        queryset = FollowUp.objects.select_related(
+            "lead",
+            "lead__assigned_to",
+            "assigned_to",
+            "assigned_to__profile",
+            "created_by",
+            "created_by__profile",
+            "completed_by",
+            "completed_by__profile",
+        )
+
+        if profile is None:
+            return queryset.none()
+
+        if profile.role == UserProfile.Role.SOFTWARE_ENGINEER:
+            return queryset.none()
+
+        if profile.role == UserProfile.Role.SALES_REP:
+            return queryset.filter(
+                lead__assigned_to=user,
+                assigned_to=user,
+            )
+
+        return queryset
+
+
+class DashboardStatsView(generics.GenericAPIView):
+    permission_classes = [
+        IsAuthenticated,
+    ]
+
+    def get(self, request):
+        user = request.user
+        profile = getattr(user, "profile", None)
+
+        if profile is None:
+            return Response(
+                {
+                    "customers": 0,
+                    "leads": 0,
+                    "opportunities": 0,
+                    "projects": 0,
+                }
+            )
+
+        role = profile.role
+
+        active_statuses = [
+            Lead.Status.NEW,
+            Lead.Status.CONTACTED,
+            Lead.Status.FOLLOW_UP_REQUIRED,
+            Lead.Status.QUALIFIED,
+            Lead.Status.PROPOSAL_SENT,
+            Lead.Status.NEGOTIATION,
+        ]
+
+        if role == UserProfile.Role.SALES_REP:
+            customers_count = Customer.objects.filter(
+                assigned_to=user,
+            ).count()
+
+            leads_count = Lead.objects.filter(
+                assigned_to=user,
+                status__in=active_statuses,
+            ).count()
+
+        else:
+            customers_count = Customer.objects.count()
+
+            leads_count = Lead.objects.filter(
+                status__in=active_statuses,
+            ).count()
+
+        return Response(
+            {
+                "customers": customers_count,
+                "leads": leads_count,
+                "opportunities": 0,
+                "projects": 0,
+            }
+        )
 
 
 class LeadConvertView(
