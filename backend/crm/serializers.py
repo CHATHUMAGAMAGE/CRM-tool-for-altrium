@@ -124,14 +124,14 @@ class LeadSerializer(serializers.ModelSerializer):
             )
 
         if (
-            requested_status == Lead.Status.CONVERTED
-            and current_status != Lead.Status.CONVERTED
+            requested_status == Lead.Status.WON
+            and current_status != Lead.Status.WON
         ):
             raise serializers.ValidationError(
                 {
                     "status": (
-                        "Leads must be converted through the "
-                        "dedicated conversion workflow."
+                        "Leads must be marked as won through the "
+                        "dedicated win workflow."
                     )
                 }
             )
@@ -191,6 +191,7 @@ class CommunicationSerializer(serializers.ModelSerializer):
         source="get_communication_type_display",
         read_only=True,
     )
+
     created_by_name = serializers.SerializerMethodField()
     created_by_username = serializers.SerializerMethodField()
 
@@ -209,6 +210,7 @@ class CommunicationSerializer(serializers.ModelSerializer):
             "created_by_username",
             "created_at",
         ]
+
         read_only_fields = [
             "id",
             "lead",
@@ -218,6 +220,7 @@ class CommunicationSerializer(serializers.ModelSerializer):
 
     def get_created_by_name(self, obj):
         full_name = obj.created_by.get_full_name().strip()
+
         return full_name or obj.created_by.username
 
     def get_created_by_username(self, obj):
@@ -250,11 +253,17 @@ class FollowUpSerializer(serializers.ModelSerializer):
         source="get_status_display",
         read_only=True,
     )
-    is_overdue = serializers.BooleanField(read_only=True)
+
+    is_overdue = serializers.BooleanField(
+        read_only=True,
+    )
+
     assigned_to_name = serializers.SerializerMethodField()
     assigned_to_username = serializers.SerializerMethodField()
+
     created_by_name = serializers.SerializerMethodField()
     created_by_username = serializers.SerializerMethodField()
+
     completed_by_name = serializers.SerializerMethodField()
     completed_by_username = serializers.SerializerMethodField()
 
@@ -291,6 +300,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
         read_only_fields = [
             "id",
             "lead",
@@ -304,16 +314,20 @@ class FollowUpSerializer(serializers.ModelSerializer):
     def get_assigned_to_name(self, obj):
         if obj.assigned_to is None:
             return None
+
         full_name = obj.assigned_to.get_full_name().strip()
+
         return full_name or obj.assigned_to.username
 
     def get_assigned_to_username(self, obj):
         if obj.assigned_to is None:
             return None
+
         return obj.assigned_to.username
 
     def get_created_by_name(self, obj):
         full_name = obj.created_by.get_full_name().strip()
+
         return full_name or obj.created_by.username
 
     def get_created_by_username(self, obj):
@@ -324,6 +338,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
             return None
 
         full_name = obj.completed_by.get_full_name().strip()
+
         return full_name or obj.completed_by.username
 
     def get_completed_by_username(self, obj):
@@ -334,10 +349,12 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
     def validate_title(self, value):
         cleaned_value = value.strip()
+
         if not cleaned_value:
             raise serializers.ValidationError(
                 "Follow-up title is required."
             )
+
         return cleaned_value
 
     def validate_description(self, value):
@@ -353,14 +370,26 @@ class FollowUpSerializer(serializers.ModelSerializer):
             if self.instance is not None
             else FollowUp.Status.PENDING
         )
-        requested_status = attrs.get("status", current_status)
+
+        requested_status = attrs.get(
+            "status",
+            current_status,
+        )
+
         due_date = attrs.get(
             "due_date",
-            self.instance.due_date if self.instance is not None else None,
+            (
+                self.instance.due_date
+                if self.instance is not None
+                else None
+            ),
         )
 
         if self.instance is None:
-            if due_date is not None and due_date <= timezone.now():
+            if (
+                due_date is not None
+                and due_date <= timezone.now()
+            ):
                 raise serializers.ValidationError(
                     {
                         "due_date": (
@@ -371,7 +400,11 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
             if requested_status != FollowUp.Status.PENDING:
                 raise serializers.ValidationError(
-                    {"status": "A new follow-up must start as pending."}
+                    {
+                        "status": (
+                            "A new follow-up must start as pending."
+                        )
+                    }
                 )
 
         if self.instance is not None:
@@ -381,7 +414,8 @@ class FollowUpSerializer(serializers.ModelSerializer):
                     FollowUp.Status.COMPLETED,
                     FollowUp.Status.CANCELLED,
                 }
-                and requested_status != self.instance.status
+                and requested_status
+                != self.instance.status
             ):
                 raise serializers.ValidationError(
                     {
@@ -419,7 +453,10 @@ class FollowUpSerializer(serializers.ModelSerializer):
             assigned_to = attrs.get("assigned_to")
 
             if profile.role == UserProfile.Role.SALES_REP:
-                if assigned_to is not None and assigned_to.id != user.id:
+                if (
+                    assigned_to is not None
+                    and assigned_to.id != user.id
+                ):
                     raise serializers.ValidationError(
                         {
                             "assigned_to": (
@@ -428,6 +465,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
                             )
                         }
                     )
+
             elif profile.role not in {
                 UserProfile.Role.ADMIN,
                 UserProfile.Role.SALES_MANAGER,
@@ -452,18 +490,24 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
         if (
             instance.status == FollowUp.Status.PENDING
-            and requested_status == FollowUp.Status.COMPLETED
+            and requested_status
+            == FollowUp.Status.COMPLETED
         ):
             request = self.context.get("request")
             user = getattr(request, "user", None)
 
             validated_data["completed_at"] = timezone.now()
             validated_data["completed_by"] = user
+
         elif requested_status != FollowUp.Status.COMPLETED:
             validated_data["completed_at"] = None
             validated_data["completed_by"] = None
 
-        return super().update(instance, validated_data)
+        return super().update(
+            instance,
+            validated_data,
+        )
+
 
 class CustomerSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.SerializerMethodField()
@@ -511,6 +555,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             return None
 
         full_name = obj.assigned_to.get_full_name().strip()
+
         return full_name or obj.assigned_to.username
 
     def get_assigned_to_username(self, obj):

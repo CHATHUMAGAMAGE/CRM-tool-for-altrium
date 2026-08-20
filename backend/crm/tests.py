@@ -328,7 +328,7 @@ class CustomerModelTests(TestCase):
             contact_name="Kamal Perera",
             email="kamal@example.com",
             phone="0712345678",
-            status=Lead.Status.CONVERTED,
+            status=Lead.Status.WON,
             created_by=cls.user,
         )
 

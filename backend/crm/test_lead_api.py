@@ -386,7 +386,7 @@ class LeadApiTests(APITestCase):
             response.data,
         )
 
-    def test_generic_update_cannot_convert_lead(self):
+    def test_generic_update_cannot_mark_lead_won(self):
         self.client.force_authenticate(
             user=self.sales_manager,
         )
@@ -399,7 +399,7 @@ class LeadApiTests(APITestCase):
         response = self.client.patch(
             detail_url,
             {
-                "status": Lead.Status.CONVERTED,
+                "status": Lead.Status.WON,
             },
             format="json",
         )
@@ -438,7 +438,7 @@ class LeadApiTests(APITestCase):
 
         self.assertEqual(
             self.lead.status,
-            Lead.Status.CONVERTED,
+            Lead.Status.WON,
         )
 
         self.assertIsNotNone(

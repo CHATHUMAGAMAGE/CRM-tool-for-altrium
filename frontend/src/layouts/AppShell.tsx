@@ -1,15 +1,38 @@
 import { useState } from 'react'
-import { Box, Drawer } from '@mui/material'
+import {
+  Box,
+  Drawer,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material'
 import { Outlet } from 'react-router'
+
 import AppSidebar, {
   SIDEBAR_WIDTH,
 } from '../components/navigation/AppSidebar'
 import AppTopBar from '../components/navigation/AppTopBar'
 
 function AppShell() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const theme = useTheme()
 
-  const openMobileMenu = () => {
+  const isDesktop = useMediaQuery(
+    theme.breakpoints.up('md'),
+  )
+
+  const [desktopSidebarOpen, setDesktopSidebarOpen] =
+    useState(true)
+
+  const [mobileMenuOpen, setMobileMenuOpen] =
+    useState(false)
+
+  const handleMenuClick = () => {
+    if (isDesktop) {
+      setDesktopSidebarOpen(
+        (current) => !current,
+      )
+      return
+    }
+
     setMobileMenuOpen(true)
   }
 
@@ -22,19 +45,28 @@ function AppShell() {
       sx={{
         minHeight: '100vh',
         display: 'flex',
-        backgroundColor: '#f5f7fa',
+        backgroundColor: '#f7f9fc',
       }}
     >
-      {/* Permanent desktop sidebar */}
-      <AppSidebar />
+      {/* Desktop sidebar */}
+      {desktopSidebarOpen && (
+        <AppSidebar />
+      )}
 
-      {/* Temporary mobile sidebar */}
+      {/* Mobile sidebar */}
       <Drawer
         variant="temporary"
         open={mobileMenuOpen}
         onClose={closeMobileMenu}
+        ModalProps={{
+          keepMounted: true,
+        }}
         sx={{
-          display: { xs: 'block', md: 'none' },
+          display: {
+            xs: 'block',
+            md: 'none',
+          },
+
           '& .MuiDrawer-paper': {
             width: SIDEBAR_WIDTH,
             boxSizing: 'border-box',
@@ -51,13 +83,22 @@ function AppShell() {
         sx={{
           flexGrow: 1,
           minWidth: 0,
+          minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
-        <AppTopBar onMenuClick={openMobileMenu} />
+        <AppTopBar
+          onMenuClick={handleMenuClick}
+        />
 
-        <Box component="main" sx={{ flexGrow: 1 }}>
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            minWidth: 0,
+          }}
+        >
           <Outlet />
         </Box>
       </Box>
