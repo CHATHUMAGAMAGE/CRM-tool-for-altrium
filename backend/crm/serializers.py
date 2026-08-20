@@ -220,6 +220,7 @@ class CommunicationSerializer(serializers.ModelSerializer):
 
     def get_created_by_name(self, obj):
         full_name = obj.created_by.get_full_name().strip()
+
         return full_name or obj.created_by.username
 
     def get_created_by_username(self, obj):
@@ -253,7 +254,9 @@ class FollowUpSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
-    is_overdue = serializers.BooleanField(read_only=True)
+    is_overdue = serializers.BooleanField(
+        read_only=True,
+    )
 
     assigned_to_name = serializers.SerializerMethodField()
     assigned_to_username = serializers.SerializerMethodField()
@@ -313,6 +316,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
             return None
 
         full_name = obj.assigned_to.get_full_name().strip()
+
         return full_name or obj.assigned_to.username
 
     def get_assigned_to_username(self, obj):
@@ -323,6 +327,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
     def get_created_by_name(self, obj):
         full_name = obj.created_by.get_full_name().strip()
+
         return full_name or obj.created_by.username
 
     def get_created_by_username(self, obj):
@@ -333,6 +338,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
             return None
 
         full_name = obj.completed_by.get_full_name().strip()
+
         return full_name or obj.completed_by.username
 
     def get_completed_by_username(self, obj):
@@ -422,8 +428,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
             if (
                 "due_date" in attrs
-                and requested_status
-                == FollowUp.Status.PENDING
+                and requested_status == FollowUp.Status.PENDING
                 and due_date is not None
                 and due_date <= timezone.now()
             ):
@@ -502,3 +507,59 @@ class FollowUpSerializer(serializers.ModelSerializer):
             instance,
             validated_data,
         )
+
+
+class CustomerSerializer(serializers.ModelSerializer):
+    assigned_to_name = serializers.SerializerMethodField()
+    assigned_to_username = serializers.SerializerMethodField()
+
+    source_lead_company = serializers.CharField(
+        source="source_lead.company_name",
+        read_only=True,
+    )
+
+    source_lead_contact = serializers.CharField(
+        source="source_lead.contact_name",
+        read_only=True,
+    )
+
+    class Meta:
+        model = Customer
+        fields = [
+            "id",
+            "company_name",
+            "contact_name",
+            "email",
+            "phone",
+            "source_lead",
+            "source_lead_company",
+            "source_lead_contact",
+            "assigned_to",
+            "assigned_to_name",
+            "assigned_to_username",
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "source_lead",
+            "source_lead_company",
+            "source_lead_contact",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_assigned_to_name(self, obj):
+        if obj.assigned_to is None:
+            return None
+
+        full_name = obj.assigned_to.get_full_name().strip()
+
+        return full_name or obj.assigned_to.username
+
+    def get_assigned_to_username(self, obj):
+        if obj.assigned_to is None:
+            return None
+
+        return obj.assigned_to.username

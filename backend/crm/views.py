@@ -63,10 +63,14 @@ class LeadQuerysetMixin:
                 | Q(phone__icontains=search)
             )
 
-        status = self.request.query_params.get("status")
+        status_value = self.request.query_params.get(
+            "status",
+        )
 
-        if status:
-            queryset = queryset.filter(status=status)
+        if status_value:
+            queryset = queryset.filter(
+                status=status_value,
+            )
 
         source = self.request.query_params.get(
             "source",
@@ -320,7 +324,10 @@ class FollowUpListCreateView(
             "completed_by__profile",
         )
 
-        status_value = self.request.query_params.get("status")
+        status_value = self.request.query_params.get(
+            "status",
+        )
+
         if status_value:
             queryset = queryset.filter(
                 status=status_value,
@@ -429,14 +436,20 @@ class FollowUpDetailView(
         return queryset
 
 
-class DashboardStatsView(generics.GenericAPIView):
+class DashboardStatsView(
+    generics.GenericAPIView,
+):
     permission_classes = [
         IsAuthenticated,
     ]
 
     def get(self, request):
         user = request.user
-        profile = getattr(user, "profile", None)
+        profile = getattr(
+            user,
+            "profile",
+            None,
+        )
 
         if profile is None:
             return Response(
@@ -453,10 +466,8 @@ class DashboardStatsView(generics.GenericAPIView):
         active_statuses = [
             Lead.Status.NEW,
             Lead.Status.CONTACTED,
-            Lead.Status.FOLLOW_UP_REQUIRED,
             Lead.Status.QUALIFIED,
-            Lead.Status.PROPOSAL_SENT,
-            Lead.Status.NEGOTIATION,
+            Lead.Status.PROPOSAL,
         ]
 
         if role == UserProfile.Role.SALES_REP:
@@ -508,17 +519,20 @@ class LeadConvertView(
                 .select_for_update()
                 .get(pk=pk)
             )
+
         except Lead.DoesNotExist:
             from rest_framework.exceptions import NotFound
 
-            raise NotFound("Lead not found.")
+            raise NotFound(
+                "Lead not found."
+            )
 
         self.check_object_permissions(
             request,
             lead,
         )
 
-        if lead.status == Lead.Status.CONVERTED:
+        if lead.status == Lead.Status.WON:
             return Response(
                 {
                     "detail": (
@@ -528,7 +542,10 @@ class LeadConvertView(
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if hasattr(lead, "customer"):
+        if hasattr(
+            lead,
+            "customer",
+        ):
             return Response(
                 {
                     "detail": (
@@ -547,7 +564,7 @@ class LeadConvertView(
             assigned_to=lead.assigned_to,
         )
 
-        lead.status = Lead.Status.CONVERTED
+        lead.status = Lead.Status.WON
         lead.converted_at = timezone.now()
 
         lead.save(

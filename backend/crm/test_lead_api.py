@@ -438,7 +438,7 @@ class LeadApiTests(APITestCase):
 
         self.assertEqual(
             self.lead.status,
-            Lead.Status.CONVERTED,
+            Lead.Status.WON,
         )
 
         self.assertIsNotNone(
