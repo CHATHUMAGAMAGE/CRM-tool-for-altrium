@@ -124,14 +124,14 @@ class LeadSerializer(serializers.ModelSerializer):
             )
 
         if (
-            requested_status == Lead.Status.CONVERTED
-            and current_status != Lead.Status.CONVERTED
+            requested_status == Lead.Status.WON
+            and current_status != Lead.Status.WON
         ):
             raise serializers.ValidationError(
                 {
                     "status": (
-                        "Leads must be converted through the "
-                        "dedicated conversion workflow."
+                        "Leads must be marked as won through the "
+                        "dedicated win workflow."
                     )
                 }
             )
@@ -191,6 +191,7 @@ class CommunicationSerializer(serializers.ModelSerializer):
         source="get_communication_type_display",
         read_only=True,
     )
+
     created_by_name = serializers.SerializerMethodField()
     created_by_username = serializers.SerializerMethodField()
 
@@ -209,6 +210,7 @@ class CommunicationSerializer(serializers.ModelSerializer):
             "created_by_username",
             "created_at",
         ]
+
         read_only_fields = [
             "id",
             "lead",
@@ -250,11 +252,15 @@ class FollowUpSerializer(serializers.ModelSerializer):
         source="get_status_display",
         read_only=True,
     )
+
     is_overdue = serializers.BooleanField(read_only=True)
+
     assigned_to_name = serializers.SerializerMethodField()
     assigned_to_username = serializers.SerializerMethodField()
+
     created_by_name = serializers.SerializerMethodField()
     created_by_username = serializers.SerializerMethodField()
+
     completed_by_name = serializers.SerializerMethodField()
     completed_by_username = serializers.SerializerMethodField()
 
@@ -291,6 +297,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
         read_only_fields = [
             "id",
             "lead",
@@ -304,12 +311,14 @@ class FollowUpSerializer(serializers.ModelSerializer):
     def get_assigned_to_name(self, obj):
         if obj.assigned_to is None:
             return None
+
         full_name = obj.assigned_to.get_full_name().strip()
         return full_name or obj.assigned_to.username
 
     def get_assigned_to_username(self, obj):
         if obj.assigned_to is None:
             return None
+
         return obj.assigned_to.username
 
     def get_created_by_name(self, obj):
@@ -334,10 +343,12 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
     def validate_title(self, value):
         cleaned_value = value.strip()
+
         if not cleaned_value:
             raise serializers.ValidationError(
                 "Follow-up title is required."
             )
+
         return cleaned_value
 
     def validate_description(self, value):
@@ -353,14 +364,26 @@ class FollowUpSerializer(serializers.ModelSerializer):
             if self.instance is not None
             else FollowUp.Status.PENDING
         )
-        requested_status = attrs.get("status", current_status)
+
+        requested_status = attrs.get(
+            "status",
+            current_status,
+        )
+
         due_date = attrs.get(
             "due_date",
-            self.instance.due_date if self.instance is not None else None,
+            (
+                self.instance.due_date
+                if self.instance is not None
+                else None
+            ),
         )
 
         if self.instance is None:
-            if due_date is not None and due_date <= timezone.now():
+            if (
+                due_date is not None
+                and due_date <= timezone.now()
+            ):
                 raise serializers.ValidationError(
                     {
                         "due_date": (
@@ -371,7 +394,11 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
             if requested_status != FollowUp.Status.PENDING:
                 raise serializers.ValidationError(
-                    {"status": "A new follow-up must start as pending."}
+                    {
+                        "status": (
+                            "A new follow-up must start as pending."
+                        )
+                    }
                 )
 
         if self.instance is not None:
@@ -381,7 +408,8 @@ class FollowUpSerializer(serializers.ModelSerializer):
                     FollowUp.Status.COMPLETED,
                     FollowUp.Status.CANCELLED,
                 }
-                and requested_status != self.instance.status
+                and requested_status
+                != self.instance.status
             ):
                 raise serializers.ValidationError(
                     {
@@ -394,7 +422,8 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
             if (
                 "due_date" in attrs
-                and requested_status == FollowUp.Status.PENDING
+                and requested_status
+                == FollowUp.Status.PENDING
                 and due_date is not None
                 and due_date <= timezone.now()
             ):
@@ -419,7 +448,10 @@ class FollowUpSerializer(serializers.ModelSerializer):
             assigned_to = attrs.get("assigned_to")
 
             if profile.role == UserProfile.Role.SALES_REP:
-                if assigned_to is not None and assigned_to.id != user.id:
+                if (
+                    assigned_to is not None
+                    and assigned_to.id != user.id
+                ):
                     raise serializers.ValidationError(
                         {
                             "assigned_to": (
@@ -428,6 +460,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
                             )
                         }
                     )
+
             elif profile.role not in {
                 UserProfile.Role.ADMIN,
                 UserProfile.Role.SALES_MANAGER,
@@ -452,69 +485,20 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
         if (
             instance.status == FollowUp.Status.PENDING
-            and requested_status == FollowUp.Status.COMPLETED
+            and requested_status
+            == FollowUp.Status.COMPLETED
         ):
             request = self.context.get("request")
             user = getattr(request, "user", None)
 
             validated_data["completed_at"] = timezone.now()
             validated_data["completed_by"] = user
+
         elif requested_status != FollowUp.Status.COMPLETED:
             validated_data["completed_at"] = None
             validated_data["completed_by"] = None
 
-        return super().update(instance, validated_data)
-
-class CustomerSerializer(serializers.ModelSerializer):
-    assigned_to_name = serializers.SerializerMethodField()
-    assigned_to_username = serializers.SerializerMethodField()
-
-    source_lead_company = serializers.CharField(
-        source="source_lead.company_name",
-        read_only=True,
-    )
-
-    source_lead_contact = serializers.CharField(
-        source="source_lead.contact_name",
-        read_only=True,
-    )
-
-    class Meta:
-        model = Customer
-        fields = [
-            "id",
-            "company_name",
-            "contact_name",
-            "email",
-            "phone",
-            "source_lead",
-            "source_lead_company",
-            "source_lead_contact",
-            "assigned_to",
-            "assigned_to_name",
-            "assigned_to_username",
-            "created_at",
-            "updated_at",
-        ]
-
-        read_only_fields = [
-            "id",
-            "source_lead",
-            "source_lead_company",
-            "source_lead_contact",
-            "created_at",
-            "updated_at",
-        ]
-
-    def get_assigned_to_name(self, obj):
-        if obj.assigned_to is None:
-            return None
-
-        full_name = obj.assigned_to.get_full_name().strip()
-        return full_name or obj.assigned_to.username
-
-    def get_assigned_to_username(self, obj):
-        if obj.assigned_to is None:
-            return None
-
-        return obj.assigned_to.username
+        return super().update(
+            instance,
+            validated_data,
+        )

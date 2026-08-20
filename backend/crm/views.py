@@ -63,14 +63,14 @@ class LeadQuerysetMixin:
                 | Q(phone__icontains=search)
             )
 
-        status_value = self.request.query_params.get("status")
+        status = self.request.query_params.get("status")
 
-        if status_value:
-            queryset = queryset.filter(
-                status=status_value,
-            )
+        if status:
+            queryset = queryset.filter(status=status)
 
-        source = self.request.query_params.get("source")
+        source = self.request.query_params.get(
+            "source",
+        )
 
         if source:
             queryset = queryset.filter(
@@ -108,15 +108,14 @@ class LeadQuerysetMixin:
         active_statuses = [
             Lead.Status.NEW,
             Lead.Status.CONTACTED,
-            Lead.Status.FOLLOW_UP_REQUIRED,
             Lead.Status.QUALIFIED,
-            Lead.Status.PROPOSAL_SENT,
-            Lead.Status.NEGOTIATION,
+            Lead.Status.PROPOSAL,
         ]
 
         closed_statuses = [
-            Lead.Status.CONVERTED,
+            Lead.Status.WON,
             Lead.Status.LOST,
+            Lead.Status.DISQUALIFIED,
         ]
 
         if lead_view == "active":
@@ -243,8 +242,9 @@ class CommunicationListCreateView(
         lead = self.get_lead()
 
         if lead.status in {
-            Lead.Status.CONVERTED,
+            Lead.Status.WON,
             Lead.Status.LOST,
+            Lead.Status.DISQUALIFIED,
         }:
             raise ValidationError(
                 {
@@ -261,7 +261,9 @@ class CommunicationListCreateView(
         )
 
 
-class FollowUpListCreateView(generics.ListCreateAPIView):
+class FollowUpListCreateView(
+    generics.ListCreateAPIView,
+):
     serializer_class = FollowUpSerializer
 
     permission_classes = [
@@ -319,7 +321,6 @@ class FollowUpListCreateView(generics.ListCreateAPIView):
         )
 
         status_value = self.request.query_params.get("status")
-
         if status_value:
             queryset = queryset.filter(
                 status=status_value,
@@ -333,11 +334,16 @@ class FollowUpListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         lead = self.get_lead()
         user = self.request.user
-        profile = getattr(user, "profile", None)
+        profile = getattr(
+            user,
+            "profile",
+            None,
+        )
 
         if lead.status in {
-            Lead.Status.CONVERTED,
+            Lead.Status.WON,
             Lead.Status.LOST,
+            Lead.Status.DISQUALIFIED,
         }:
             raise ValidationError(
                 {
@@ -366,7 +372,9 @@ class FollowUpListCreateView(generics.ListCreateAPIView):
         )
 
 
-class FollowUpDetailView(generics.RetrieveUpdateAPIView):
+class FollowUpDetailView(
+    generics.RetrieveUpdateAPIView,
+):
     serializer_class = FollowUpSerializer
 
     permission_classes = [
@@ -383,7 +391,11 @@ class FollowUpDetailView(generics.RetrieveUpdateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        profile = getattr(user, "profile", None)
+        profile = getattr(
+            user,
+            "profile",
+            None,
+        )
 
         queryset = FollowUp.objects.select_related(
             "lead",
@@ -399,10 +411,16 @@ class FollowUpDetailView(generics.RetrieveUpdateAPIView):
         if profile is None:
             return queryset.none()
 
-        if profile.role == UserProfile.Role.SOFTWARE_ENGINEER:
+        if (
+            profile.role
+            == UserProfile.Role.SOFTWARE_ENGINEER
+        ):
             return queryset.none()
 
-        if profile.role == UserProfile.Role.SALES_REP:
+        if (
+            profile.role
+            == UserProfile.Role.SALES_REP
+        ):
             return queryset.filter(
                 lead__assigned_to=user,
                 assigned_to=user,

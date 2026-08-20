@@ -8,12 +8,11 @@ class Lead(models.Model):
     class Status(models.TextChoices):
         NEW = "NEW", "New"
         CONTACTED = "CONTACTED", "Contacted"
-        FOLLOW_UP_REQUIRED = "FOLLOW_UP_REQUIRED", "Follow-up Required"
         QUALIFIED = "QUALIFIED", "Qualified"
-        PROPOSAL_SENT = "PROPOSAL_SENT", "Proposal Sent"
-        NEGOTIATION = "NEGOTIATION", "Negotiation"
-        CONVERTED = "CONVERTED", "Converted"
+        PROPOSAL = "PROPOSAL", "Proposal"
+        WON = "WON", "Won"
         LOST = "LOST", "Lost"
+        DISQUALIFIED = "DISQUALIFIED", "Disqualified"
 
     company_name = models.CharField(max_length=255)
     contact_name = models.CharField(max_length=255)
