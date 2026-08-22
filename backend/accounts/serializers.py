@@ -111,6 +111,29 @@ class AdminUserListSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+class SalesRepLookupSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(
+        source="profile.role",
+        read_only=True,
+    )
+
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "full_name",
+            "role",
+        ]
+        read_only_fields = fields
+
+    def get_full_name(self, obj):
+        full_name = obj.get_full_name().strip()
+        return full_name or obj.username
 
 class AdminUserCreateSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(

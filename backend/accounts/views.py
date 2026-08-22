@@ -44,6 +44,7 @@ from .serializers import (
     ForgotPasswordSerializer,
     LogoutSerializer,
     ResetPasswordSerializer,
+    SalesRepLookupSerializer,
 )
 
 
@@ -268,6 +269,34 @@ class AdminDashboardSummaryView(APIView):
             status=status.HTTP_200_OK,
         )
 
+class SalesRepLookupView(ListAPIView):
+    serializer_class = SalesRepLookupSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        profile = getattr(user, "profile", None)
+
+        if profile is None:
+            return User.objects.none()
+
+        if profile.role not in {
+            UserProfile.Role.ADMIN,
+            UserProfile.Role.SALES_MANAGER,
+            UserProfile.Role.PROJECT_MANAGER,
+        }:
+            return User.objects.none()
+
+        return User.objects.select_related(
+            "profile",
+        ).filter(
+            is_active=True,
+            profile__role=UserProfile.Role.SALES_REP,
+        ).order_by(
+            "first_name",
+            "last_name",
+            "username",
+        )
 
 class AdminUserListView(ListAPIView):
     serializer_class = AdminUserListSerializer

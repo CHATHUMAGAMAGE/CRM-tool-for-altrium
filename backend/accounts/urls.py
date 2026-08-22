@@ -16,6 +16,7 @@ from .views import (
     ForgotPasswordView,
     LogoutView,
     ResetPasswordView,
+    SalesRepLookupView,
 )
 
 
@@ -40,6 +41,11 @@ urlpatterns = [
         CurrentUserView.as_view(),
         name="current-user",
     ),
+    path(
+    "sales-representatives/",
+    SalesRepLookupView.as_view(),
+    name="sales-representative-list",
+),
     path(
         "forgot-password/",
         ForgotPasswordView.as_view(),

@@ -52,16 +52,44 @@ type LeadView = 'ACTIVE' | 'CLOSED' | 'ALL'
 const activeStatuses: LeadStatus[] = [
   'NEW',
   'CONTACTED',
-  'FOLLOW_UP_REQUIRED',
   'QUALIFIED',
-  'PROPOSAL_SENT',
-  'NEGOTIATION',
+  'PROPOSAL',
 ]
 
 const closedStatuses: LeadStatus[] = [
-  'CONVERTED',
+  'WON',
   'LOST',
+  'DISQUALIFIED',
 ]
+
+function getStatusColor(
+  status: LeadStatus,
+):
+  | 'default'
+  | 'info'
+  | 'warning'
+  | 'success'
+  | 'error' {
+  switch (status) {
+    case 'CONTACTED':
+      return 'info'
+
+    case 'PROPOSAL':
+      return 'warning'
+
+    case 'QUALIFIED':
+    case 'WON':
+      return 'success'
+
+    case 'LOST':
+    case 'DISQUALIFIED':
+      return 'error'
+
+    case 'NEW':
+    default:
+      return 'default'
+  }
+}
 
 const leadCreatorRoles: UserRole[] = [
   'ADMIN',
@@ -311,35 +339,6 @@ function LeadsPage() {
           word.slice(1).toLowerCase(),
       )
       .join(' ')
-
-  const getStatusColor = (
-    status: LeadStatus,
-  ):
-    | 'default'
-    | 'info'
-    | 'warning'
-    | 'success'
-    | 'error' => {
-    switch (status) {
-      case 'CONTACTED':
-      case 'PROPOSAL_SENT':
-        return 'info'
-
-      case 'FOLLOW_UP_REQUIRED':
-      case 'NEGOTIATION':
-        return 'warning'
-
-      case 'QUALIFIED':
-      case 'CONVERTED':
-        return 'success'
-
-      case 'LOST':
-        return 'error'
-
-      default:
-        return 'default'
-    }
-  }
 
   const formatDate = (
     dateValue: string | null,
