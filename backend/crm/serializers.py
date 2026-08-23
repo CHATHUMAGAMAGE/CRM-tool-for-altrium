@@ -110,6 +110,70 @@ class LeadSerializer(serializers.ModelSerializer):
             ),
         )
 
+        qualification_notes = attrs.get(
+            "qualification_notes",
+            (
+                self.instance.qualification_notes
+                if self.instance is not None
+                else ""
+            ),
+        )
+
+        # Sales Representatives may work assigned leads,
+        # but the qualification decision belongs to management.
+        if (
+            profile is not None
+            and profile.role == UserProfile.Role.SALES_REP
+        ):
+            if "qualification_notes" in attrs:
+                raise serializers.ValidationError(
+                    {
+                        "qualification_notes": (
+                            "Sales Representatives cannot modify "
+                            "lead qualification notes."
+                        )
+                    }
+                )
+
+            if (
+                requested_status
+                in {
+                    Lead.Status.QUALIFIED,
+                    Lead.Status.DISQUALIFIED,
+                }
+                and requested_status != current_status
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "status": (
+                            "Only management can qualify or "
+                            "disqualify a lead."
+                        )
+                    }
+                )
+
+        # A management qualification decision must
+        # include supporting notes / a reason.
+        if (
+            requested_status
+            in {
+                Lead.Status.QUALIFIED,
+                Lead.Status.DISQUALIFIED,
+            }
+            and requested_status != current_status
+            and not (
+                qualification_notes or ""
+            ).strip()
+        ):
+            raise serializers.ValidationError(
+                {
+                    "qualification_notes": (
+                        "Qualification notes are required "
+                        "when qualifying or disqualifying a lead."
+                    )
+                }
+            )
+
         if (
             requested_status == Lead.Status.LOST
             and not (lost_reason or "").strip()
@@ -385,7 +449,6 @@ class FollowUpSerializer(serializers.ModelSerializer):
             ),
         )
 
-        # New follow-up validation.
         if self.instance is None:
             if (
                 due_date is not None
@@ -408,9 +471,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
                     }
                 )
 
-        # Existing follow-up validation.
         if self.instance is not None:
-            # Completed and cancelled follow-ups are locked.
             if (
                 self.instance.status
                 in {
@@ -428,8 +489,6 @@ class FollowUpSerializer(serializers.ModelSerializer):
                     }
                 )
 
-            # Pending follow-ups may only be rescheduled
-            # to a future date/time.
             if (
                 "due_date" in attrs
                 and requested_status == FollowUp.Status.PENDING
@@ -444,7 +503,6 @@ class FollowUpSerializer(serializers.ModelSerializer):
                     }
                 )
 
-        # Assignment permissions.
         if "assigned_to" in attrs:
             if profile is None:
                 raise serializers.ValidationError(

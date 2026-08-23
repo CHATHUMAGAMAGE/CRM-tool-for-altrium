@@ -1,4 +1,8 @@
-import { useEffect, useState } from 'react'
+import {
+  useEffect,
+  useState,
+} from 'react'
+
 import {
   Alert,
   Avatar,
@@ -24,6 +28,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+
 import {
   AddRounded,
   ArrowBackRounded,
@@ -32,7 +37,9 @@ import {
   CalendarTodayRounded,
   CallRounded,
   ChatBubbleOutlineRounded,
+  CheckCircleRounded,
   CloseRounded,
+  DoNotDisturbAltRounded,
   EditRounded,
   EventRounded,
   FilterListRounded,
@@ -41,6 +48,7 @@ import {
   MoreVertRounded,
   PersonOutlineRounded,
 } from '@mui/icons-material'
+
 import {
   useNavigate,
   useParams,
@@ -69,6 +77,7 @@ import {
   type SalesRepresentative,
 } from '../services/crm'
 
+
 type WorkspaceTab =
   | 'overview'
   | 'communications'
@@ -76,23 +85,42 @@ type WorkspaceTab =
   | 'activity'
   | 'history'
 
+
 type CommunicationFilter =
   | 'ALL'
   | CommunicationType
 
+
 type CommunicationForm = {
-  communicationType: CommunicationType
+  communicationType:
+    CommunicationType
   communicationDate: string
   communicationTime: string
   summary: string
   notes: string
 }
 
+
 type FollowUpForm = {
   title: string
   description: string
   dueDate: string
 }
+
+
+type EditLeadForm = {
+  contactName: string
+  companyName: string
+  email: string
+  phone: string
+  source: string
+}
+
+
+type QualificationAction =
+  | 'QUALIFY'
+  | 'DISQUALIFY'
+
 
 function getStatusColor(
   status: LeadStatus,
@@ -123,36 +151,48 @@ function getStatusColor(
   }
 }
 
+
 function getCommunicationIcon(
   type: CommunicationType,
 ) {
   switch (type) {
     case 'CALL':
       return (
-        <CallRounded fontSize="small" />
+        <CallRounded
+          fontSize="small"
+        />
       )
 
     case 'EMAIL':
       return (
-        <MailOutlineRounded fontSize="small" />
+        <MailOutlineRounded
+          fontSize="small"
+        />
       )
 
     case 'MEETING':
       return (
-        <GroupsRounded fontSize="small" />
+        <GroupsRounded
+          fontSize="small"
+        />
       )
 
     case 'WHATSAPP':
       return (
-        <ChatBubbleOutlineRounded fontSize="small" />
+        <ChatBubbleOutlineRounded
+          fontSize="small"
+        />
       )
 
     default:
       return (
-        <CallRounded fontSize="small" />
+        <CallRounded
+          fontSize="small"
+        />
       )
   }
 }
+
 
 function getFollowUpColor(
   followUp: FollowUp,
@@ -174,12 +214,11 @@ function getFollowUpColor(
       return 'success'
 
     case 'CANCELLED':
-      return 'default'
-
     default:
       return 'default'
   }
 }
+
 
 function getFollowUpLabel(
   followUp: FollowUp,
@@ -188,12 +227,16 @@ function getFollowUpLabel(
     return 'Overdue'
   }
 
-  if (followUp.status === 'PENDING') {
+  if (
+    followUp.status ===
+    'PENDING'
+  ) {
     return 'Upcoming'
   }
 
   return followUp.status_display
 }
+
 
 function sortFollowUps(
   items: FollowUp[],
@@ -207,21 +250,40 @@ function sortFollowUps(
     CANCELLED: 2,
   }
 
-  return [...items].sort((a, b) => {
-    const statusDifference =
-      statusRank[a.status] -
-      statusRank[b.status]
+  return [
+    ...items,
+  ].sort(
+    (
+      first,
+      second,
+    ) => {
+      const statusDifference =
+        statusRank[
+          first.status
+        ] -
+        statusRank[
+          second.status
+        ]
 
-    if (statusDifference !== 0) {
-      return statusDifference
-    }
+      if (
+        statusDifference !==
+        0
+      ) {
+        return statusDifference
+      }
 
-    return (
-      new Date(a.due_date).getTime() -
-      new Date(b.due_date).getTime()
-    )
-  })
+      return (
+        new Date(
+          first.due_date,
+        ).getTime() -
+        new Date(
+          second.due_date,
+        ).getTime()
+      )
+    },
+  )
 }
+
 
 function formatDate(
   value: string | null,
@@ -244,68 +306,123 @@ function formatDate(
   )
 }
 
-function getDefaultCommunicationDateParts() {
-  const date = new Date(
-    Date.now() - 60_000,
-  )
 
-  const localDate = new Date(
-    date.getTime() -
-      date.getTimezoneOffset() *
+function getDefaultCommunicationDateParts() {
+  const date =
+    new Date(
+      Date.now() -
         60_000,
-  )
+    )
+
+  const localDate =
+    new Date(
+      date.getTime() -
+        date
+          .getTimezoneOffset() *
+          60_000,
+    )
 
   const localValue =
     localDate.toISOString()
 
   return {
-    date: localValue.slice(0, 10),
-    time: localValue.slice(11, 16),
+    date:
+      localValue.slice(
+        0,
+        10,
+      ),
+
+    time:
+      localValue.slice(
+        11,
+        16,
+      ),
   }
 }
 
+
 function createEmptyCommunicationForm():
-  CommunicationForm {
+CommunicationForm {
   const defaultDateTime =
     getDefaultCommunicationDateParts()
 
   return {
-    communicationType: 'CALL',
+    communicationType:
+      'CALL',
+
     communicationDate:
       defaultDateTime.date,
+
     communicationTime:
       defaultDateTime.time,
+
     summary: '',
+
     notes: '',
   }
 }
 
-function getDefaultFollowUpDateTime() {
-  const date = new Date(
-    Date.now() +
-      60 * 60 * 1000,
-  )
 
-  const localDate = new Date(
-    date.getTime() -
-      date.getTimezoneOffset() *
-        60_000,
-  )
+function getDefaultFollowUpDateTime() {
+  const date =
+    new Date(
+      Date.now() +
+        60 *
+          60 *
+          1000,
+    )
+
+  const localDate =
+    new Date(
+      date.getTime() -
+        date
+          .getTimezoneOffset() *
+          60_000,
+    )
 
   return localDate
     .toISOString()
-    .slice(0, 16)
+    .slice(
+      0,
+      16,
+    )
 }
 
+
 function createEmptyFollowUpForm():
-  FollowUpForm {
+FollowUpForm {
   return {
     title: '',
+
     description: '',
+
     dueDate:
       getDefaultFollowUpDateTime(),
   }
 }
+
+
+function getEditLeadForm(
+  lead: Lead,
+): EditLeadForm {
+  return {
+    contactName:
+      lead.contact_name,
+
+    companyName:
+      lead.company_name,
+
+    email:
+      lead.email || '',
+
+    phone:
+      lead.phone,
+
+    source:
+      lead.source || '',
+  }
+}
+
 
 function InformationItem({
   label,
@@ -335,234 +452,441 @@ function InformationItem({
   )
 }
 
+
 function LeadWorkspacePage() {
-  const navigate = useNavigate()
-  const [searchParams] =
+  const navigate =
+    useNavigate()
+
+  const [
+    searchParams,
+  ] =
     useSearchParams()
 
-  const { leadId } = useParams()
+  const {
+    leadId,
+  } =
+    useParams()
 
-  const [lead, setLead] =
-    useState<Lead | null>(null)
 
-  const [currentUser, setCurrentUser] =
-    useState<CurrentUser | null>(null)
+  const [
+    lead,
+    setLead,
+  ] =
+    useState<
+      Lead | null
+    >(null)
+
+
+  const [
+    currentUser,
+    setCurrentUser,
+  ] =
+    useState<
+      CurrentUser | null
+    >(null)
+
 
   const [
     salesRepresentatives,
     setSalesRepresentatives,
-  ] = useState<
-    SalesRepresentative[]
-  >([])
+  ] =
+    useState<
+      SalesRepresentative[]
+    >([])
+
 
   const [
     communications,
     setCommunications,
-  ] = useState<Communication[]>([])
+  ] =
+    useState<
+      Communication[]
+    >([])
 
-  const [followUps, setFollowUps] =
-    useState<FollowUp[]>([])
 
-  const [activeTab, setActiveTab] =
-    useState<WorkspaceTab>(() =>
-      searchParams.get('tab') ===
+  const [
+    followUps,
+    setFollowUps,
+  ] =
+    useState<
+      FollowUp[]
+    >([])
+
+
+  const [
+    activeTab,
+    setActiveTab,
+  ] =
+    useState<
+      WorkspaceTab
+    >(() =>
+      searchParams.get(
+        'tab',
+      ) ===
       'follow-ups'
         ? 'follow-ups'
         : 'overview',
     )
 
-  const [isLoading, setIsLoading] =
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] =
     useState(true)
 
-  const [
-    isAssigningLead,
-    setIsAssigningLead,
-  ] = useState(false)
 
   const [
-    assignmentError,
-    setAssignmentError,
-  ] = useState('')
+    error,
+    setError,
+  ] =
+    useState('')
 
-  const [
-    isCreatingCommunication,
-    setIsCreatingCommunication,
-  ] = useState(false)
-
-  const [
-    communicationDialogOpen,
-    setCommunicationDialogOpen,
-  ] = useState(false)
-
-  const [
-    communicationForm,
-    setCommunicationForm,
-  ] = useState<CommunicationForm>(
-    createEmptyCommunicationForm,
-  )
-
-  const [
-    communicationError,
-    setCommunicationError,
-  ] = useState('')
-
-  const [
-    communicationFilter,
-    setCommunicationFilter,
-  ] = useState<CommunicationFilter>(
-    'ALL',
-  )
-
-  const [
-    isCreatingFollowUp,
-    setIsCreatingFollowUp,
-  ] = useState(false)
-
-  const [
-    followUpDialogOpen,
-    setFollowUpDialogOpen,
-  ] = useState(false)
-
-  const [
-    followUpForm,
-    setFollowUpForm,
-  ] = useState<FollowUpForm>(
-    createEmptyFollowUpForm,
-  )
-
-  const [
-    followUpError,
-    setFollowUpError,
-  ] = useState('')
-
-  const [
-    followUpSuccessMessage,
-    setFollowUpSuccessMessage,
-  ] = useState('')
 
   const [
     successMessage,
     setSuccessMessage,
-  ] = useState('')
-
-  const [error, setError] =
+  ] =
     useState('')
 
-  useEffect(() => {
-    let isMounted = true
 
-    const loadWorkspace =
-      async () => {
-        const numericLeadId =
-          Number(leadId)
+  /*
+   * Assignment
+   */
 
-        if (
-          !leadId ||
-          Number.isNaN(
-            numericLeadId,
-          )
-        ) {
-          if (isMounted) {
-            setError(
-              'Invalid lead identifier.',
+  const [
+    isAssigningLead,
+    setIsAssigningLead,
+  ] =
+    useState(false)
+
+  const [
+    assignmentError,
+    setAssignmentError,
+  ] =
+    useState('')
+
+
+  /*
+   * Edit Lead
+   */
+
+  const [
+    editLeadDialogOpen,
+    setEditLeadDialogOpen,
+  ] =
+    useState(false)
+
+  const [
+    editLeadForm,
+    setEditLeadForm,
+  ] =
+    useState<
+      EditLeadForm
+    >({
+      contactName: '',
+      companyName: '',
+      email: '',
+      phone: '',
+      source: '',
+    })
+
+  const [
+    isSavingLead,
+    setIsSavingLead,
+  ] =
+    useState(false)
+
+  const [
+    editLeadError,
+    setEditLeadError,
+  ] =
+    useState('')
+
+
+  /*
+   * Qualification
+   */
+
+  const [
+    qualificationDialogOpen,
+    setQualificationDialogOpen,
+  ] =
+    useState(false)
+
+  const [
+    qualificationAction,
+    setQualificationAction,
+  ] =
+    useState<
+      QualificationAction
+    >(
+      'QUALIFY',
+    )
+
+  const [
+    qualificationNotes,
+    setQualificationNotes,
+  ] =
+    useState('')
+
+  const [
+    qualificationError,
+    setQualificationError,
+  ] =
+    useState('')
+
+  const [
+    isSavingQualification,
+    setIsSavingQualification,
+  ] =
+    useState(false)
+
+
+  /*
+   * Communication
+   */
+
+  const [
+    isCreatingCommunication,
+    setIsCreatingCommunication,
+  ] =
+    useState(false)
+
+  const [
+    communicationDialogOpen,
+    setCommunicationDialogOpen,
+  ] =
+    useState(false)
+
+  const [
+    communicationForm,
+    setCommunicationForm,
+  ] =
+    useState<
+      CommunicationForm
+    >(
+      createEmptyCommunicationForm,
+    )
+
+  const [
+    communicationError,
+    setCommunicationError,
+  ] =
+    useState('')
+
+  const [
+    communicationFilter,
+    setCommunicationFilter,
+  ] =
+    useState<
+      CommunicationFilter
+    >(
+      'ALL',
+    )
+
+
+  /*
+   * Follow-up
+   */
+
+  const [
+    isCreatingFollowUp,
+    setIsCreatingFollowUp,
+  ] =
+    useState(false)
+
+  const [
+    followUpDialogOpen,
+    setFollowUpDialogOpen,
+  ] =
+    useState(false)
+
+  const [
+    followUpForm,
+    setFollowUpForm,
+  ] =
+    useState<
+      FollowUpForm
+    >(
+      createEmptyFollowUpForm,
+    )
+
+  const [
+    followUpError,
+    setFollowUpError,
+  ] =
+    useState('')
+
+  const [
+    followUpSuccessMessage,
+    setFollowUpSuccessMessage,
+  ] =
+    useState('')
+
+
+  useEffect(
+    () => {
+      let isMounted =
+        true
+
+      const loadWorkspace =
+        async () => {
+          const numericLeadId =
+            Number(
+              leadId,
             )
-            setIsLoading(false)
-          }
 
-          return
-        }
+          if (
+            !leadId ||
+            Number.isNaN(
+              numericLeadId,
+            )
+          ) {
+            if (
+              isMounted
+            ) {
+              setError(
+                'Invalid lead identifier.',
+              )
 
-        try {
-          const [
-            leadData,
-            user,
-            communicationData,
-            followUpData,
-          ] = await Promise.all([
-            getLead(
-              numericLeadId,
-            ),
-            getCurrentUser(),
-            getLeadCommunications(
-              numericLeadId,
-            ),
-            getLeadFollowUps(
-              numericLeadId,
-            ),
-          ])
+              setIsLoading(
+                false,
+              )
+            }
 
-          if (!isMounted) {
             return
           }
 
-          setLead(leadData)
-          setCurrentUser(user)
-          setCommunications(
-            communicationData,
-          )
-          setFollowUps(
-            sortFollowUps(
+          try {
+            const [
+              leadData,
+              user,
+              communicationData,
               followUpData,
-            ),
-          )
+            ] =
+              await Promise.all([
+                getLead(
+                  numericLeadId,
+                ),
 
-          if (
-            user.role === 'ADMIN' ||
-            user.role ===
-              'SALES_MANAGER' ||
-            user.role ===
-              'PROJECT_MANAGER'
+                getCurrentUser(),
+
+                getLeadCommunications(
+                  numericLeadId,
+                ),
+
+                getLeadFollowUps(
+                  numericLeadId,
+                ),
+              ])
+
+            if (
+              !isMounted
+            ) {
+              return
+            }
+
+            setLead(
+              leadData,
+            )
+
+            setCurrentUser(
+              user,
+            )
+
+            setCommunications(
+              communicationData,
+            )
+
+            setFollowUps(
+              sortFollowUps(
+                followUpData,
+              ),
+            )
+
+            if (
+              user.role ===
+                'ADMIN' ||
+              user.role ===
+                'SALES_MANAGER' ||
+              user.role ===
+                'PROJECT_MANAGER'
+            ) {
+              const representativeData =
+                await getSalesRepresentatives()
+
+              if (
+                isMounted
+              ) {
+                setSalesRepresentatives(
+                  representativeData,
+                )
+              }
+            }
+          } catch (
+            requestError
           ) {
-            const representativeData =
-              await getSalesRepresentatives()
+            if (
+              !isMounted
+            ) {
+              return
+            }
 
-            if (isMounted) {
-              setSalesRepresentatives(
-                representativeData,
+            setError(
+              requestError
+                instanceof Error
+                ? requestError.message
+                : 'Unable to load this lead.',
+            )
+          } finally {
+            if (
+              isMounted
+            ) {
+              setIsLoading(
+                false,
               )
             }
           }
-        } catch (
-          requestError
-        ) {
-          if (!isMounted) {
-            return
-          }
-
-          setError(
-            requestError instanceof
-              Error
-              ? requestError.message
-              : 'Unable to load this lead.',
-          )
-        } finally {
-          if (isMounted) {
-            setIsLoading(false)
-          }
         }
+
+      void loadWorkspace()
+
+      return () => {
+        isMounted =
+          false
       }
+    },
+    [
+      leadId,
+    ],
+  )
 
-    void loadWorkspace()
 
-    return () => {
-      isMounted = false
-    }
-  }, [leadId])
-
-  if (isLoading) {
+  if (
+    isLoading
+  ) {
     return (
       <Box
         sx={{
-          minHeight: 500,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          minHeight:
+            500,
+
+          display:
+            'flex',
+
+          alignItems:
+            'center',
+
+          justifyContent:
+            'center',
         }}
       >
         <Stack
           spacing={2}
           sx={{
-            alignItems: 'center',
+            alignItems:
+              'center',
           }}
         >
           <CircularProgress />
@@ -577,7 +901,11 @@ function LeadWorkspacePage() {
     )
   }
 
-  if (error || !lead) {
+
+  if (
+    error ||
+    !lead
+  ) {
     return (
       <Box
         sx={{
@@ -589,7 +917,9 @@ function LeadWorkspacePage() {
       >
         <Alert
           severity="error"
-          sx={{ mb: 3 }}
+          sx={{
+            mb: 3,
+          }}
         >
           {error ||
             'Lead not found.'}
@@ -600,7 +930,9 @@ function LeadWorkspacePage() {
             <ArrowBackRounded />
           }
           onClick={() =>
-            navigate('/leads')
+            navigate(
+              '/leads',
+            )
           }
         >
           Back to Leads
@@ -609,26 +941,17 @@ function LeadWorkspacePage() {
     )
   }
 
-  const numericLeadId = lead.id
+
+  const numericLeadId =
+    lead.id
+
 
   const isSalesRep =
     currentUser?.role ===
     'SALES_REP'
 
-  const canWorkLead =
-    currentUser?.role ===
-      'ADMIN' ||
-    currentUser?.role ===
-      'SALES_MANAGER' ||
-    currentUser?.role ===
-      'PROJECT_MANAGER' ||
-    (
-      isSalesRep &&
-      lead.assigned_to ===
-        currentUser?.id
-    )
 
-  const canAssignLead =
+  const canManageLead =
     currentUser?.role ===
       'ADMIN' ||
     currentUser?.role ===
@@ -636,23 +959,54 @@ function LeadWorkspacePage() {
     currentUser?.role ===
       'PROJECT_MANAGER'
 
+
+  const canWorkLead =
+    canManageLead ||
+    (
+      isSalesRep &&
+      lead.assigned_to ===
+        currentUser?.id
+    )
+
+
+  const canAssignLead =
+    canManageLead
+
+
   const isClosedLead =
-    lead.status === 'WON' ||
-    lead.status === 'LOST' ||
+    lead.status ===
+      'WON' ||
+    lead.status ===
+      'LOST' ||
     lead.status ===
       'DISQUALIFIED'
+
+
+  const canEditLead =
+    canManageLead &&
+    !isClosedLead
+
+
+  const canReviewLead =
+    canManageLead &&
+    !isClosedLead
+
 
   const canAddCommunication =
     canWorkLead &&
     !isClosedLead
 
+
   const canScheduleFollowUp =
     canWorkLead &&
     !isClosedLead
 
+
   const filteredCommunications =
     communications.filter(
-      (communication) =>
+      (
+        communication,
+      ) =>
         communicationFilter ===
           'ALL' ||
         communication
@@ -660,18 +1014,33 @@ function LeadWorkspacePage() {
           communicationFilter,
     )
 
+
+  /*
+   * Assignment
+   */
+
   const handleAssignLead =
     async (
       salesRepresentativeId:
         number | null,
     ) => {
-      if (!canAssignLead) {
+      if (
+        !canAssignLead
+      ) {
         return
       }
 
-      setIsAssigningLead(true)
-      setAssignmentError('')
-      setSuccessMessage('')
+      setIsAssigningLead(
+        true,
+      )
+
+      setAssignmentError(
+        '',
+      )
+
+      setSuccessMessage(
+        '',
+      )
 
       try {
         const updatedLead =
@@ -683,7 +1052,9 @@ function LeadWorkspacePage() {
             },
           )
 
-        setLead(updatedLead)
+        setLead(
+          updatedLead,
+        )
 
         if (
           salesRepresentativeId ===
@@ -695,7 +1066,9 @@ function LeadWorkspacePage() {
         } else {
           const representative =
             salesRepresentatives.find(
-              (item) =>
+              (
+                item,
+              ) =>
                 item.id ===
                 salesRepresentativeId,
             )
@@ -710,8 +1083,8 @@ function LeadWorkspacePage() {
         requestError
       ) {
         setAssignmentError(
-          requestError instanceof
-            Error
+          requestError
+            instanceof Error
             ? requestError.message
             : 'Unable to assign this lead.',
         )
@@ -722,6 +1095,311 @@ function LeadWorkspacePage() {
       }
     }
 
+
+  /*
+   * Edit Lead
+   */
+
+  const openEditLeadDialog =
+    () => {
+      if (
+        !canEditLead
+      ) {
+        return
+      }
+
+      setEditLeadForm(
+        getEditLeadForm(
+          lead,
+        ),
+      )
+
+      setEditLeadError(
+        '',
+      )
+
+      setSuccessMessage(
+        '',
+      )
+
+      setEditLeadDialogOpen(
+        true,
+      )
+    }
+
+
+  const closeEditLeadDialog =
+    () => {
+      if (
+        isSavingLead
+      ) {
+        return
+      }
+
+      setEditLeadDialogOpen(
+        false,
+      )
+
+      setEditLeadError(
+        '',
+      )
+    }
+
+
+  const handleSaveLead =
+    async () => {
+      if (
+        !canEditLead
+      ) {
+        return
+      }
+
+      if (
+        !editLeadForm
+          .contactName
+          .trim()
+      ) {
+        setEditLeadError(
+          'Contact name is required.',
+        )
+
+        return
+      }
+
+      if (
+        !editLeadForm
+          .companyName
+          .trim()
+      ) {
+        setEditLeadError(
+          'Company name is required.',
+        )
+
+        return
+      }
+
+      if (
+        !editLeadForm
+          .phone
+          .trim()
+      ) {
+        setEditLeadError(
+          'Phone number is required.',
+        )
+
+        return
+      }
+
+      setIsSavingLead(
+        true,
+      )
+
+      setEditLeadError(
+        '',
+      )
+
+      try {
+        const updatedLead =
+          await updateLead(
+            numericLeadId,
+            {
+              contact_name:
+                editLeadForm
+                  .contactName
+                  .trim(),
+
+              company_name:
+                editLeadForm
+                  .companyName
+                  .trim(),
+
+              email:
+                editLeadForm
+                  .email
+                  .trim(),
+
+              phone:
+                editLeadForm
+                  .phone
+                  .trim(),
+
+              source:
+                editLeadForm
+                  .source
+                  .trim(),
+            },
+          )
+
+        setLead(
+          updatedLead,
+        )
+
+        setEditLeadDialogOpen(
+          false,
+        )
+
+        setSuccessMessage(
+          'Lead details updated successfully.',
+        )
+      } catch (
+        requestError
+      ) {
+        setEditLeadError(
+          requestError
+            instanceof Error
+            ? requestError.message
+            : 'Unable to update this lead.',
+        )
+      } finally {
+        setIsSavingLead(
+          false,
+        )
+      }
+    }
+
+
+  /*
+   * Qualification
+   */
+
+  const openQualificationDialog =
+    (
+      action:
+        QualificationAction,
+    ) => {
+      if (
+        !canReviewLead
+      ) {
+        return
+      }
+
+      setQualificationAction(
+        action,
+      )
+
+      setQualificationNotes(
+        '',
+      )
+
+      setQualificationError(
+        '',
+      )
+
+      setSuccessMessage(
+        '',
+      )
+
+      setQualificationDialogOpen(
+        true,
+      )
+    }
+
+
+  const closeQualificationDialog =
+    () => {
+      if (
+        isSavingQualification
+      ) {
+        return
+      }
+
+      setQualificationDialogOpen(
+        false,
+      )
+
+      setQualificationError(
+        '',
+      )
+    }
+
+
+  const handleQualificationDecision =
+    async () => {
+      if (
+        !canReviewLead
+      ) {
+        return
+      }
+
+      const notes =
+        qualificationNotes.trim()
+
+      if (
+        !notes
+      ) {
+        setQualificationError(
+          qualificationAction ===
+            'QUALIFY'
+            ? 'Please record qualification notes before qualifying the lead.'
+            : 'Please provide a reason for disqualifying the lead.',
+        )
+
+        return
+      }
+
+      setIsSavingQualification(
+        true,
+      )
+
+      setQualificationError(
+        '',
+      )
+
+      try {
+        const newStatus:
+          LeadStatus =
+            qualificationAction ===
+            'QUALIFY'
+              ? 'QUALIFIED'
+              : 'DISQUALIFIED'
+
+        const updatedLead =
+          await updateLead(
+            numericLeadId,
+            {
+              status:
+                newStatus,
+
+              qualification_notes:
+                notes,
+            },
+          )
+
+        setLead(
+          updatedLead,
+        )
+
+        setQualificationDialogOpen(
+          false,
+        )
+
+        setSuccessMessage(
+          qualificationAction ===
+            'QUALIFY'
+            ? 'Lead qualified successfully.'
+            : 'Lead disqualified successfully.',
+        )
+      } catch (
+        requestError
+      ) {
+        setQualificationError(
+          requestError
+            instanceof Error
+            ? requestError.message
+            : 'Unable to update the lead qualification decision.',
+        )
+      } finally {
+        setIsSavingQualification(
+          false,
+        )
+      }
+    }
+
+
+  /*
+   * Communications
+   */
+
   const openCommunicationDialog =
     () => {
       if (
@@ -730,15 +1408,23 @@ function LeadWorkspacePage() {
         return
       }
 
-      setCommunicationError('')
-      setSuccessMessage('')
+      setCommunicationError(
+        '',
+      )
+
+      setSuccessMessage(
+        '',
+      )
+
       setCommunicationForm(
         createEmptyCommunicationForm(),
       )
+
       setCommunicationDialogOpen(
         true,
       )
     }
+
 
   const closeCommunicationDialog =
     () => {
@@ -751,14 +1437,20 @@ function LeadWorkspacePage() {
       setCommunicationDialogOpen(
         false,
       )
-      setCommunicationError('')
+
+      setCommunicationError(
+        '',
+      )
     }
+
 
   const handleCreateCommunication =
     async () => {
       if (
         !canAddCommunication ||
-        !communicationForm.summary.trim() ||
+        !communicationForm
+          .summary
+          .trim() ||
         !communicationForm
           .communicationDate ||
         !communicationForm
@@ -770,8 +1462,14 @@ function LeadWorkspacePage() {
       setIsCreatingCommunication(
         true,
       )
-      setCommunicationError('')
-      setSuccessMessage('')
+
+      setCommunicationError(
+        '',
+      )
+
+      setSuccessMessage(
+        '',
+      )
 
       try {
         const createdCommunication =
@@ -781,14 +1479,17 @@ function LeadWorkspacePage() {
               communication_type:
                 communicationForm
                   .communicationType,
+
               communication_date:
                 new Date(
                   `${communicationForm.communicationDate}T${communicationForm.communicationTime}`,
                 ).toISOString(),
+
               summary:
                 communicationForm
                   .summary
                   .trim(),
+
               notes:
                 communicationForm
                   .notes
@@ -797,7 +1498,9 @@ function LeadWorkspacePage() {
           )
 
         setCommunications(
-          (current) => [
+          (
+            current,
+          ) => [
             createdCommunication,
             ...current,
           ],
@@ -822,8 +1525,8 @@ function LeadWorkspacePage() {
         requestError
       ) {
         setCommunicationError(
-          requestError instanceof
-            Error
+          requestError
+            instanceof Error
             ? requestError.message
             : 'Unable to record the communication.',
         )
@@ -834,6 +1537,11 @@ function LeadWorkspacePage() {
       }
     }
 
+
+  /*
+   * Follow-ups
+   */
+
   const openFollowUpDialog =
     () => {
       if (
@@ -842,18 +1550,27 @@ function LeadWorkspacePage() {
         return
       }
 
-      setFollowUpError('')
-      setSuccessMessage('')
+      setFollowUpError(
+        '',
+      )
+
+      setSuccessMessage(
+        '',
+      )
+
       setFollowUpSuccessMessage(
         '',
       )
+
       setFollowUpForm(
         createEmptyFollowUpForm(),
       )
+
       setFollowUpDialogOpen(
         true,
       )
     }
+
 
   const closeFollowUpDialog =
     () => {
@@ -866,41 +1583,57 @@ function LeadWorkspacePage() {
       setFollowUpDialogOpen(
         false,
       )
-      setFollowUpError('')
+
+      setFollowUpError(
+        '',
+      )
     }
+
 
   const handleCreateFollowUp =
     async () => {
       if (
         !canScheduleFollowUp ||
-        !followUpForm.title.trim() ||
-        !followUpForm.dueDate
+        !followUpForm
+          .title
+          .trim() ||
+        !followUpForm
+          .dueDate
       ) {
         return
       }
 
       const dueDate =
         new Date(
-          followUpForm.dueDate,
+          followUpForm
+            .dueDate,
         )
 
       if (
         Number.isNaN(
           dueDate.getTime(),
         ) ||
-        dueDate <= new Date()
+        dueDate <=
+          new Date()
       ) {
         setFollowUpError(
           'Follow-up due date must be in the future.',
         )
+
         return
       }
 
       setIsCreatingFollowUp(
         true,
       )
-      setFollowUpError('')
-      setSuccessMessage('')
+
+      setFollowUpError(
+        '',
+      )
+
+      setSuccessMessage(
+        '',
+      )
 
       try {
         const createdFollowUp =
@@ -911,17 +1644,21 @@ function LeadWorkspacePage() {
                 followUpForm
                   .title
                   .trim(),
+
               description:
                 followUpForm
                   .description
                   .trim(),
+
               due_date:
                 dueDate.toISOString(),
             },
           )
 
         setFollowUps(
-          (current) =>
+          (
+            current,
+          ) =>
             sortFollowUps([
               ...current,
               createdFollowUp,
@@ -947,8 +1684,8 @@ function LeadWorkspacePage() {
         requestError
       ) {
         setFollowUpError(
-          requestError instanceof
-            Error
+          requestError
+            instanceof Error
             ? requestError.message
             : 'Unable to schedule the follow-up.',
         )
@@ -958,6 +1695,7 @@ function LeadWorkspacePage() {
         )
       }
     }
+
 
   return (
     <Box
@@ -973,26 +1711,40 @@ function LeadWorkspacePage() {
           <ArrowBackRounded />
         }
         onClick={() =>
-          navigate('/leads')
+          navigate(
+            '/leads',
+          )
         }
-        sx={{ mb: 2 }}
+        sx={{
+          mb: 2,
+        }}
       >
         {isSalesRep
           ? 'Back to My Leads'
           : 'Back to Leads'}
       </Button>
 
+
       {successMessage && (
         <Alert
           severity="success"
-          sx={{ mb: 3 }}
+          sx={{
+            mb: 3,
+          }}
           onClose={() =>
-            setSuccessMessage('')
+            setSuccessMessage(
+              '',
+            )
           }
         >
-          {successMessage}
+          {
+            successMessage
+          }
         </Alert>
       )}
+
+
+      {/* HEADER */}
 
       <Stack
         direction={{
@@ -1002,11 +1754,14 @@ function LeadWorkspacePage() {
         sx={{
           justifyContent:
             'space-between',
+
           alignItems: {
             xs: 'flex-start',
             lg: 'center',
           },
+
           gap: 3,
+
           mb: 4,
         }}
       >
@@ -1015,27 +1770,36 @@ function LeadWorkspacePage() {
             direction="row"
             spacing={1.5}
             sx={{
-              alignItems: 'center',
-              flexWrap: 'wrap',
+              alignItems:
+                'center',
+
+              flexWrap:
+                'wrap',
+
               mb: 1,
             }}
           >
             <Typography
               variant="h4"
               sx={{
-                fontWeight: 800,
+                fontWeight:
+                  800,
               }}
             >
-              {lead.contact_name}
+              {
+                lead.contact_name
+              }
             </Typography>
 
             <Chip
               label={
                 lead.status_display
               }
-              color={getStatusColor(
-                lead.status,
-              )}
+              color={
+                getStatusColor(
+                  lead.status,
+                )
+              }
               size="small"
             />
           </Stack>
@@ -1044,12 +1808,16 @@ function LeadWorkspacePage() {
             variant="h6"
             color="text.secondary"
             sx={{
-              fontWeight: 500,
+              fontWeight:
+                500,
             }}
           >
-            {lead.company_name}
+            {
+              lead.company_name
+            }
           </Typography>
         </Box>
+
 
         {canWorkLead && (
           <Stack
@@ -1059,14 +1827,19 @@ function LeadWorkspacePage() {
             }}
             spacing={1}
           >
-            <Button
-              variant="outlined"
-              startIcon={
-                <EditRounded />
-              }
-            >
-              Edit Lead
-            </Button>
+            {canEditLead && (
+              <Button
+                variant="outlined"
+                startIcon={
+                  <EditRounded />
+                }
+                onClick={
+                  openEditLeadDialog
+                }
+              >
+                Edit Lead
+              </Button>
+            )}
 
             {canAddCommunication && (
               <Button
@@ -1099,12 +1872,19 @@ function LeadWorkspacePage() {
         )}
       </Stack>
 
+
+      {/* TABS */}
+
       <Card
         variant="outlined"
-        sx={{ mb: 3 }}
+        sx={{
+          mb: 3,
+        }}
       >
         <Tabs
-          value={activeTab}
+          value={
+            activeTab
+          }
           onChange={(
             _event,
             newValue:
@@ -1118,8 +1898,10 @@ function LeadWorkspacePage() {
           scrollButtons="auto"
           sx={{
             px: 2,
+
             borderBottom:
               '1px solid',
+
             borderColor:
               'divider',
           }}
@@ -1151,6 +1933,9 @@ function LeadWorkspacePage() {
         </Tabs>
       </Card>
 
+
+      {/* OVERVIEW */}
+
       {activeTab ===
         'overview' && (
         <Stack
@@ -1168,17 +1953,22 @@ function LeadWorkspacePage() {
             spacing={3}
             sx={{
               flex: 1,
-              width: '100%',
+              width:
+                '100%',
             }}
           >
             <Card
               variant="outlined"
-              sx={{ p: 3 }}
+              sx={{
+                p: 3,
+              }}
             >
               <Typography
                 variant="h6"
                 sx={{
-                  fontWeight: 800,
+                  fontWeight:
+                    800,
+
                   mb: 3,
                 }}
               >
@@ -1187,12 +1977,18 @@ function LeadWorkspacePage() {
 
               <Box
                 sx={{
-                  display: 'grid',
+                  display:
+                    'grid',
+
                   gridTemplateColumns:
                     {
-                      xs: '1fr',
-                      sm: '1fr 1fr',
+                      xs:
+                        '1fr',
+
+                      sm:
+                        '1fr 1fr',
                     },
+
                   gap: 3,
                 }}
               >
@@ -1250,64 +2046,241 @@ function LeadWorkspacePage() {
 
                 <InformationItem
                   label="Created"
-                  value={formatDate(
-                    lead.created_at,
-                  )}
+                  value={
+                    formatDate(
+                      lead.created_at,
+                    )
+                  }
                 />
 
                 <InformationItem
                   label="Last updated"
-                  value={formatDate(
-                    lead.updated_at,
-                  )}
+                  value={
+                    formatDate(
+                      lead.updated_at,
+                    )
+                  }
                 />
 
                 <InformationItem
                   label="Won / Converted"
-                  value={formatDate(
-                    lead.converted_at,
-                  )}
+                  value={
+                    formatDate(
+                      lead.converted_at,
+                    )
+                  }
                 />
               </Box>
             </Card>
 
+
+            {/* QUALIFICATION */}
+
             <Card
               variant="outlined"
-              sx={{ p: 3 }}
+              sx={{
+                p: 3,
+              }}
             >
-              <Typography
-                variant="h6"
+              <Stack
+                direction={{
+                  xs:
+                    'column',
+
+                  sm:
+                    'row',
+                }}
                 sx={{
-                  fontWeight: 800,
+                  justifyContent:
+                    'space-between',
+
+                  alignItems: {
+                    xs:
+                      'flex-start',
+
+                    sm:
+                      'center',
+                  },
+
+                  gap: 2,
+
                   mb: 2,
                 }}
               >
-                Qualification
-              </Typography>
+                <Box>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight:
+                        800,
+                    }}
+                  >
+                    Qualification
+                  </Typography>
 
-              <Typography
-                color={
-                  lead.qualification_notes
-                    ? 'text.primary'
-                    : 'text.secondary'
-                }
-              >
-                {lead.qualification_notes ||
-                  'No qualification notes have been recorded yet.'}
-              </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      mt: 0.4,
+                    }}
+                  >
+                    Sales Manager
+                    review and
+                    qualification
+                    decision.
+                  </Typography>
+                </Box>
+
+
+                {canReviewLead && (
+                  <Stack
+                    direction={{
+                      xs:
+                        'column',
+
+                      sm:
+                        'row',
+                    }}
+                    spacing={1}
+                  >
+                    {lead.status !==
+                      'QUALIFIED' && (
+                      <Button
+                        variant="contained"
+                        color="success"
+                        startIcon={
+                          <CheckCircleRounded />
+                        }
+                        onClick={() =>
+                          openQualificationDialog(
+                            'QUALIFY',
+                          )
+                        }
+                        sx={{
+                          textTransform:
+                            'none',
+
+                          fontWeight:
+                            700,
+                        }}
+                      >
+                        Qualify Lead
+                      </Button>
+                    )}
+
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={
+                        <DoNotDisturbAltRounded />
+                      }
+                      onClick={() =>
+                        openQualificationDialog(
+                          'DISQUALIFY',
+                        )
+                      }
+                      sx={{
+                        textTransform:
+                          'none',
+
+                        fontWeight:
+                          700,
+                      }}
+                    >
+                      Disqualify Lead
+                    </Button>
+                  </Stack>
+                )}
+              </Stack>
+
+
+              {lead.status ===
+                'QUALIFIED' && (
+                <Alert
+                  severity="success"
+                  sx={{
+                    mb:
+                      lead.qualification_notes
+                        ? 2
+                        : 0,
+                  }}
+                >
+                  This lead has been
+                  qualified by the
+                  management team.
+                </Alert>
+              )}
+
+
+              {lead.status ===
+                'DISQUALIFIED' && (
+                <Alert
+                  severity="warning"
+                  sx={{
+                    mb:
+                      lead.qualification_notes
+                        ? 2
+                        : 0,
+                  }}
+                >
+                  This lead has been
+                  disqualified.
+                </Alert>
+              )}
+
+
+              {lead.qualification_notes ? (
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    {lead.status ===
+                    'DISQUALIFIED'
+                      ? 'Disqualification reason'
+                      : 'Qualification notes'}
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      mt: 0.5,
+
+                      whiteSpace:
+                        'pre-wrap',
+                    }}
+                  >
+                    {
+                      lead.qualification_notes
+                    }
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography
+                  color="text.secondary"
+                >
+                  No qualification
+                  notes have been
+                  recorded yet.
+                </Typography>
+              )}
             </Card>
+
 
             {lead.status ===
               'LOST' && (
               <Card
                 variant="outlined"
-                sx={{ p: 3 }}
+                sx={{
+                  p: 3,
+                }}
               >
                 <Typography
                   variant="h6"
                   sx={{
                     fontWeight:
                       800,
+
                     mb: 2,
                   }}
                 >
@@ -1317,51 +2290,37 @@ function LeadWorkspacePage() {
                 <Alert
                   severity="error"
                 >
-                  {lead.lost_reason}
-                </Alert>
-              </Card>
-            )}
-
-            {lead.status ===
-              'DISQUALIFIED' && (
-              <Card
-                variant="outlined"
-                sx={{ p: 3 }}
-              >
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight:
-                      800,
-                    mb: 2,
-                  }}
-                >
-                  Disqualified Lead
-                </Typography>
-
-                <Alert
-                  severity="warning"
-                >
-                  This lead has been
-                  disqualified.
+                  {
+                    lead.lost_reason
+                  }
                 </Alert>
               </Card>
             )}
           </Stack>
 
+
+          {/* RIGHT SIDE */}
+
           <Stack
             spacing={3}
             sx={{
               width: {
-                xs: '100%',
-                lg: 360,
+                xs:
+                  '100%',
+
+                lg:
+                  360,
               },
-              flexShrink: 0,
+
+              flexShrink:
+                0,
             }}
           >
             <Card
               variant="outlined"
-              sx={{ p: 3 }}
+              sx={{
+                p: 3,
+              }}
             >
               <Stack
                 direction="row"
@@ -1369,6 +2328,7 @@ function LeadWorkspacePage() {
                 sx={{
                   alignItems:
                     'center',
+
                   mb: 2,
                 }}
               >
@@ -1388,7 +2348,9 @@ function LeadWorkspacePage() {
               </Stack>
 
               <Divider
-                sx={{ mb: 2 }}
+                sx={{
+                  mb: 2,
+                }}
               />
 
               <InformationItem
@@ -1399,8 +2361,14 @@ function LeadWorkspacePage() {
                 }
               />
 
-              {canAssignLead && (
-                <Box sx={{ mt: 3 }}>
+
+              {canAssignLead &&
+                !isClosedLead && (
+                <Box
+                  sx={{
+                    mt: 3,
+                  }}
+                >
                   <FormControl
                     fullWidth
                     size="small"
@@ -1426,7 +2394,9 @@ function LeadWorkspacePage() {
                         event,
                       ) => {
                         const selectedValue =
-                          event.target.value
+                          event
+                            .target
+                            .value
 
                         void handleAssignLead(
                           selectedValue ===
@@ -1452,9 +2422,11 @@ function LeadWorkspacePage() {
                             key={
                               representative.id
                             }
-                            value={String(
-                              representative.id,
-                            )}
+                            value={
+                              String(
+                                representative.id,
+                              )
+                            }
                           >
                             {
                               representative.full_name
@@ -1470,6 +2442,7 @@ function LeadWorkspacePage() {
                     </Select>
                   </FormControl>
 
+
                   {isAssigningLead && (
                     <Stack
                       direction="row"
@@ -1477,6 +2450,7 @@ function LeadWorkspacePage() {
                       sx={{
                         alignItems:
                           'center',
+
                         mt: 1.5,
                       }}
                     >
@@ -1494,10 +2468,13 @@ function LeadWorkspacePage() {
                     </Stack>
                   )}
 
+
                   {assignmentError && (
                     <Alert
                       severity="error"
-                      sx={{ mt: 2 }}
+                      sx={{
+                        mt: 2,
+                      }}
                       onClose={() =>
                         setAssignmentError(
                           '',
@@ -1512,7 +2489,12 @@ function LeadWorkspacePage() {
                 </Box>
               )}
 
-              <Box sx={{ mt: 2 }}>
+
+              <Box
+                sx={{
+                  mt: 2,
+                }}
+              >
                 <InformationItem
                   label="Created by"
                   value={
@@ -1522,14 +2504,18 @@ function LeadWorkspacePage() {
               </Box>
             </Card>
 
+
             <Card
               variant="outlined"
-              sx={{ p: 3 }}
+              sx={{
+                p: 3,
+              }}
             >
               <Typography
                 variant="h6"
                 sx={{
-                  fontWeight: 800,
+                  fontWeight:
+                    800,
                 }}
               >
                 Lead Rescue Radar
@@ -1551,18 +2537,30 @@ function LeadWorkspacePage() {
 
               <Box
                 sx={{
-                  display: 'flex',
+                  display:
+                    'flex',
+
                   justifyContent:
                     'center',
+
                   alignItems:
                     'center',
-                  width: 130,
-                  height: 130,
-                  mx: 'auto',
+
+                  width:
+                    130,
+
+                  height:
+                    130,
+
+                  mx:
+                    'auto',
+
                   borderRadius:
                     '50%',
+
                   border:
                     '10px solid',
+
                   borderColor:
                     'divider',
                 }}
@@ -1596,22 +2594,34 @@ function LeadWorkspacePage() {
         </Stack>
       )}
 
+
+      {/* COMMUNICATIONS */}
+
       {activeTab ===
         'communications' && (
         <Box>
           <Stack
             direction={{
-              xs: 'column',
-              md: 'row',
+              xs:
+                'column',
+
+              md:
+                'row',
             }}
             sx={{
               justifyContent:
                 'space-between',
+
               alignItems: {
-                xs: 'flex-start',
-                md: 'center',
+                xs:
+                  'flex-start',
+
+                md:
+                  'center',
               },
+
               gap: 2,
+
               mb: 3,
             }}
           >
@@ -1619,11 +2629,15 @@ function LeadWorkspacePage() {
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ mb: 1 }}
+                sx={{
+                  mb: 1,
+                }}
               >
                 Leads
                 &nbsp;&nbsp;›&nbsp;&nbsp;
-                {lead.contact_name}
+                {
+                  lead.contact_name
+                }
                 &nbsp;&nbsp;›&nbsp;&nbsp;
                 Communication History
               </Typography>
@@ -1634,6 +2648,7 @@ function LeadWorkspacePage() {
                 sx={{
                   alignItems:
                     'center',
+
                   flexWrap:
                     'wrap',
                 }}
@@ -1661,15 +2676,22 @@ function LeadWorkspacePage() {
 
               <Typography
                 color="text.secondary"
-                sx={{ mt: 0.75 }}
+                sx={{
+                  mt: 0.75,
+                }}
               >
                 View previous
                 interactions with{' '}
-                {lead.contact_name}{' '}
+                {
+                  lead.contact_name
+                }{' '}
                 from{' '}
-                {lead.company_name}.
+                {
+                  lead.company_name
+                }.
               </Typography>
             </Box>
+
 
             {canAddCommunication && (
               <Button
@@ -1682,9 +2704,13 @@ function LeadWorkspacePage() {
                 }
                 sx={{
                   px: 2.5,
-                  minHeight: 42,
+
+                  minHeight:
+                    42,
+
                   textTransform:
                     'none',
+
                   fontWeight:
                     700,
                 }}
@@ -1694,36 +2720,55 @@ function LeadWorkspacePage() {
             )}
           </Stack>
 
+
           <Divider
-            sx={{ mb: 2.5 }}
+            sx={{
+              mb: 2.5,
+            }}
           />
+
 
           <Stack
             direction={{
-              xs: 'column',
-              lg: 'row',
+              xs:
+                'column',
+
+              lg:
+                'row',
             }}
             sx={{
               justifyContent:
                 'space-between',
+
               alignItems: {
-                xs: 'stretch',
-                lg: 'center',
+                xs:
+                  'stretch',
+
+                lg:
+                  'center',
               },
+
               gap: 2,
+
               mb: 3,
             }}
           >
             <Stack
               direction={{
-                xs: 'column',
-                sm: 'row',
+                xs:
+                  'column',
+
+                sm:
+                  'row',
               }}
               spacing={1}
               sx={{
                 alignItems: {
-                  xs: 'stretch',
-                  sm: 'center',
+                  xs:
+                    'stretch',
+
+                  sm:
+                    'center',
                 },
               }}
             >
@@ -1733,6 +2778,7 @@ function LeadWorkspacePage() {
                 sx={{
                   alignItems:
                     'center',
+
                   color:
                     'text.secondary',
                 }}
@@ -1752,24 +2798,29 @@ function LeadWorkspacePage() {
                 </Typography>
               </Stack>
 
+
               {(
                 [
                   [
                     'ALL',
                     'All Activities',
                   ],
+
                   [
                     'CALL',
                     'Calls',
                   ],
+
                   [
                     'EMAIL',
                     'Emails',
                   ],
+
                   [
                     'MEETING',
                     'Meetings',
                   ],
+
                   [
                     'WHATSAPP',
                     'WhatsApp',
@@ -1781,7 +2832,9 @@ function LeadWorkspacePage() {
                   label,
                 ]) => (
                   <Button
-                    key={value}
+                    key={
+                      value
+                    }
                     size="small"
                     variant={
                       communicationFilter ===
@@ -1795,17 +2848,24 @@ function LeadWorkspacePage() {
                       )
                     }
                     sx={{
-                      minWidth: 0,
-                      px: 1.5,
+                      minWidth:
+                        0,
+
+                      px:
+                        1.5,
+
                       color:
                         communicationFilter ===
                         value
                           ? 'text.primary'
                           : 'text.secondary',
+
                       borderColor:
                         'divider',
+
                       textTransform:
                         'none',
+
                       fontWeight:
                         communicationFilter ===
                         value
@@ -1813,7 +2873,9 @@ function LeadWorkspacePage() {
                           : 500,
                     }}
                   >
-                    {label}
+                    {
+                      label
+                    }
                   </Button>
                 ),
               )}
@@ -1834,14 +2896,17 @@ function LeadWorkspacePage() {
             </Typography>
           </Stack>
 
+
           {filteredCommunications.length ===
           0 ? (
             <Card
               variant="outlined"
               sx={{
                 p: 5,
+
                 textAlign:
                   'center',
+
                 boxShadow:
                   'none',
               }}
@@ -1859,7 +2924,9 @@ function LeadWorkspacePage() {
 
               <Typography
                 color="text.secondary"
-                sx={{ mt: 1 }}
+                sx={{
+                  mt: 1,
+                }}
               >
                 {communications.length ===
                 0
@@ -1874,19 +2941,30 @@ function LeadWorkspacePage() {
               sx={{
                 position:
                   'relative',
-                '&::before': {
-                  content:
-                    '""',
-                  position:
-                    'absolute',
-                  left: 20,
-                  top: 22,
-                  bottom: 22,
-                  width:
-                    '1px',
-                  bgcolor:
-                    'divider',
-                },
+
+                '&::before':
+                  {
+                    content:
+                      '""',
+
+                    position:
+                      'absolute',
+
+                    left:
+                      20,
+
+                    top:
+                      22,
+
+                    bottom:
+                      22,
+
+                    width:
+                      '1px',
+
+                    bgcolor:
+                      'divider',
+                  },
               }}
             >
               <Stack
@@ -1905,6 +2983,7 @@ function LeadWorkspacePage() {
                       sx={{
                         position:
                           'relative',
+
                         alignItems:
                           'flex-start',
                       }}
@@ -1913,17 +2992,28 @@ function LeadWorkspacePage() {
                         sx={{
                           position:
                             'relative',
-                          zIndex: 1,
-                          width: 42,
-                          height: 42,
+
+                          zIndex:
+                            1,
+
+                          width:
+                            42,
+
+                          height:
+                            42,
+
                           borderRadius:
                             1.5,
+
                           display:
                             'flex',
+
                           alignItems:
                             'center',
+
                           justifyContent:
                             'center',
+
                           bgcolor:
                             communication.communication_type ===
                             'CALL'
@@ -1935,8 +3025,10 @@ function LeadWorkspacePage() {
                                     'MEETING'
                                   ? 'success.main'
                                   : 'warning.main',
+
                           color:
                             'common.white',
+
                           flexShrink:
                             0,
                         }}
@@ -1946,147 +3038,170 @@ function LeadWorkspacePage() {
                         )}
                       </Box>
 
+
                       <Card
                         variant="outlined"
                         sx={{
-                          flex: 1,
+                          flex:
+                            1,
+
                           p: {
-                            xs: 2,
-                            sm: 2.5,
+                            xs:
+                              2,
+
+                            sm:
+                              2.5,
                           },
+
                           boxShadow:
                             'none',
                         }}
                       >
-                        <Box>
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{
+                            alignItems:
+                              'center',
+
+                            flexWrap:
+                              'wrap',
+
+                            mb:
+                              1,
+                          }}
+                        >
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              px:
+                                1,
+
+                              py:
+                                0.35,
+
+                              borderRadius:
+                                1,
+
+                              bgcolor:
+                                'action.hover',
+
+                              color:
+                                'text.secondary',
+
+                              fontWeight:
+                                800,
+                            }}
+                          >
+                            {communication
+                              .communication_type_display
+                              .toUpperCase()}
+                          </Typography>
+
+                          <Typography
+                            sx={{
+                              fontWeight:
+                                800,
+                            }}
+                          >
+                            {
+                              communication.summary
+                            }
+                          </Typography>
+                        </Stack>
+
+
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            lineHeight:
+                              1.65,
+
+                            whiteSpace:
+                              'pre-wrap',
+                          }}
+                        >
+                          {communication.notes ||
+                            'No additional communication details were recorded.'}
+                        </Typography>
+
+
+                        <Stack
+                          direction={{
+                            xs:
+                              'column',
+
+                            sm:
+                              'row',
+                          }}
+                          spacing={{
+                            xs:
+                              0.75,
+
+                            sm:
+                              2,
+                          }}
+                          sx={{
+                            mt:
+                              2,
+                          }}
+                        >
                           <Stack
                             direction="row"
-                            spacing={1}
+                            spacing={0.75}
                             sx={{
                               alignItems:
                                 'center',
-                              flexWrap:
-                                'wrap',
-                              mb: 1,
+
+                              color:
+                                'text.secondary',
                             }}
                           >
+                            <PersonOutlineRounded
+                              sx={{
+                                fontSize:
+                                  17,
+                              }}
+                            />
+
                             <Typography
                               variant="caption"
-                              sx={{
-                                px: 1,
-                                py: 0.35,
-                                borderRadius:
-                                  1,
-                                bgcolor:
-                                  'action.hover',
-                                color:
-                                  'text.secondary',
-                                fontWeight:
-                                  800,
-                                letterSpacing:
-                                  '0.05em',
-                              }}
                             >
-                              {communication.communication_type_display.toUpperCase()}
-                            </Typography>
-
-                            <Typography
-                              sx={{
-                                fontWeight:
-                                  800,
-                              }}
-                            >
+                              Recorded by{' '}
                               {
-                                communication.summary
+                                communication.created_by_name
                               }
                             </Typography>
                           </Stack>
-
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{
-                              lineHeight:
-                                1.65,
-                              whiteSpace:
-                                'pre-wrap',
-                            }}
-                          >
-                            {communication.notes ||
-                              'No additional communication details were recorded.'}
-                          </Typography>
 
                           <Stack
-                            direction={{
-                              xs: 'column',
-                              sm: 'row',
-                            }}
-                            spacing={{
-                              xs: 0.75,
-                              sm: 2,
-                            }}
+                            direction="row"
+                            spacing={0.75}
                             sx={{
-                              mt: 2,
+                              alignItems:
+                                'center',
+
+                              color:
+                                'text.secondary',
                             }}
                           >
-                            <Stack
-                              direction="row"
-                              spacing={
-                                0.75
-                              }
+                            <CalendarTodayRounded
                               sx={{
-                                alignItems:
-                                  'center',
-                                color:
-                                  'text.secondary',
+                                fontSize:
+                                  16,
                               }}
+                            />
+
+                            <Typography
+                              variant="caption"
                             >
-                              <PersonOutlineRounded
-                                sx={{
-                                  fontSize:
-                                    17,
-                                }}
-                              />
-
-                              <Typography
-                                variant="caption"
-                              >
-                                Recorded by{' '}
-                                {
-                                  communication.created_by_name
-                                }
-                              </Typography>
-                            </Stack>
-
-                            <Stack
-                              direction="row"
-                              spacing={
-                                0.75
-                              }
-                              sx={{
-                                alignItems:
-                                  'center',
-                                color:
-                                  'text.secondary',
-                              }}
-                            >
-                              <CalendarTodayRounded
-                                sx={{
-                                  fontSize:
-                                    16,
-                                }}
-                              />
-
-                              <Typography
-                                variant="caption"
-                              >
-                                {formatDate(
-                                  communication.communication_date,
-                                )}
-                              </Typography>
-                            </Stack>
+                              {formatDate(
+                                communication.communication_date,
+                              )}
+                            </Typography>
                           </Stack>
-                        </Box>
+                        </Stack>
                       </Card>
                     </Stack>
                   ),
@@ -2094,158 +3209,52 @@ function LeadWorkspacePage() {
               </Stack>
             </Box>
           )}
-
-          <Divider
-            sx={{ my: 4 }}
-          />
-
-          <Stack
-            direction={{
-              xs: 'column',
-              md: 'row',
-            }}
-            spacing={2}
-          >
-            {canAddCommunication && (
-              <Card
-                variant="outlined"
-                onClick={
-                  openCommunicationDialog
-                }
-                sx={{
-                  flex: 1,
-                  p: 2.25,
-                  cursor:
-                    'pointer',
-                  boxShadow:
-                    'none',
-                  '&:hover': {
-                    borderColor:
-                      'primary.main',
-                    bgcolor:
-                      'action.hover',
-                  },
-                }}
-              >
-                <Stack
-                  direction="row"
-                  spacing={1.5}
-                  sx={{
-                    alignItems:
-                      'center',
-                  }}
-                >
-                  <CallRounded
-                    color="primary"
-                  />
-
-                  <Box>
-                    <Typography
-                      sx={{
-                        fontWeight:
-                          800,
-                      }}
-                    >
-                      Log an Interaction
-                    </Typography>
-
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                    >
-                      Record the latest
-                      customer
-                      communication.
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Card>
-            )}
-
-            {canScheduleFollowUp && (
-              <Card
-                variant="outlined"
-                onClick={
-                  openFollowUpDialog
-                }
-                sx={{
-                  flex: 1,
-                  p: 2.25,
-                  cursor:
-                    'pointer',
-                  boxShadow:
-                    'none',
-                  '&:hover': {
-                    borderColor:
-                      'primary.main',
-                    bgcolor:
-                      'action.hover',
-                  },
-                }}
-              >
-                <Stack
-                  direction="row"
-                  spacing={1.5}
-                  sx={{
-                    alignItems:
-                      'center',
-                  }}
-                >
-                  <EventRounded
-                    color="primary"
-                  />
-
-                  <Box>
-                    <Typography
-                      sx={{
-                        fontWeight:
-                          800,
-                      }}
-                    >
-                      Schedule Follow-up
-                    </Typography>
-
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                    >
-                      Set the next action
-                      for this lead.
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Card>
-            )}
-          </Stack>
         </Box>
       )}
 
+
+      {/* FOLLOW UPS */}
+
       {activeTab ===
         'follow-ups' && (
-        <Stack spacing={2.5}>
+        <Stack
+          spacing={2.5}
+        >
           <Card
             variant="outlined"
             sx={{
               p: {
-                xs: 2.25,
-                sm: 2.75,
+                xs:
+                  2.25,
+
+                sm:
+                  2.75,
               },
+
               boxShadow:
                 'none',
             }}
           >
             <Stack
               direction={{
-                xs: 'column',
-                sm: 'row',
+                xs:
+                  'column',
+
+                sm:
+                  'row',
               }}
               sx={{
                 justifyContent:
                   'space-between',
+
                 alignItems: {
-                  xs: 'flex-start',
-                  sm: 'center',
+                  xs:
+                    'flex-start',
+
+                  sm:
+                    'center',
                 },
+
                 gap: 2,
               }}
             >
@@ -2264,7 +3273,8 @@ function LeadWorkspacePage() {
                   variant="body2"
                   color="text.secondary"
                   sx={{
-                    mt: 0.5,
+                    mt:
+                      0.5,
                   }}
                 >
                   Track upcoming,
@@ -2273,6 +3283,7 @@ function LeadWorkspacePage() {
                   for this lead.
                 </Typography>
               </Box>
+
 
               {canScheduleFollowUp && (
                 <Button
@@ -2286,9 +3297,12 @@ function LeadWorkspacePage() {
                   sx={{
                     textTransform:
                       'none',
+
                     fontWeight:
                       700,
-                    px: 2,
+
+                    px:
+                      2,
                   }}
                 >
                   Schedule Follow-up
@@ -2297,21 +3311,6 @@ function LeadWorkspacePage() {
             </Stack>
           </Card>
 
-          {followUpError &&
-            !followUpDialogOpen && (
-              <Alert
-                severity="error"
-                onClose={() =>
-                  setFollowUpError(
-                    '',
-                  )
-                }
-              >
-                {
-                  followUpError
-                }
-              </Alert>
-            )}
 
           {followUps.length ===
           0 ? (
@@ -2319,8 +3318,10 @@ function LeadWorkspacePage() {
               variant="outlined"
               sx={{
                 p: 5,
+
                 textAlign:
                   'center',
+
                 boxShadow:
                   'none',
               }}
@@ -2337,7 +3338,9 @@ function LeadWorkspacePage() {
 
               <Typography
                 color="text.secondary"
-                sx={{ mt: 1 }}
+                sx={{
+                  mt: 1,
+                }}
               >
                 {canScheduleFollowUp
                   ? 'Schedule the next action for this lead.'
@@ -2346,7 +3349,9 @@ function LeadWorkspacePage() {
             </Card>
           ) : (
             followUps.map(
-              (followUp) => (
+              (
+                followUp,
+              ) => (
                 <Card
                   key={
                     followUp.id
@@ -2359,21 +3364,27 @@ function LeadWorkspacePage() {
                   }
                   sx={{
                     p: {
-                      xs: 2.25,
-                      sm: 2.75,
+                      xs:
+                        2.25,
+
+                      sm:
+                        2.75,
                     },
+
                     boxShadow:
                       'none',
+
                     cursor:
                       'pointer',
-                    transition:
-                      'border-color 120ms ease, background-color 120ms ease',
-                    '&:hover': {
-                      borderColor:
-                        'primary.main',
-                      bgcolor:
-                        'action.hover',
-                    },
+
+                    '&:hover':
+                      {
+                        borderColor:
+                          'primary.main',
+
+                        bgcolor:
+                          'action.hover',
+                      },
                   }}
                 >
                   <Stack
@@ -2381,38 +3392,49 @@ function LeadWorkspacePage() {
                     sx={{
                       justifyContent:
                         'space-between',
+
                       alignItems:
                         'flex-start',
-                      gap: 2,
+
+                      gap:
+                        2,
                     }}
                   >
                     <Box
                       sx={{
-                        flex: 1,
-                        minWidth: 0,
+                        flex:
+                          1,
+
+                        minWidth:
+                          0,
                       }}
                     >
                       <Stack
                         direction="row"
-                        spacing={
-                          1.25
-                        }
+                        spacing={1.25}
                         sx={{
                           alignItems:
                             'center',
+
                           flexWrap:
                             'wrap',
-                          mb: 1.25,
+
+                          mb:
+                            1.25,
                         }}
                       >
                         <Chip
                           size="small"
-                          label={getFollowUpLabel(
-                            followUp,
-                          )}
-                          color={getFollowUpColor(
-                            followUp,
-                          )}
+                          label={
+                            getFollowUpLabel(
+                              followUp,
+                            )
+                          }
+                          color={
+                            getFollowUpColor(
+                              followUp,
+                            )
+                          }
                           sx={{
                             fontWeight:
                               700,
@@ -2423,6 +3445,7 @@ function LeadWorkspacePage() {
                           sx={{
                             fontWeight:
                               800,
+
                             wordBreak:
                               'break-word',
                           }}
@@ -2433,6 +3456,7 @@ function LeadWorkspacePage() {
                         </Typography>
                       </Stack>
 
+
                       {followUp.description && (
                         <Typography
                           variant="body2"
@@ -2440,7 +3464,9 @@ function LeadWorkspacePage() {
                           sx={{
                             whiteSpace:
                               'pre-wrap',
-                            mb: 2,
+
+                            mb:
+                              2,
                           }}
                         >
                           {
@@ -2449,27 +3475,30 @@ function LeadWorkspacePage() {
                         </Typography>
                       )}
 
+
                       <Stack
                         direction={{
-                          xs: 'column',
-                          md: 'row',
+                          xs:
+                            'column',
+
+                          md:
+                            'row',
                         }}
                         spacing={{
-                          xs: 0.75,
-                          md: 2.5,
-                        }}
-                        sx={{
-                          mb: 1,
+                          xs:
+                            0.75,
+
+                          md:
+                            2.5,
                         }}
                       >
                         <Stack
                           direction="row"
-                          spacing={
-                            0.75
-                          }
+                          spacing={0.75}
                           sx={{
                             alignItems:
                               'center',
+
                             color:
                               followUp.is_overdue
                                 ? 'error.main'
@@ -2493,14 +3522,14 @@ function LeadWorkspacePage() {
                           </Typography>
                         </Stack>
 
+
                         <Stack
                           direction="row"
-                          spacing={
-                            0.75
-                          }
+                          spacing={0.75}
                           sx={{
                             alignItems:
                               'center',
+
                             color:
                               'text.secondary',
                           }}
@@ -2521,85 +3550,8 @@ function LeadWorkspacePage() {
                           </Typography>
                         </Stack>
                       </Stack>
-
-                      <Stack
-                        direction={{
-                          xs: 'column',
-                          md: 'row',
-                        }}
-                        spacing={{
-                          xs: 0.75,
-                          md: 2.5,
-                        }}
-                      >
-                        <Stack
-                          direction="row"
-                          spacing={
-                            0.75
-                          }
-                          sx={{
-                            alignItems:
-                              'center',
-                            color:
-                              'text.secondary',
-                          }}
-                        >
-                          <PersonOutlineRounded
-                            sx={{
-                              fontSize:
-                                18,
-                            }}
-                          />
-
-                          <Typography
-                            variant="body2"
-                          >
-                            Created by:{' '}
-                            {
-                              followUp.created_by_name
-                            }
-                            {' · '}
-                            {formatDate(
-                              followUp.created_at,
-                            )}
-                          </Typography>
-                        </Stack>
-
-                        {followUp.completed_at && (
-                          <Stack
-                            direction="row"
-                            spacing={
-                              0.75
-                            }
-                            sx={{
-                              alignItems:
-                                'center',
-                              color:
-                                'text.secondary',
-                            }}
-                          >
-                            <EventRounded
-                              sx={{
-                                fontSize:
-                                  18,
-                              }}
-                            />
-
-                            <Typography
-                              variant="body2"
-                            >
-                              Completed:{' '}
-                              {formatDate(
-                                followUp.completed_at,
-                              )}
-                              {followUp.completed_by_name
-                                ? ` · ${followUp.completed_by_name}`
-                                : ''}
-                            </Typography>
-                          </Stack>
-                        )}
-                      </Stack>
                     </Box>
+
 
                     <IconButton
                       size="small"
@@ -2624,16 +3576,22 @@ function LeadWorkspacePage() {
         </Stack>
       )}
 
+
+      {/* ACTIVITY */}
+
       {activeTab ===
         'activity' && (
         <Card
           variant="outlined"
-          sx={{ p: 4 }}
+          sx={{
+            p: 4,
+          }}
         >
           <Typography
             variant="h6"
             sx={{
-              fontWeight: 800,
+              fontWeight:
+                800,
             }}
           >
             Activity
@@ -2641,7 +3599,9 @@ function LeadWorkspacePage() {
 
           <Typography
             color="text.secondary"
-            sx={{ mt: 1 }}
+            sx={{
+              mt: 1,
+            }}
           >
             Lead activity events
             will be shown as a
@@ -2650,16 +3610,22 @@ function LeadWorkspacePage() {
         </Card>
       )}
 
+
+      {/* HISTORY */}
+
       {activeTab ===
         'history' && (
         <Card
           variant="outlined"
-          sx={{ p: 4 }}
+          sx={{
+            p: 4,
+          }}
         >
           <Typography
             variant="h6"
             sx={{
-              fontWeight: 800,
+              fontWeight:
+                800,
             }}
           >
             History
@@ -2667,7 +3633,9 @@ function LeadWorkspacePage() {
 
           <Typography
             color="text.secondary"
-            sx={{ mt: 1 }}
+            sx={{
+              mt: 1,
+            }}
           >
             Assignment, status and
             lifecycle history will
@@ -2676,43 +3644,28 @@ function LeadWorkspacePage() {
         </Card>
       )}
 
+
+      {/* EDIT LEAD DIALOG */}
+
       <Dialog
         open={
-          communicationDialogOpen
+          editLeadDialogOpen
         }
         onClose={
-          closeCommunicationDialog
+          closeEditLeadDialog
         }
         fullWidth
         maxWidth="sm"
-        slotProps={{
-          paper: {
-            sx: {
-              borderRadius: 2,
-              overflow:
-                'hidden',
-            },
-          },
-        }}
       >
-        <DialogTitle
-          sx={{
-            px: 3,
-            py: 2.25,
-            borderBottom:
-              '1px solid',
-            borderColor:
-              'divider',
-          }}
-        >
+        <DialogTitle>
           <Stack
             direction="row"
             sx={{
-              alignItems:
-                'flex-start',
               justifyContent:
                 'space-between',
-              gap: 2,
+
+              alignItems:
+                'center',
             }}
           >
             <Box>
@@ -2723,42 +3676,498 @@ function LeadWorkspacePage() {
                     800,
                 }}
               >
-                Add Communication
+                Edit Lead
               </Typography>
 
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ mt: 0.25 }}
               >
-                Log a new interaction
-                with this contact.
+                Update prospect
+                information.
               </Typography>
             </Box>
 
             <IconButton
-              size="small"
               onClick={
-                closeCommunicationDialog
+                closeEditLeadDialog
               }
               disabled={
-                isCreatingCommunication
+                isSavingLead
               }
-              aria-label="Close communication dialog"
             >
               <CloseRounded />
             </IconButton>
           </Stack>
         </DialogTitle>
 
-        <DialogContent
+
+        <DialogContent>
+          <Stack
+            spacing={2.25}
+            sx={{
+              mt: 1,
+            }}
+          >
+            {editLeadError && (
+              <Alert
+                severity="error"
+              >
+                {
+                  editLeadError
+                }
+              </Alert>
+            )}
+
+            <TextField
+              required
+              label="Contact name"
+              value={
+                editLeadForm.contactName
+              }
+              onChange={(
+                event,
+              ) =>
+                setEditLeadForm(
+                  (
+                    current,
+                  ) => ({
+                    ...current,
+
+                    contactName:
+                      event
+                        .target
+                        .value,
+                  }),
+                )
+              }
+            />
+
+            <TextField
+              required
+              label="Company"
+              value={
+                editLeadForm.companyName
+              }
+              onChange={(
+                event,
+              ) =>
+                setEditLeadForm(
+                  (
+                    current,
+                  ) => ({
+                    ...current,
+
+                    companyName:
+                      event
+                        .target
+                        .value,
+                  }),
+                )
+              }
+            />
+
+            <TextField
+              type="email"
+              label="Email"
+              value={
+                editLeadForm.email
+              }
+              onChange={(
+                event,
+              ) =>
+                setEditLeadForm(
+                  (
+                    current,
+                  ) => ({
+                    ...current,
+
+                    email:
+                      event
+                        .target
+                        .value,
+                  }),
+                )
+              }
+            />
+
+            <TextField
+              required
+              label="Phone"
+              value={
+                editLeadForm.phone
+              }
+              onChange={(
+                event,
+              ) =>
+                setEditLeadForm(
+                  (
+                    current,
+                  ) => ({
+                    ...current,
+
+                    phone:
+                      event
+                        .target
+                        .value,
+                  }),
+                )
+              }
+            />
+
+            <TextField
+              label="Lead source"
+              value={
+                editLeadForm.source
+              }
+              onChange={(
+                event,
+              ) =>
+                setEditLeadForm(
+                  (
+                    current,
+                  ) => ({
+                    ...current,
+
+                    source:
+                      event
+                        .target
+                        .value,
+                  }),
+                )
+              }
+            />
+          </Stack>
+        </DialogContent>
+
+
+        <DialogActions
           sx={{
             px: 3,
-            pt: 3,
-            pb: 2,
+            pb: 3,
           }}
         >
-          <Stack spacing={2.5}>
+          <Button
+            variant="outlined"
+            onClick={
+              closeEditLeadDialog
+            }
+            disabled={
+              isSavingLead
+            }
+          >
+            Cancel
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={() =>
+              void handleSaveLead()
+            }
+            disabled={
+              isSavingLead ||
+              !editLeadForm
+                .contactName
+                .trim() ||
+              !editLeadForm
+                .companyName
+                .trim() ||
+              !editLeadForm
+                .phone
+                .trim()
+            }
+          >
+            {isSavingLead ? (
+              <CircularProgress
+                size={22}
+                color="inherit"
+              />
+            ) : (
+              'Save Changes'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+
+      {/* QUALIFICATION DIALOG */}
+
+      <Dialog
+        open={
+          qualificationDialogOpen
+        }
+        onClose={
+          closeQualificationDialog
+        }
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent:
+                'space-between',
+
+              alignItems:
+                'center',
+            }}
+          >
+            <Box>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight:
+                    800,
+                }}
+              >
+                {qualificationAction ===
+                'QUALIFY'
+                  ? 'Qualify Lead'
+                  : 'Disqualify Lead'}
+              </Typography>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                {qualificationAction ===
+                'QUALIFY'
+                  ? 'Confirm that this lead is suitable to progress.'
+                  : 'Record why this lead should not progress.'}
+              </Typography>
+            </Box>
+
+            <IconButton
+              onClick={
+                closeQualificationDialog
+              }
+              disabled={
+                isSavingQualification
+              }
+            >
+              <CloseRounded />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+
+
+        <DialogContent>
+          <Stack
+            spacing={2.5}
+            sx={{
+              mt: 1,
+            }}
+          >
+            {qualificationError && (
+              <Alert
+                severity="error"
+              >
+                {
+                  qualificationError
+                }
+              </Alert>
+            )}
+
+
+            <Card
+              variant="outlined"
+              sx={{
+                p: 2,
+
+                bgcolor:
+                  'action.hover',
+              }}
+            >
+              <Typography
+                sx={{
+                  fontWeight:
+                    800,
+                }}
+              >
+                {
+                  lead.contact_name
+                }
+              </Typography>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                {
+                  lead.company_name
+                }
+              </Typography>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  mt:
+                    0.75,
+                }}
+              >
+                Current status:{' '}
+                {
+                  lead.status_display
+                }
+              </Typography>
+            </Card>
+
+
+            <TextField
+              required
+              multiline
+              minRows={5}
+              label={
+                qualificationAction ===
+                'QUALIFY'
+                  ? 'Qualification notes'
+                  : 'Disqualification reason'
+              }
+              placeholder={
+                qualificationAction ===
+                'QUALIFY'
+                  ? 'Explain why this lead meets the qualification criteria...'
+                  : 'Explain why this lead should be disqualified...'
+              }
+              value={
+                qualificationNotes
+              }
+              onChange={(
+                event,
+              ) =>
+                setQualificationNotes(
+                  event
+                    .target
+                    .value,
+                )
+              }
+            />
+
+
+            <Alert
+              severity={
+                qualificationAction ===
+                'QUALIFY'
+                  ? 'success'
+                  : 'warning'
+              }
+            >
+              {qualificationAction ===
+              'QUALIFY'
+                ? 'The lead status will change to Qualified.'
+                : 'The lead will be closed as Disqualified and normal lead work will stop.'}
+            </Alert>
+          </Stack>
+        </DialogContent>
+
+
+        <DialogActions
+          sx={{
+            px: 3,
+            pb: 3,
+          }}
+        >
+          <Button
+            variant="outlined"
+            onClick={
+              closeQualificationDialog
+            }
+            disabled={
+              isSavingQualification
+            }
+          >
+            Cancel
+          </Button>
+
+          <Button
+            variant="contained"
+            color={
+              qualificationAction ===
+                'QUALIFY'
+                ? 'success'
+                : 'error'
+            }
+            onClick={() =>
+              void handleQualificationDecision()
+            }
+            disabled={
+              isSavingQualification ||
+              !qualificationNotes
+                .trim()
+            }
+          >
+            {isSavingQualification ? (
+              <CircularProgress
+                size={22}
+                color="inherit"
+              />
+            ) : qualificationAction ===
+              'QUALIFY' ? (
+              'Confirm Qualification'
+            ) : (
+              'Confirm Disqualification'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+
+      {/* COMMUNICATION DIALOG */}
+
+      <Dialog
+        open={
+          communicationDialogOpen
+        }
+        onClose={
+          closeCommunicationDialog
+        }
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent:
+                'space-between',
+
+              alignItems:
+                'center',
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight:
+                  800,
+              }}
+            >
+              Add Communication
+            </Typography>
+
+            <IconButton
+              onClick={
+                closeCommunicationDialog
+              }
+              disabled={
+                isCreatingCommunication
+              }
+            >
+              <CloseRounded />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+
+
+        <DialogContent>
+          <Stack
+            spacing={2.5}
+            sx={{
+              mt: 1,
+            }}
+          >
             {communicationError && (
               <Alert
                 severity="error"
@@ -2769,14 +4178,14 @@ function LeadWorkspacePage() {
               </Alert>
             )}
 
+
             <Card
               variant="outlined"
               sx={{
                 p: 2,
+
                 bgcolor:
                   'action.hover',
-                boxShadow:
-                  'none',
               }}
             >
               <Stack
@@ -2787,36 +4196,15 @@ function LeadWorkspacePage() {
                     'center',
                 }}
               >
-                <Avatar
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    fontWeight:
-                      800,
-                  }}
-                >
+                <Avatar>
                   {lead.contact_name
-                    .split(' ')
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map(
-                      (
-                        namePart,
-                      ) =>
-                        namePart
-                          .charAt(
-                            0,
-                          )
-                          .toUpperCase(),
+                    .charAt(
+                      0,
                     )
-                    .join('')}
+                    .toUpperCase()}
                 </Avatar>
 
-                <Box
-                  sx={{
-                    flex: 1,
-                  }}
-                >
+                <Box>
                   <Typography
                     sx={{
                       fontWeight:
@@ -2830,15 +4218,10 @@ function LeadWorkspacePage() {
 
                   <Stack
                     direction="row"
-                    spacing={
-                      0.75
-                    }
+                    spacing={0.75}
                     sx={{
                       alignItems:
                         'center',
-                      color:
-                        'text.secondary',
-                      mt: 0.25,
                     }}
                   >
                     <BusinessRounded
@@ -2850,6 +4233,7 @@ function LeadWorkspacePage() {
 
                     <Typography
                       variant="body2"
+                      color="text.secondary"
                     >
                       {
                         lead.company_name
@@ -2857,18 +4241,9 @@ function LeadWorkspacePage() {
                     </Typography>
                   </Stack>
                 </Box>
-
-                <Chip
-                  size="small"
-                  label="Lead"
-                  variant="outlined"
-                  sx={{
-                    fontWeight:
-                      700,
-                  }}
-                />
               </Stack>
             </Card>
+
 
             <FormControl
               fullWidth
@@ -2890,6 +4265,7 @@ function LeadWorkspacePage() {
                       current,
                     ) => ({
                       ...current,
+
                       communicationType:
                         event
                           .target
@@ -2901,95 +4277,46 @@ function LeadWorkspacePage() {
                 <MenuItem
                   value="CALL"
                 >
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{
-                      alignItems:
-                        'center',
-                    }}
-                  >
-                    <CallRounded
-                      fontSize="small"
-                    />
-                    <span>
-                      Call
-                    </span>
-                  </Stack>
+                  Call
                 </MenuItem>
 
                 <MenuItem
                   value="EMAIL"
                 >
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{
-                      alignItems:
-                        'center',
-                    }}
-                  >
-                    <MailOutlineRounded
-                      fontSize="small"
-                    />
-                    <span>
-                      Email
-                    </span>
-                  </Stack>
+                  Email
                 </MenuItem>
 
                 <MenuItem
                   value="MEETING"
                 >
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{
-                      alignItems:
-                        'center',
-                    }}
-                  >
-                    <GroupsRounded
-                      fontSize="small"
-                    />
-                    <span>
-                      Meeting
-                    </span>
-                  </Stack>
+                  Meeting
                 </MenuItem>
 
                 <MenuItem
                   value="WHATSAPP"
                 >
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{
-                      alignItems:
-                        'center',
-                    }}
-                  >
-                    <ChatBubbleOutlineRounded
-                      fontSize="small"
-                    />
-                    <span>
-                      WhatsApp
-                    </span>
-                  </Stack>
+                  WhatsApp
                 </MenuItem>
               </Select>
             </FormControl>
+
 
             <Box
               sx={{
                 display:
                   'grid',
+
                 gridTemplateColumns:
                   {
-                    xs: '1fr',
-                    sm: '1fr 1fr',
+                    xs:
+                      '1fr',
+
+                    sm:
+                      '1fr 1fr',
                   },
-                gap: 2,
+
+                gap:
+                  2,
               }}
             >
               <TextField
@@ -3007,6 +4334,7 @@ function LeadWorkspacePage() {
                       current,
                     ) => ({
                       ...current,
+
                       communicationDate:
                         event
                           .target
@@ -3038,6 +4366,7 @@ function LeadWorkspacePage() {
                       current,
                     ) => ({
                       ...current,
+
                       communicationTime:
                         event
                           .target
@@ -3055,10 +4384,10 @@ function LeadWorkspacePage() {
               />
             </Box>
 
+
             <TextField
               required
               label="Subject / Title"
-              placeholder="e.g. Initial discovery call"
               value={
                 communicationForm.summary
               }
@@ -3070,25 +4399,20 @@ function LeadWorkspacePage() {
                     current,
                   ) => ({
                     ...current,
+
                     summary:
-                      event.target
+                      event
+                        .target
                         .value,
                   }),
                 )
               }
-              slotProps={{
-                htmlInput: {
-                  maxLength:
-                    255,
-                },
-              }}
             />
 
             <TextField
               multiline
               minRows={5}
               label="Communication Details"
-              placeholder="Summarize the key points of the conversation..."
               value={
                 communicationForm.notes
               }
@@ -3100,8 +4424,10 @@ function LeadWorkspacePage() {
                     current,
                   ) => ({
                     ...current,
+
                     notes:
-                      event.target
+                      event
+                        .target
                         .value,
                   }),
                 )
@@ -3110,133 +4436,51 @@ function LeadWorkspacePage() {
           </Stack>
         </DialogContent>
 
+
         <DialogActions
           sx={{
             px: 3,
-            py: 2,
-            borderTop:
-              '1px solid',
-            borderColor:
-              'divider',
-            justifyContent:
-              'space-between',
+            pb: 3,
           }}
         >
-          <Stack
-            direction="row"
-            spacing={0.75}
-            sx={{
-              alignItems:
-                'center',
-              color:
-                'text.secondary',
-            }}
+          <Button
+            variant="outlined"
+            onClick={
+              closeCommunicationDialog
+            }
+            disabled={
+              isCreatingCommunication
+            }
           >
-            <PersonOutlineRounded
-              sx={{
-                fontSize: 17,
-              }}
-            />
+            Cancel
+          </Button>
 
-            <Typography
-              variant="caption"
-            >
-              Visible to permitted CRM
-              team members
-            </Typography>
-          </Stack>
-
-          <Stack
-            direction="row"
-            spacing={1}
+          <Button
+            variant="contained"
+            onClick={() =>
+              void handleCreateCommunication()
+            }
+            disabled={
+              isCreatingCommunication ||
+              !communicationForm
+                .summary
+                .trim()
+            }
           >
-            <Button
-              variant="outlined"
-              onClick={
-                closeCommunicationDialog
-              }
-              disabled={
-                isCreatingCommunication
-              }
-              sx={{
-                textTransform:
-                  'none',
-              }}
-            >
-              Cancel
-            </Button>
-
-            <Button
-              variant="contained"
-              onClick={() =>
-                void handleCreateCommunication()
-              }
-              disabled={
-                isCreatingCommunication ||
-                !communicationForm.summary.trim() ||
-                !communicationForm.communicationDate ||
-                !communicationForm.communicationTime
-              }
-              sx={{
-                textTransform:
-                  'none',
-                px: 2.5,
-                fontWeight:
-                  700,
-              }}
-            >
-              {isCreatingCommunication ? (
-                <CircularProgress
-                  size={22}
-                  color="inherit"
-                />
-              ) : (
-                'Save Communication'
-              )}
-            </Button>
-          </Stack>
+            {isCreatingCommunication ? (
+              <CircularProgress
+                size={22}
+                color="inherit"
+              />
+            ) : (
+              'Save Communication'
+            )}
+          </Button>
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={Boolean(
-          followUpSuccessMessage,
-        )}
-        autoHideDuration={5000}
-        onClose={() =>
-          setFollowUpSuccessMessage(
-            '',
-          )
-        }
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal:
-            'right',
-        }}
-      >
-        <Alert
-          severity="success"
-          variant="outlined"
-          onClose={() =>
-            setFollowUpSuccessMessage(
-              '',
-            )
-          }
-          sx={{
-            bgcolor:
-              'background.paper',
-            boxShadow: 3,
-            minWidth: {
-              xs: 'auto',
-              sm: 320,
-            },
-          }}
-        >
-          {
-            followUpSuccessMessage
-          }
-        </Alert>
-      </Snackbar>
+
+      {/* FOLLOW-UP DIALOG */}
 
       <Dialog
         open={
@@ -3247,68 +4491,49 @@ function LeadWorkspacePage() {
         }
         fullWidth
         maxWidth="sm"
-        slotProps={{
-          paper: {
-            sx: {
-              borderRadius: 2,
-              overflow:
-                'hidden',
-            },
-          },
-        }}
       >
-        <DialogTitle
-          sx={{
-            px: 3,
-            py: 2.25,
-            borderBottom:
-              '1px solid',
-            borderColor:
-              'divider',
-          }}
-        >
+        <DialogTitle>
           <Stack
             direction="row"
             sx={{
-              alignItems:
-                'center',
               justifyContent:
                 'space-between',
-              gap: 2,
+
+              alignItems:
+                'center',
             }}
           >
             <Typography
               variant="h6"
               sx={{
-                fontWeight: 800,
+                fontWeight:
+                  800,
               }}
             >
               Schedule Follow-up
             </Typography>
 
             <IconButton
-              size="small"
               onClick={
                 closeFollowUpDialog
               }
               disabled={
                 isCreatingFollowUp
               }
-              aria-label="Close follow-up dialog"
             >
               <CloseRounded />
             </IconButton>
           </Stack>
         </DialogTitle>
 
-        <DialogContent
-          sx={{
-            px: 3,
-            pt: 3,
-            pb: 2.5,
-          }}
-        >
-          <Stack spacing={2.5}>
+
+        <DialogContent>
+          <Stack
+            spacing={2.5}
+            sx={{
+              mt: 1,
+            }}
+          >
             {followUpError && (
               <Alert
                 severity="error"
@@ -3322,7 +4547,6 @@ function LeadWorkspacePage() {
             <TextField
               required
               label="Title"
-              placeholder="e.g. Call client for requirement discussion"
               value={
                 followUpForm.title
               }
@@ -3334,19 +4558,14 @@ function LeadWorkspacePage() {
                     current,
                   ) => ({
                     ...current,
+
                     title:
-                      event.target
+                      event
+                        .target
                         .value,
                   }),
                 )
               }
-              slotProps={{
-                htmlInput: {
-                  maxLength:
-                    255,
-                },
-              }}
-              helperText={`${followUpForm.title.length}/255`}
             />
 
             <TextField
@@ -3364,16 +4583,20 @@ function LeadWorkspacePage() {
                     current,
                   ) => ({
                     ...current,
+
                     dueDate:
-                      event.target
+                      event
+                        .target
                         .value,
                   }),
                 )
               }
               slotProps={{
-                inputLabel: {
-                  shrink: true,
-                },
+                inputLabel:
+                  {
+                    shrink:
+                      true,
+                  },
               }}
             />
 
@@ -3381,7 +4604,6 @@ function LeadWorkspacePage() {
               multiline
               minRows={5}
               label="Description"
-              placeholder="Add details about the follow-up..."
               value={
                 followUpForm.description
               }
@@ -3393,19 +4615,14 @@ function LeadWorkspacePage() {
                     current,
                   ) => ({
                     ...current,
+
                     description:
-                      event.target
+                      event
+                        .target
                         .value,
                   }),
                 )
               }
-              slotProps={{
-                htmlInput: {
-                  maxLength:
-                    1000,
-                },
-              }}
-              helperText={`${followUpForm.description.length}/1000`}
             />
 
             <Alert
@@ -3420,14 +4637,11 @@ function LeadWorkspacePage() {
           </Stack>
         </DialogContent>
 
+
         <DialogActions
           sx={{
             px: 3,
-            py: 2,
-            borderTop:
-              '1px solid',
-            borderColor:
-              'divider',
+            pb: 3,
           }}
         >
           <Button
@@ -3438,10 +4652,6 @@ function LeadWorkspacePage() {
             disabled={
               isCreatingFollowUp
             }
-            sx={{
-              textTransform:
-                'none',
-            }}
           >
             Cancel
           </Button>
@@ -3453,15 +4663,12 @@ function LeadWorkspacePage() {
             }
             disabled={
               isCreatingFollowUp ||
-              !followUpForm.title.trim() ||
-              !followUpForm.dueDate
+              !followUpForm
+                .title
+                .trim() ||
+              !followUpForm
+                .dueDate
             }
-            sx={{
-              textTransform:
-                'none',
-              px: 2.5,
-              fontWeight: 700,
-            }}
           >
             {isCreatingFollowUp ? (
               <CircularProgress
@@ -3474,8 +4681,46 @@ function LeadWorkspacePage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+
+      <Snackbar
+        open={
+          Boolean(
+            followUpSuccessMessage,
+          )
+        }
+        autoHideDuration={
+          5000
+        }
+        onClose={() =>
+          setFollowUpSuccessMessage(
+            '',
+          )
+        }
+        anchorOrigin={{
+          vertical:
+            'top',
+
+          horizontal:
+            'right',
+        }}
+      >
+        <Alert
+          severity="success"
+          onClose={() =>
+            setFollowUpSuccessMessage(
+              '',
+            )
+          }
+        >
+          {
+            followUpSuccessMessage
+          }
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }
+
 
 export default LeadWorkspacePage
