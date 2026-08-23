@@ -21,6 +21,7 @@ import type {
 
 import {
   AdminPanelSettingsOutlined,
+  AssignmentOutlined,
   BarChartRounded,
   CalendarMonthOutlined,
   ChatBubbleOutlineRounded,
@@ -28,6 +29,7 @@ import {
   ExpandLessRounded,
   ExpandMoreRounded,
   GroupsOutlined,
+  HistoryRounded,
   KeyboardArrowDownRounded,
   LogoutRounded,
   PeopleOutlineRounded,
@@ -69,35 +71,72 @@ type NavigationItem = {
 
 const futureNavigationItems: NavigationItem[] = [
   {
-    label: 'Sales Pipeline',
-    icon: <BarChartRounded />,
-    available: false,
-    visible: false,
+    label:
+      'Sales Pipeline',
+
+    icon:
+      <BarChartRounded />,
+
+    available:
+      false,
+
+    visible:
+      false,
   },
   {
-    label: 'Customers',
-    path: '/customers',
-    icon: <GroupsOutlined />,
-    available: true,
-    visible: false,
+    label:
+      'Customers',
+
+    path:
+      '/customers',
+
+    icon:
+      <GroupsOutlined />,
+
+    available:
+      true,
+
+    visible:
+      false,
   },
   {
-    label: 'Reports & Analytics',
-    icon: <PieChartOutlineRounded />,
-    available: false,
-    visible: false,
+    label:
+      'Reports & Analytics',
+
+    icon:
+      <PieChartOutlineRounded />,
+
+    available:
+      false,
+
+    visible:
+      false,
   },
   {
-    label: 'Communications',
-    icon: <ChatBubbleOutlineRounded />,
-    available: false,
-    visible: false,
+    label:
+      'Communications',
+
+    icon:
+      <ChatBubbleOutlineRounded />,
+
+    available:
+      false,
+
+    visible:
+      false,
   },
   {
-    label: 'Integrations',
-    icon: <StorageOutlined />,
-    available: false,
-    visible: false,
+    label:
+      'Integrations',
+
+    icon:
+      <StorageOutlined />,
+
+    available:
+      false,
+
+    visible:
+      false,
   },
 ]
 
@@ -112,123 +151,260 @@ function AppSidebar({
   mobile = false,
   onNavigate,
 }: AppSidebarProps) {
-  const navigate = useNavigate()
-  const location = useLocation()
+  const navigate =
+    useNavigate()
+
+  const location =
+    useLocation()
 
   const [
     currentUser,
     setCurrentUser,
-  ] = useState<CurrentUser | null>(null)
+  ] =
+    useState<
+      CurrentUser | null
+    >(
+      null,
+    )
 
   const [
     isLoggingOut,
     setIsLoggingOut,
-  ] = useState(false)
+  ] =
+    useState(
+      false,
+    )
 
 
-  /*
-   * Treat Leads, Follow-ups and Activity
-   * as one navigation section.
-   */
+  const isTechLead =
+    currentUser?.role ===
+    'TECH_LEAD'
+
+
+  const isFinancialOfficer =
+    currentUser?.role ===
+    'FINANCIAL_OFFICER'
+
+
+  const isSpecialist =
+    isTechLead ||
+    isFinancialOfficer
+
+
+  const specialistBasePath =
+    isFinancialOfficer
+      ? '/financial-assessments'
+      : '/technical-assessments'
+
+
+  const specialistLabel =
+    isFinancialOfficer
+      ? 'Financial Assessments'
+      : 'Technical Assessments'
+
+
   const isLeadSectionPath =
-    location.pathname === '/leads' ||
-    location.pathname.startsWith('/leads/') ||
-    location.pathname === '/follow-ups' ||
-    location.pathname.startsWith('/follow-ups/') ||
-    location.pathname === '/activity'
+    location.pathname ===
+      '/leads' ||
+    location.pathname.startsWith(
+      '/leads/',
+    ) ||
+    location.pathname ===
+      '/follow-ups' ||
+    location.pathname.startsWith(
+      '/follow-ups/',
+    ) ||
+    location.pathname ===
+      '/activity'
+
+
+  const isTechnicalAssessmentPath =
+    location.pathname ===
+      '/technical-assessments' ||
+    location.pathname.startsWith(
+      '/technical-assessments/',
+    )
+
+
+  const isFinancialAssessmentPath =
+    location.pathname ===
+      '/financial-assessments' ||
+    location.pathname.startsWith(
+      '/financial-assessments/',
+    )
+
+
+  const isAssessmentSectionPath =
+    isTechLead
+      ? isTechnicalAssessmentPath
+      : isFinancialOfficer
+        ? isFinancialAssessmentPath
+        : false
 
 
   const [
     leadsExpanded,
     setLeadsExpanded,
-  ] = useState(isLeadSectionPath)
-
-
-  useEffect(() => {
-    let isMounted = true
-
-    const loadCurrentUser = async () => {
-      try {
-        const user =
-          await getCurrentUser()
-
-        if (isMounted) {
-          setCurrentUser(user)
-        }
-      } catch {
-        if (isMounted) {
-          setCurrentUser(null)
-        }
-      }
-    }
-
-    void loadCurrentUser()
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
-
-
-  /*
-   * Automatically expand the Leads section
-   * whenever the user navigates to one of
-   * its child pages.
-   */
-  useEffect(() => {
-    if (isLeadSectionPath) {
-      setLeadsExpanded(true)
-    }
-  }, [isLeadSectionPath])
-
-
-  const handleNavigate = (
-    path: string,
-  ) => {
-    navigate(path)
-
-    onNavigate?.()
-  }
-
-
-  const handleLogout = () => {
-    if (isLoggingOut) {
-      return
-    }
-
-    setIsLoggingOut(true)
-
-    void logoutUser()
-
-    onNavigate?.()
-
-    navigate(
-      '/login',
-      {
-        replace: true,
-      },
+  ] =
+    useState(
+      isLeadSectionPath,
     )
-  }
+
+
+  const [
+    assessmentsExpanded,
+    setAssessmentsExpanded,
+  ] =
+    useState(
+      isAssessmentSectionPath,
+    )
+
+
+  useEffect(
+    () => {
+      let isMounted =
+        true
+
+      const loadCurrentUser =
+        async () => {
+          try {
+            const user =
+              await getCurrentUser()
+
+            if (
+              isMounted
+            ) {
+              setCurrentUser(
+                user,
+              )
+            }
+          } catch {
+            if (
+              isMounted
+            ) {
+              setCurrentUser(
+                null,
+              )
+            }
+          }
+        }
+
+      void loadCurrentUser()
+
+      return () => {
+        isMounted =
+          false
+      }
+    },
+    [],
+  )
+
+
+  useEffect(
+    () => {
+      if (
+        isLeadSectionPath
+      ) {
+        setLeadsExpanded(
+          true,
+        )
+      }
+    },
+    [
+      isLeadSectionPath,
+    ],
+  )
+
+
+  useEffect(
+    () => {
+      if (
+        isAssessmentSectionPath
+      ) {
+        setAssessmentsExpanded(
+          true,
+        )
+      }
+    },
+    [
+      isAssessmentSectionPath,
+    ],
+  )
+
+
+  const handleNavigate =
+    (
+      path:
+        string,
+    ) => {
+      navigate(
+        path,
+      )
+
+      onNavigate?.()
+    }
+
+
+  const handleLogout =
+    () => {
+      if (
+        isLoggingOut
+      ) {
+        return
+      }
+
+      setIsLoggingOut(
+        true,
+      )
+
+      void logoutUser()
+
+      onNavigate?.()
+
+      navigate(
+        '/login',
+        {
+          replace:
+            true,
+        },
+      )
+    }
 
 
   const displayName =
-    currentUser?.first_name?.trim() ||
-    currentUser?.username ||
+    currentUser
+      ?.first_name
+      ?.trim() ||
+    currentUser
+      ?.username ||
     'ELEVEN User'
 
 
   const initials =
     displayName
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
+      .split(
+        /\s+/,
+      )
+      .filter(
+        Boolean,
+      )
+      .slice(
+        0,
+        2,
+      )
       .map(
-        (part) =>
+        (
+          part,
+        ) =>
           part
-            .charAt(0)
+            .charAt(
+              0,
+            )
             .toUpperCase(),
       )
-      .join('')
+      .join(
+        '',
+      )
 
 
   const isSalesRepresentative =
@@ -265,172 +441,229 @@ function AppSidebar({
     '/activity'
 
 
-  const canSeeAdministration =
-    currentUser !== null &&
-    hasRequiredRole(
-      currentUser.role,
-      ['ADMIN'],
+  const assessmentStatusParam =
+    new URLSearchParams(
+      location.search,
+    ).get(
+      'status',
     )
 
 
-  /*
-   * Main sidebar navigation styling.
-   *
-   * The end-icon styling is included here
-   * so we do not need to combine nested
-   * SxProps arrays, which caused the
-   * TypeScript overload error.
-   */
-  const navigationButtonSx = (
-    active: boolean,
-  ): SxProps<Theme> => ({
-    position: 'relative',
+  const isAssessmentListActive =
+    location.pathname ===
+      specialistBasePath &&
+    assessmentStatusParam !==
+      'REVIEWED'
 
-    minHeight: 48,
 
-    justifyContent:
-      'flex-start',
+  const isAssessmentHistoryActive =
+    location.pathname ===
+      specialistBasePath &&
+    assessmentStatusParam ===
+      'REVIEWED'
 
-    gap: 0.8,
 
-    px: 2,
+  const canSeeAdministration =
+    currentUser !==
+      null &&
+    hasRequiredRole(
+      currentUser.role,
+      [
+        'ADMIN',
+      ],
+    )
 
-    borderRadius: '8px',
 
-    textTransform: 'none',
+  const navigationButtonSx =
+    (
+      active:
+        boolean,
+    ):
+    SxProps<Theme> => ({
+      position:
+        'relative',
 
-    fontSize: 15,
+      minHeight:
+        48,
 
-    fontWeight:
-      active
-        ? 700
-        : 500,
+      justifyContent:
+        'flex-start',
 
-    color:
-      active
-        ? '#0b5cff'
-        : '#26344d',
+      gap:
+        0.8,
 
-    backgroundColor:
-      active
-        ? '#eef4ff'
-        : 'transparent',
+      px:
+        2,
 
-    '& .MuiButton-startIcon': {
-      marginRight: 1,
+      borderRadius:
+        '8px',
+
+      textTransform:
+        'none',
+
+      fontSize:
+        15,
+
+      fontWeight:
+        active
+          ? 700
+          : 500,
 
       color:
         active
           ? '#0b5cff'
-          : '#34445f',
+          : '#26344d',
 
-      '& svg': {
-        fontSize: 22,
-      },
-    },
-
-    '& .MuiButton-endIcon': {
-      marginLeft: 'auto',
-
-      color:
-        active
-          ? '#0b5cff'
-          : '#657087',
-
-      '& svg': {
-        fontSize: 20,
-      },
-    },
-
-    ...(active
-      ? {
-          '&::before': {
-            content: '""',
-
-            position:
-              'absolute',
-
-            left: -8,
-
-            top: 7,
-
-            bottom: 7,
-
-            width: 3,
-
-            borderRadius:
-              '0 3px 3px 0',
-
-            backgroundColor:
-              '#0b5cff',
-          },
-        }
-      : {}),
-
-    '&:hover': {
       backgroundColor:
         active
-          ? '#e8f0ff'
-          : '#f7f9fc',
-    },
-  })
+          ? '#eef4ff'
+          : 'transparent',
+
+      '& .MuiButton-startIcon':
+        {
+          marginRight:
+            1,
+
+          color:
+            active
+              ? '#0b5cff'
+              : '#34445f',
+
+          '& svg':
+            {
+              fontSize:
+                22,
+            },
+        },
+
+      '& .MuiButton-endIcon':
+        {
+          marginLeft:
+            'auto',
+
+          color:
+            active
+              ? '#0b5cff'
+              : '#657087',
+
+          '& svg':
+            {
+              fontSize:
+                20,
+            },
+        },
+
+      ...(active
+        ? {
+            '&::before':
+              {
+                content:
+                  '""',
+
+                position:
+                  'absolute',
+
+                left:
+                  -8,
+
+                top:
+                  7,
+
+                bottom:
+                  7,
+
+                width:
+                  3,
+
+                borderRadius:
+                  '0 3px 3px 0',
+
+                backgroundColor:
+                  '#0b5cff',
+              },
+          }
+        : {}),
+
+      '&:hover':
+        {
+          backgroundColor:
+            active
+              ? '#e8f0ff'
+              : '#f7f9fc',
+        },
+    })
 
 
-  const childButtonSx = (
-    active: boolean,
-  ): SxProps<Theme> => ({
-    minHeight: 40,
+  const childButtonSx =
+    (
+      active:
+        boolean,
+    ):
+    SxProps<Theme> => ({
+      minHeight:
+        40,
 
-    justifyContent:
-      'flex-start',
+      justifyContent:
+        'flex-start',
 
-    pl: 5.6,
+      pl:
+        5.6,
 
-    pr: 2,
+      pr:
+        2,
 
-    borderRadius: '8px',
+      borderRadius:
+        '8px',
 
-    textTransform: 'none',
+      textTransform:
+        'none',
 
-    fontSize: 14,
+      fontSize:
+        14,
 
-    fontWeight:
-      active
-        ? 700
-        : 500,
-
-    color:
-      active
-        ? '#0b5cff'
-        : '#56647a',
-
-    backgroundColor:
-      active
-        ? '#f3f7ff'
-        : 'transparent',
-
-    '& .MuiButton-startIcon': {
-      minWidth: 0,
-
-      marginRight: 1.1,
+      fontWeight:
+        active
+          ? 700
+          : 500,
 
       color:
         active
           ? '#0b5cff'
-          : '#68758c',
+          : '#56647a',
 
-      '& svg': {
-        fontSize: 18,
-      },
-    },
-
-    '&:hover': {
       backgroundColor:
         active
-          ? '#edf3ff'
-          : '#f7f9fc',
-    },
-  })
+          ? '#f3f7ff'
+          : 'transparent',
+
+      '& .MuiButton-startIcon':
+        {
+          minWidth:
+            0,
+
+          marginRight:
+            1.1,
+
+          color:
+            active
+              ? '#0b5cff'
+              : '#68758c',
+
+          '& svg':
+            {
+              fontSize:
+                18,
+            },
+        },
+
+      '&:hover':
+        {
+          backgroundColor:
+            active
+              ? '#edf3ff'
+              : '#f7f9fc',
+        },
+    })
 
 
   return (
@@ -445,17 +678,13 @@ function AppSidebar({
             ? '100%'
             : '100vh',
 
-        /*
-         * Desktop sidebar stays attached
-         * to the viewport while page
-         * content scrolls independently.
-         */
         position:
           mobile
             ? 'relative'
             : 'sticky',
 
-        top: 0,
+        top:
+          0,
 
         alignSelf:
           'flex-start',
@@ -464,14 +693,18 @@ function AppSidebar({
           mobile
             ? 'flex'
             : {
-                xs: 'none',
-                md: 'flex',
+                xs:
+                  'none',
+
+                md:
+                  'flex',
               },
 
         flexDirection:
           'column',
 
-        flexShrink: 0,
+        flexShrink:
+          0,
 
         boxSizing:
           'border-box',
@@ -485,27 +718,33 @@ function AppSidebar({
         backgroundColor:
           '#ffffff',
 
-        px: 2,
+        px:
+          2,
 
-        py: 2.5,
+        py:
+          2.5,
 
-        overflowY: 'auto',
+        overflowY:
+          'auto',
       }}
     >
-      {/* BRAND */}
-
       <Box
         sx={{
-          px: 1,
-          pb: 3.5,
+          px:
+            1,
+
+          pb:
+            3.5,
         }}
       >
         <BrandLogo
           variant="horizontal"
           sx={{
-            width: 190,
+            width:
+              190,
 
-            maxHeight: 54,
+            maxHeight:
+              54,
 
             objectFit:
               'contain',
@@ -521,9 +760,11 @@ function AppSidebar({
             display:
               'block',
 
-            mt: 0.7,
+            mt:
+              0.7,
 
-            ml: 5.6,
+            ml:
+              5.6,
 
             color:
               '#778198',
@@ -531,9 +772,11 @@ function AppSidebar({
             letterSpacing:
               '0.13em',
 
-            fontWeight: 700,
+            fontWeight:
+              700,
 
-            fontSize: 11,
+            fontSize:
+              11,
           }}
         >
           CRM FOR ALTRIUM
@@ -541,11 +784,11 @@ function AppSidebar({
       </Box>
 
 
-      {/* MAIN NAVIGATION */}
-
-      <Stack spacing={0.45}>
-        {/* DASHBOARD */}
-
+      <Stack
+        spacing={
+          0.45
+        }
+      >
         <Button
           startIcon={
             <DashboardOutlined />
@@ -565,200 +808,290 @@ function AppSidebar({
         </Button>
 
 
-        {/* LEADS SECTION */}
+        {isSpecialist ? (
+          <>
+            <Button
+              startIcon={
+                <AssignmentOutlined />
+              }
+              endIcon={
+                assessmentsExpanded
+                  ? (
+                    <ExpandLessRounded />
+                  )
+                  : (
+                    <ExpandMoreRounded />
+                  )
+              }
+              onClick={() =>
+                setAssessmentsExpanded(
+                  (
+                    current,
+                  ) =>
+                    !current,
+                )
+              }
+              sx={
+                navigationButtonSx(
+                  isAssessmentSectionPath,
+                )
+              }
+            >
+              {specialistLabel}
+            </Button>
 
-        <Button
-          startIcon={
-            <PeopleOutlineRounded />
-          }
-          endIcon={
-            leadsExpanded
-              ? (
-                <ExpandLessRounded />
-              )
-              : (
-                <ExpandMoreRounded />
-              )
-          }
-          onClick={() =>
-            setLeadsExpanded(
-              (current) =>
-                !current,
-            )
-          }
-          sx={
-            navigationButtonSx(
-              isLeadSectionPath,
-            )
-          }
-        >
-          Leads
-        </Button>
+            <Collapse
+              in={
+                assessmentsExpanded
+              }
+              timeout="auto"
+              unmountOnExit
+            >
+              <Stack
+                spacing={
+                  0.25
+                }
+                sx={{
+                  mt:
+                    0.25,
 
+                  mb:
+                    0.5,
+                }}
+              >
+                <Button
+                  startIcon={
+                    <AssignmentOutlined />
+                  }
+                  onClick={() =>
+                    handleNavigate(
+                      specialistBasePath,
+                    )
+                  }
+                  sx={
+                    childButtonSx(
+                      isAssessmentListActive,
+                    )
+                  }
+                >
+                  My Assessments
+                </Button>
 
-        <Collapse
-          in={leadsExpanded}
-          timeout="auto"
-          unmountOnExit
-        >
-          <Stack
-            spacing={0.25}
-            sx={{
-              mt: 0.25,
-              mb: 0.5,
-            }}
-          >
-            {/* MY LEADS / ALL LEADS */}
-
+                <Button
+                  startIcon={
+                    <HistoryRounded />
+                  }
+                  onClick={() =>
+                    handleNavigate(
+                      `${specialistBasePath}?status=REVIEWED`,
+                    )
+                  }
+                  sx={
+                    childButtonSx(
+                      isAssessmentHistoryActive,
+                    )
+                  }
+                >
+                  Assessment History
+                </Button>
+              </Stack>
+            </Collapse>
+          </>
+        ) : (
+          <>
             <Button
               startIcon={
                 <PeopleOutlineRounded />
               }
+              endIcon={
+                leadsExpanded
+                  ? (
+                    <ExpandLessRounded />
+                  )
+                  : (
+                    <ExpandMoreRounded />
+                  )
+              }
               onClick={() =>
-                handleNavigate(
-                  '/leads',
+                setLeadsExpanded(
+                  (
+                    current,
+                  ) =>
+                    !current,
                 )
               }
               sx={
-                childButtonSx(
-                  isLeadListActive,
+                navigationButtonSx(
+                  isLeadSectionPath,
                 )
               }
             >
-              {leadListLabel}
+              Leads
             </Button>
 
 
-            {/* FOLLOW-UPS */}
-
-            <Button
-              startIcon={
-                <CalendarMonthOutlined />
+            <Collapse
+              in={
+                leadsExpanded
               }
-              onClick={() =>
-                handleNavigate(
-                  '/follow-ups',
-                )
-              }
-              sx={
-                childButtonSx(
-                  isFollowUpsActive,
-                )
-              }
+              timeout="auto"
+              unmountOnExit
             >
-              Follow-ups
-            </Button>
-
-
-            {/* ACTIVITY */}
-
-            <Button
-              startIcon={
-                <ChatBubbleOutlineRounded />
-              }
-              onClick={() =>
-                handleNavigate(
-                  '/activity',
-                )
-              }
-              sx={
-                childButtonSx(
-                  isActivityActive,
-                )
-              }
-            >
-              Activity
-            </Button>
-          </Stack>
-        </Collapse>
-
-
-        {/* FUTURE FEATURES */}
-
-        {futureNavigationItems
-          .filter(
-            (item) =>
-              item.visible !==
-              false,
-          )
-          .map(
-            (item) => (
-              <Button
-                key={
-                  item.label
+              <Stack
+                spacing={
+                  0.25
                 }
-                startIcon={
-                  item.icon
-                }
-                disabled={
-                  item.available ===
-                  false
-                }
-                onClick={() => {
-                  if (
-                    item.path
-                  ) {
+                sx={{
+                  mt:
+                    0.25,
+
+                  mb:
+                    0.5,
+                }}
+              >
+                <Button
+                  startIcon={
+                    <PeopleOutlineRounded />
+                  }
+                  onClick={() =>
                     handleNavigate(
-                      item.path,
+                      '/leads',
                     )
                   }
-                }}
+                  sx={
+                    childButtonSx(
+                      isLeadListActive,
+                    )
+                  }
+                >
+                  {leadListLabel}
+                </Button>
+
+
+                <Button
+                  startIcon={
+                    <CalendarMonthOutlined />
+                  }
+                  onClick={() =>
+                    handleNavigate(
+                      '/follow-ups',
+                    )
+                  }
+                  sx={
+                    childButtonSx(
+                      isFollowUpsActive,
+                    )
+                  }
+                >
+                  Follow-ups
+                </Button>
+
+
+                <Button
+                  startIcon={
+                    <ChatBubbleOutlineRounded />
+                  }
+                  onClick={() =>
+                    handleNavigate(
+                      '/activity',
+                    )
+                  }
+                  sx={
+                    childButtonSx(
+                      isActivityActive,
+                    )
+                  }
+                >
+                  Activity
+                </Button>
+              </Stack>
+            </Collapse>
+
+
+            {futureNavigationItems
+              .filter(
+                (
+                  item,
+                ) =>
+                  item.visible !==
+                  false,
+              )
+              .map(
+                (
+                  item,
+                ) => (
+                  <Button
+                    key={
+                      item.label
+                    }
+                    startIcon={
+                      item.icon
+                    }
+                    disabled={
+                      item.available ===
+                      false
+                    }
+                    onClick={() => {
+                      if (
+                        item.path
+                      ) {
+                        handleNavigate(
+                          item.path,
+                        )
+                      }
+                    }}
+                    sx={
+                      navigationButtonSx(
+                        false,
+                      )
+                    }
+                  >
+                    {item.label}
+                  </Button>
+                ),
+              )}
+
+
+            {canSeeAdministration && (
+              <Button
+                startIcon={
+                  <AdminPanelSettingsOutlined />
+                }
+                onClick={() =>
+                  handleNavigate(
+                    '/admin',
+                  )
+                }
                 sx={
                   navigationButtonSx(
-                    false,
+                    location.pathname ===
+                      '/admin' ||
+                    location.pathname.startsWith(
+                      '/admin/',
+                    ),
                   )
                 }
               >
-                {item.label}
+                Administration
               </Button>
-            ),
-          )}
-
-
-        {/* ADMINISTRATION */}
-
-        {canSeeAdministration && (
-          <Button
-            startIcon={
-              <AdminPanelSettingsOutlined />
-            }
-            onClick={() =>
-              handleNavigate(
-                '/admin',
-              )
-            }
-            sx={
-              navigationButtonSx(
-                location.pathname ===
-                  '/admin' ||
-                  location.pathname.startsWith(
-                    '/admin/',
-                  ),
-              )
-            }
-          >
-            Administration
-          </Button>
+            )}
+          </>
         )}
       </Stack>
 
 
-      {/*
-       * Push logout/user controls to
-       * the bottom of the viewport.
-       */}
       <Box
         sx={{
-          flexGrow: 1,
+          flexGrow:
+            1,
         }}
       />
 
 
-      {/* BOTTOM UTILITIES */}
-
       <Divider
         sx={{
-          my: 2.2,
+          my:
+            2.2,
 
           borderColor:
             '#e4e8ef',
@@ -766,7 +1099,11 @@ function AppSidebar({
       />
 
 
-      <Stack spacing={0.4}>
+      <Stack
+        spacing={
+          0.4
+        }
+      >
         <Button
           startIcon={
             <LogoutRounded />
@@ -778,12 +1115,14 @@ function AppSidebar({
             isLoggingOut
           }
           sx={{
-            minHeight: 46,
+            minHeight:
+              46,
 
             justifyContent:
               'flex-start',
 
-            px: 2,
+            px:
+              2,
 
             borderRadius:
               '8px',
@@ -794,19 +1133,23 @@ function AppSidebar({
             textTransform:
               'none',
 
-            fontSize: 15,
+            fontSize:
+              15,
 
-            fontWeight: 500,
+            fontWeight:
+              500,
 
             '& .MuiButton-startIcon svg':
               {
-                fontSize: 22,
+                fontSize:
+                  22,
               },
 
-            '&:hover': {
-              backgroundColor:
-                '#f7f9fc',
-            },
+            '&:hover':
+              {
+                backgroundColor:
+                  '#f7f9fc',
+              },
           }}
         >
           {isLoggingOut
@@ -816,24 +1159,28 @@ function AppSidebar({
       </Stack>
 
 
-      {/* SIGNED-IN USER */}
-
       <Box
         sx={{
-          mt: 2.2,
+          mt:
+            2.2,
 
-          p: 1.5,
+          p:
+            1.5,
 
-          minHeight: 72,
+          minHeight:
+            72,
 
-          display: 'flex',
+          display:
+            'flex',
 
           alignItems:
             'center',
 
-          gap: 1.25,
+          gap:
+            1.25,
 
-          flexShrink: 0,
+          flexShrink:
+            0,
 
           border:
             '1px solid',
@@ -850,11 +1197,14 @@ function AppSidebar({
       >
         <Avatar
           sx={{
-            width: 42,
+            width:
+              42,
 
-            height: 42,
+            height:
+              42,
 
-            flexShrink: 0,
+            flexShrink:
+              0,
 
             backgroundColor:
               '#edf2ff',
@@ -862,20 +1212,25 @@ function AppSidebar({
             color:
               '#1548c7',
 
-            fontWeight: 700,
+            fontWeight:
+              700,
 
-            fontSize: 15,
+            fontSize:
+              15,
           }}
         >
-          {initials || 'EU'}
+          {initials ||
+            'EU'}
         </Avatar>
 
 
         <Box
           sx={{
-            minWidth: 0,
+            minWidth:
+              0,
 
-            flexGrow: 1,
+            flexGrow:
+              1,
           }}
         >
           <Typography
@@ -883,11 +1238,14 @@ function AppSidebar({
               color:
                 '#111827',
 
-              fontSize: 14,
+              fontSize:
+                14,
 
-              fontWeight: 700,
+              fontWeight:
+                700,
 
-              lineHeight: 1.25,
+              lineHeight:
+                1.25,
 
               overflow:
                 'hidden',
@@ -905,14 +1263,17 @@ function AppSidebar({
 
           <Typography
             sx={{
-              mt: 0.25,
+              mt:
+                0.25,
 
               color:
                 '#68758c',
 
-              fontSize: 11.5,
+              fontSize:
+                11.5,
 
-              lineHeight: 1.3,
+              lineHeight:
+                1.3,
 
               overflow:
                 'hidden',
@@ -935,9 +1296,11 @@ function AppSidebar({
             color:
               '#657087',
 
-            fontSize: 20,
+            fontSize:
+              20,
 
-            flexShrink: 0,
+            flexShrink:
+              0,
           }}
         />
       </Box>

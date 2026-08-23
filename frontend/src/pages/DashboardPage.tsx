@@ -6,17 +6,20 @@ import {
 
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Card,
   CardContent,
   Chip,
   CircularProgress,
+  Divider,
   Stack,
   Typography,
 } from '@mui/material'
 
 import {
+  AddRounded,
   CheckCircleOutlineRounded,
   GroupOutlined,
   PersonAddOutlined,
@@ -37,6 +40,15 @@ import {
   type Lead,
   type LeadStatus,
 } from '../services/crm'
+
+
+const ACTIVE_LEAD_STATUSES:
+LeadStatus[] = [
+  'NEW',
+  'CONTACTED',
+  'QUALIFIED',
+  'PROPOSAL',
+]
 
 
 function getStatusColor(
@@ -69,6 +81,37 @@ function getStatusColor(
 }
 
 
+function getStatusLabel(
+  status: LeadStatus,
+) {
+  switch (status) {
+    case 'NEW':
+      return 'New'
+
+    case 'CONTACTED':
+      return 'Contacted'
+
+    case 'QUALIFIED':
+      return 'Qualified'
+
+    case 'PROPOSAL':
+      return 'Proposal'
+
+    case 'WON':
+      return 'Won'
+
+    case 'LOST':
+      return 'Lost'
+
+    case 'DISQUALIFIED':
+      return 'Disqualified'
+
+    default:
+      return status
+  }
+}
+
+
 function formatDate(
   value: string | null,
 ) {
@@ -89,9 +132,36 @@ function formatDate(
 }
 
 
+function getLeadInitials(
+  name: string,
+) {
+  const parts =
+    name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+
+  return (
+    parts
+      .map(
+        (
+          part,
+        ) =>
+          part
+            .charAt(0)
+            .toUpperCase(),
+      )
+      .join('') ||
+    'L'
+  )
+}
+
+
 function DashboardPage() {
   const navigate =
     useNavigate()
+
 
   const [
     currentUser,
@@ -101,17 +171,20 @@ function DashboardPage() {
       null,
     )
 
+
   const [
     leads,
     setLeads,
   ] =
     useState<Lead[]>([])
 
+
   const [
     isLoading,
     setIsLoading,
   ] =
     useState(true)
+
 
   const [
     error,
@@ -122,8 +195,13 @@ function DashboardPage() {
 
   const loadDashboard =
     async () => {
-      setIsLoading(true)
-      setError('')
+      setIsLoading(
+        true,
+      )
+
+      setError(
+        '',
+      )
 
       try {
         const [
@@ -172,6 +250,11 @@ function DashboardPage() {
     'SALES_REP'
 
 
+  const isSalesManager =
+    currentUser?.role ===
+    'SALES_MANAGER'
+
+
   const assignedLeadCount =
     useMemo(
       () => {
@@ -204,6 +287,42 @@ function DashboardPage() {
     )
 
 
+  const activeLeadCount =
+    useMemo(
+      () =>
+        leads.filter(
+          (
+            lead,
+          ) =>
+            ACTIVE_LEAD_STATUSES.includes(
+              lead.status,
+            ),
+        ).length,
+      [
+        leads,
+      ],
+    )
+
+
+  const unassignedLeadCount =
+    useMemo(
+      () =>
+        leads.filter(
+          (
+            lead,
+          ) =>
+            lead.assigned_to ===
+              null &&
+            ACTIVE_LEAD_STATUSES.includes(
+              lead.status,
+            ),
+        ).length,
+      [
+        leads,
+      ],
+    )
+
+
   const qualifiedLeadCount =
     useMemo(
       () =>
@@ -213,6 +332,54 @@ function DashboardPage() {
           ) =>
             lead.status ===
             'QUALIFIED',
+        ).length,
+      [
+        leads,
+      ],
+    )
+
+
+  const newLeadCount =
+    useMemo(
+      () =>
+        leads.filter(
+          (
+            lead,
+          ) =>
+            lead.status ===
+            'NEW',
+        ).length,
+      [
+        leads,
+      ],
+    )
+
+
+  const contactedLeadCount =
+    useMemo(
+      () =>
+        leads.filter(
+          (
+            lead,
+          ) =>
+            lead.status ===
+            'CONTACTED',
+        ).length,
+      [
+        leads,
+      ],
+    )
+
+
+  const proposalLeadCount =
+    useMemo(
+      () =>
+        leads.filter(
+          (
+            lead,
+          ) =>
+            lead.status ===
+            'PROPOSAL',
         ).length,
       [
         leads,
@@ -248,12 +415,46 @@ function DashboardPage() {
     )
 
 
-  const summaryCards = [
+  const unassignedLeads =
+    useMemo(
+      () =>
+        leads
+          .filter(
+            (
+              lead,
+            ) =>
+              lead.assigned_to ===
+                null &&
+              ACTIVE_LEAD_STATUSES.includes(
+                lead.status,
+              ),
+          )
+          .sort(
+            (
+              first,
+              second,
+            ) =>
+              new Date(
+                second.created_at,
+              ).getTime() -
+              new Date(
+                first.created_at,
+              ).getTime(),
+          )
+          .slice(
+            0,
+            4,
+          ),
+      [
+        leads,
+      ],
+    )
+
+
+  const salesRepresentativeSummaryCards = [
     {
       title:
-        isSalesRepresentative
-          ? 'My Total Leads'
-          : 'Total Leads',
+        'My Total Leads',
 
       value:
         leads.length,
@@ -268,9 +469,7 @@ function DashboardPage() {
 
     {
       title:
-        isSalesRepresentative
-          ? 'My Assigned Leads'
-          : 'Assigned Leads',
+        'My Assigned Leads',
 
       value:
         assignedLeadCount,
@@ -285,9 +484,7 @@ function DashboardPage() {
 
     {
       title:
-        isSalesRepresentative
-          ? 'My Qualified Leads'
-          : 'Qualified Leads',
+        'My Qualified Leads',
 
       value:
         qualifiedLeadCount,
@@ -305,125 +502,1191 @@ function DashboardPage() {
   return (
     <Box
       sx={{
-        p: {
-          xs: 3,
-          md: 5,
+        px: {
+          xs:
+            2.5,
+
+          md:
+            4,
+        },
+
+        py: {
+          xs:
+            3,
+
+          md:
+            4,
         },
       }}
     >
-      <Stack
-        direction={{
-          xs: 'column',
-          sm: 'row',
-        }}
+      <Box
         sx={{
-          justifyContent:
-            'space-between',
+          width:
+            '100%',
 
-          alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
-          },
+          maxWidth:
+            1480,
 
-          gap: 2,
-
-          mb: 4,
+          mx:
+            'auto',
         }}
       >
-        <Box>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 800,
-            }}
-          >
-            Dashboard
-          </Typography>
+        {/*
+          HEADER
+        */}
 
-          <Typography
-            sx={{
-              color:
-                'text.secondary',
-            }}
-          >
-            {isSalesRepresentative
-              ? 'Your ELEVEN CRM lead overview'
-              : 'ELEVEN CRM operational overview'}
-          </Typography>
-        </Box>
+        <Stack
+          direction={{
+            xs:
+              'column',
 
-
-        <Button
-          startIcon={
-            <RefreshRounded />
-          }
-          onClick={() =>
-            void loadDashboard()
-          }
-          disabled={
-            isLoading
-          }
-        >
-          Refresh
-        </Button>
-      </Stack>
-
-
-      {error && (
-        <Alert
-          severity="error"
-          sx={{
-            mb: 3,
+            md:
+              'row',
           }}
-        >
-          {error}
-        </Alert>
-      )}
-
-
-      {isLoading ? (
-        <Box
           sx={{
-            minHeight:
-              300,
-
-            display:
-              'flex',
-
-            alignItems:
-              'center',
-
             justifyContent:
-              'center',
+              'space-between',
+
+            alignItems: {
+              xs:
+                'flex-start',
+
+              md:
+                'center',
+            },
+
+            gap:
+              2,
+
+            mb:
+              3,
           }}
         >
+          <Box>
+            <Typography
+              sx={{
+                color:
+                  '#172033',
+
+                fontSize: {
+                  xs:
+                    28,
+
+                  md:
+                    30,
+                },
+
+                fontWeight:
+                  700,
+
+                lineHeight:
+                  1.2,
+
+                letterSpacing:
+                  '-0.02em',
+              }}
+            >
+              Dashboard
+            </Typography>
+
+            <Typography
+              sx={{
+                mt:
+                  0.7,
+
+                color:
+                  'text.secondary',
+
+                fontSize:
+                  14,
+              }}
+            >
+              {isSalesRepresentative
+                ? 'Your ELEVEN CRM lead overview'
+                : isSalesManager
+                  ? 'Sales overview and lead assignments'
+                  : 'ELEVEN CRM operational overview'}
+            </Typography>
+          </Box>
+
+
           <Stack
-            spacing={2}
+            direction="row"
+            spacing={1.25}
+          >
+            <Button
+              variant="outlined"
+              startIcon={
+                <RefreshRounded />
+              }
+              onClick={() =>
+                void loadDashboard()
+              }
+              disabled={
+                isLoading
+              }
+              sx={{
+                bgcolor:
+                  '#ffffff',
+              }}
+            >
+              Refresh
+            </Button>
+
+
+            {isSalesManager && (
+              <Button
+                variant="contained"
+                startIcon={
+                  <AddRounded />
+                }
+                onClick={() =>
+                  navigate(
+                    '/leads',
+                  )
+                }
+              >
+                Create Lead
+              </Button>
+            )}
+          </Stack>
+        </Stack>
+
+
+        {error && (
+          <Alert
+            severity="error"
             sx={{
+              mb:
+                2.5,
+            }}
+          >
+            {error}
+          </Alert>
+        )}
+
+
+        {isLoading ? (
+          <Box
+            sx={{
+              minHeight:
+                380,
+
+              display:
+                'flex',
+
               alignItems:
+                'center',
+
+              justifyContent:
                 'center',
             }}
           >
-            <CircularProgress />
-
-            <Typography
-              color="text.secondary"
+            <Stack
+              spacing={1.5}
+              sx={{
+                alignItems:
+                  'center',
+              }}
             >
-              Loading dashboard...
-            </Typography>
-          </Stack>
-        </Box>
-      ) : (
-        <>
-          {/* SUMMARY CARDS */}
+              <CircularProgress />
 
-          <Box
-            sx={{
-              display:
-                'grid',
+              <Typography
+                sx={{
+                  color:
+                    'text.secondary',
 
-              gridTemplateColumns:
-                {
+                  fontSize:
+                    13,
+                }}
+              >
+                Loading dashboard...
+              </Typography>
+            </Stack>
+          </Box>
+        ) : isSalesManager ? (
+          <>
+            {/*
+              MANAGER SUMMARY
+            */}
+
+            <Card
+              variant="outlined"
+              sx={{
+                mb:
+                  2.5,
+
+                borderColor:
+                  '#e4e8ef',
+
+                borderRadius:
+                  '12px',
+
+                boxShadow:
+                  '0 2px 8px rgba(15, 23, 42, 0.035)',
+
+                overflow:
+                  'hidden',
+              }}
+            >
+              <Box
+                sx={{
+                  display:
+                    'grid',
+
+                  gridTemplateColumns: {
+                    xs:
+                      'repeat(2, 1fr)',
+
+                    md:
+                      'repeat(4, 1fr)',
+                  },
+                }}
+              >
+                {[
+                  {
+                    label:
+                      'Total Leads',
+
+                    value:
+                      leads.length,
+                  },
+
+                  {
+                    label:
+                      'Active',
+
+                    value:
+                      activeLeadCount,
+                  },
+
+                  {
+                    label:
+                      'Unassigned',
+
+                    value:
+                      unassignedLeadCount,
+                  },
+
+                  {
+                    label:
+                      'Qualified',
+
+                    value:
+                      qualifiedLeadCount,
+                  },
+                ].map(
+                  (
+                    item,
+                    index,
+                  ) => (
+                    <Box
+                      key={
+                        item.label
+                      }
+                      sx={{
+                        minHeight:
+                          88,
+
+                        px: {
+                          xs:
+                            2.25,
+
+                          md:
+                            2.75,
+                        },
+
+                        py:
+                          2,
+
+                        display:
+                          'flex',
+
+                        flexDirection:
+                          'column',
+
+                        justifyContent:
+                          'center',
+
+                        borderRight:
+                          index <
+                          3
+                            ? {
+                                md:
+                                  '1px solid #edf0f4',
+                              }
+                            : undefined,
+
+                        borderBottom: {
+                          xs:
+                            index <
+                            2
+                              ? '1px solid #edf0f4'
+                              : 'none',
+
+                          md:
+                            'none',
+                        },
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          color:
+                            '#667085',
+
+                          fontSize:
+                            12.5,
+
+                          fontWeight:
+                            500,
+                        }}
+                      >
+                        {item.label}
+                      </Typography>
+
+                      <Typography
+                        sx={{
+                          mt:
+                            0.4,
+
+                          color:
+                            '#172033',
+
+                          fontSize:
+                            24,
+
+                          fontWeight:
+                            700,
+
+                          lineHeight:
+                            1.2,
+                        }}
+                      >
+                        {item.value}
+                      </Typography>
+                    </Box>
+                  ),
+                )}
+              </Box>
+            </Card>
+
+
+            {/*
+              MAIN DASHBOARD GRID
+            */}
+
+            <Box
+              sx={{
+                display:
+                  'grid',
+
+                gridTemplateColumns: {
+                  xs:
+                    '1fr',
+
+                  lg:
+                    'minmax(0, 1.65fr) minmax(300px, 0.65fr)',
+                },
+
+                gap:
+                  2.5,
+
+                alignItems:
+                  'start',
+              }}
+            >
+              {/*
+                RECENT LEADS
+              */}
+
+              <Card
+                variant="outlined"
+                sx={{
+                  borderColor:
+                    '#e4e8ef',
+
+                  borderRadius:
+                    '12px',
+
+                  boxShadow:
+                    '0 2px 10px rgba(15, 23, 42, 0.04)',
+
+                  overflow:
+                    'hidden',
+                }}
+              >
+                <Box
+                  sx={{
+                    px: {
+                      xs:
+                        2.25,
+
+                      md:
+                        2.75,
+                    },
+
+                    py:
+                      2.2,
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    sx={{
+                      justifyContent:
+                        'space-between',
+
+                      alignItems:
+                        'center',
+
+                      gap:
+                        2,
+                    }}
+                  >
+                    <Box>
+                      <Typography
+                        sx={{
+                          color:
+                            '#172033',
+
+                          fontSize:
+                            16,
+
+                          fontWeight:
+                            700,
+                        }}
+                      >
+                        Recent Leads
+                      </Typography>
+
+                      <Typography
+                        sx={{
+                          mt:
+                            0.25,
+
+                          color:
+                            'text.secondary',
+
+                          fontSize:
+                            12.5,
+                        }}
+                      >
+                        Recently created lead records
+                      </Typography>
+                    </Box>
+
+
+                    <Button
+                      size="small"
+                      onClick={() =>
+                        navigate(
+                          '/leads',
+                        )
+                      }
+                      sx={{
+                        minHeight:
+                          34,
+
+                        px:
+                          1.25,
+
+                        fontSize:
+                          12.5,
+                      }}
+                    >
+                      View All
+                    </Button>
+                  </Stack>
+                </Box>
+
+
+                <Divider />
+
+
+                {recentLeads.length ===
+                0 ? (
+                  <Box
+                    sx={{
+                      px:
+                        3,
+
+                      py:
+                        6,
+
+                      textAlign:
+                        'center',
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        color:
+                          'text.secondary',
+
+                        fontSize:
+                          13,
+                      }}
+                    >
+                      No leads have been created yet.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Stack
+                    divider={
+                      <Divider
+                        flexItem
+                      />
+                    }
+                  >
+                    {recentLeads.map(
+                      (
+                        lead,
+                      ) => (
+                        <Box
+                          key={
+                            lead.id
+                          }
+                          onClick={() =>
+                            navigate(
+                              `/leads/${lead.id}`,
+                            )
+                          }
+                          sx={{
+                            px: {
+                              xs:
+                                2.25,
+
+                              md:
+                                2.75,
+                            },
+
+                            py:
+                              1.55,
+
+                            cursor:
+                              'pointer',
+
+                            '&:hover':
+                              {
+                                bgcolor:
+                                  '#fafcff',
+                              },
+                          }}
+                        >
+                          <Stack
+                            direction="row"
+                            sx={{
+                              alignItems:
+                                'center',
+
+                              justifyContent:
+                                'space-between',
+
+                              gap:
+                                2,
+                            }}
+                          >
+                            <Stack
+                              direction="row"
+                              spacing={1.4}
+                              sx={{
+                                alignItems:
+                                  'center',
+
+                                minWidth:
+                                  0,
+
+                                flex:
+                                  1,
+                              }}
+                            >
+                              <Avatar
+                                sx={{
+                                  width:
+                                    38,
+
+                                  height:
+                                    38,
+
+                                  bgcolor:
+                                    '#edf2ff',
+
+                                  color:
+                                    '#1748bf',
+
+                                  fontSize:
+                                    12.5,
+
+                                  fontWeight:
+                                    700,
+
+                                  flexShrink:
+                                    0,
+                                }}
+                              >
+                                {getLeadInitials(
+                                  lead.contact_name,
+                                )}
+                              </Avatar>
+
+
+                              <Box
+                                sx={{
+                                  minWidth:
+                                    0,
+                                }}
+                              >
+                                <Typography
+                                  sx={{
+                                    color:
+                                      '#172033',
+
+                                    fontSize:
+                                      13.5,
+
+                                    fontWeight:
+                                      600,
+
+                                    overflow:
+                                      'hidden',
+
+                                    textOverflow:
+                                      'ellipsis',
+
+                                    whiteSpace:
+                                      'nowrap',
+                                  }}
+                                >
+                                  {lead.contact_name}
+                                </Typography>
+
+                                <Typography
+                                  sx={{
+                                    mt:
+                                      0.15,
+
+                                    color:
+                                      '#7a8699',
+
+                                    fontSize:
+                                      11.5,
+
+                                    overflow:
+                                      'hidden',
+
+                                    textOverflow:
+                                      'ellipsis',
+
+                                    whiteSpace:
+                                      'nowrap',
+                                  }}
+                                >
+                                  {lead.company_name}
+                                  {' · '}
+                                  {lead.assigned_to_name ||
+                                    'Unassigned'}
+                                </Typography>
+                              </Box>
+                            </Stack>
+
+
+                            <Stack
+                              direction="row"
+                              spacing={1.5}
+                              sx={{
+                                alignItems:
+                                  'center',
+
+                                flexShrink:
+                                  0,
+                              }}
+                            >
+                              <Chip
+                                size="small"
+                                label={
+                                  lead.status_display ||
+                                  getStatusLabel(
+                                    lead.status,
+                                  )
+                                }
+                                color={
+                                  getStatusColor(
+                                    lead.status,
+                                  )
+                                }
+                                variant="outlined"
+                                sx={{
+                                  bgcolor:
+                                    '#ffffff',
+
+                                  fontSize:
+                                    11.5,
+                                }}
+                              />
+
+                              <Typography
+                                sx={{
+                                  width:
+                                    86,
+
+                                  display: {
+                                    xs:
+                                      'none',
+
+                                    sm:
+                                      'block',
+                                  },
+
+                                  color:
+                                    '#667085',
+
+                                  fontSize:
+                                    11.5,
+
+                                  textAlign:
+                                    'right',
+                                }}
+                              >
+                                {formatDate(
+                                  lead.created_at,
+                                )}
+                              </Typography>
+                            </Stack>
+                          </Stack>
+                        </Box>
+                      ),
+                    )}
+                  </Stack>
+                )}
+              </Card>
+
+
+              {/*
+                RIGHT COLUMN
+              */}
+
+              <Stack
+                spacing={2.5}
+              >
+                {/*
+                  ASSIGNMENT QUEUE
+                */}
+
+                <Card
+                  variant="outlined"
+                  sx={{
+                    borderColor:
+                      '#e4e8ef',
+
+                    borderRadius:
+                      '12px',
+
+                    boxShadow:
+                      '0 2px 8px rgba(15, 23, 42, 0.035)',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      px:
+                        2.5,
+
+                      py:
+                        2.25,
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      sx={{
+                        justifyContent:
+                          'space-between',
+
+                        alignItems:
+                          'center',
+
+                        gap:
+                          2,
+                      }}
+                    >
+                      <Box>
+                        <Typography
+                          sx={{
+                            color:
+                              '#172033',
+
+                            fontSize:
+                              15,
+
+                            fontWeight:
+                              700,
+                          }}
+                        >
+                          Assignment Queue
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            mt:
+                              0.25,
+
+                            color:
+                              'text.secondary',
+
+                            fontSize:
+                              12,
+                          }}
+                        >
+                          Active unassigned leads
+                        </Typography>
+                      </Box>
+
+
+                      <Box
+                        sx={{
+                          minWidth:
+                            34,
+
+                          height:
+                            30,
+
+                          px:
+                            1,
+
+                          display:
+                            'flex',
+
+                          alignItems:
+                            'center',
+
+                          justifyContent:
+                            'center',
+
+                          bgcolor:
+                            unassignedLeadCount >
+                            0
+                              ? '#fff8e6'
+                              : '#f4f7fb',
+
+                          color:
+                            unassignedLeadCount >
+                            0
+                              ? '#b54708'
+                              : '#475467',
+
+                          borderRadius:
+                            '8px',
+
+                          fontSize:
+                            13,
+
+                          fontWeight:
+                            700,
+                        }}
+                      >
+                        {unassignedLeadCount}
+                      </Box>
+                    </Stack>
+                  </Box>
+
+
+                  <Divider />
+
+
+                  {unassignedLeads.length ===
+                  0 ? (
+                    <Box
+                      sx={{
+                        px:
+                          2.5,
+
+                        py:
+                          2.25,
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          color:
+                            '#667085',
+
+                          fontSize:
+                            12.5,
+                        }}
+                      >
+                        All active leads are currently assigned.
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Stack
+                      divider={
+                        <Divider
+                          flexItem
+                        />
+                      }
+                    >
+                      {unassignedLeads.map(
+                        (
+                          lead,
+                        ) => (
+                          <Box
+                            key={
+                              lead.id
+                            }
+                            sx={{
+                              px:
+                                2.5,
+
+                              py:
+                                1.5,
+                            }}
+                          >
+                            <Stack
+                              direction="row"
+                              sx={{
+                                justifyContent:
+                                  'space-between',
+
+                                alignItems:
+                                  'center',
+
+                                gap:
+                                  1.5,
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  minWidth:
+                                    0,
+                                }}
+                              >
+                                <Typography
+                                  sx={{
+                                    color:
+                                      '#172033',
+
+                                    fontSize:
+                                      12.75,
+
+                                    fontWeight:
+                                      600,
+                                  }}
+                                >
+                                  {lead.contact_name}
+                                </Typography>
+
+                                <Typography
+                                  sx={{
+                                    mt:
+                                      0.15,
+
+                                    color:
+                                      '#7a8699',
+
+                                    fontSize:
+                                      11.5,
+                                  }}
+                                >
+                                  {lead.company_name}
+                                </Typography>
+                              </Box>
+
+
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() =>
+                                  navigate(
+                                    `/leads/${lead.id}`,
+                                  )
+                                }
+                                sx={{
+                                  minHeight:
+                                    32,
+
+                                  px:
+                                    1.15,
+
+                                  fontSize:
+                                    11.5,
+                                }}
+                              >
+                                Assign
+                              </Button>
+                            </Stack>
+                          </Box>
+                        ),
+                      )}
+                    </Stack>
+                  )}
+                </Card>
+
+
+                {/*
+                  LEAD STATUS
+                */}
+
+                <Card
+                  variant="outlined"
+                  sx={{
+                    borderColor:
+                      '#e4e8ef',
+
+                    borderRadius:
+                      '12px',
+
+                    boxShadow:
+                      '0 2px 8px rgba(15, 23, 42, 0.035)',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      px:
+                        2.5,
+
+                      py:
+                        2.25,
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        color:
+                          '#172033',
+
+                        fontSize:
+                          15,
+
+                        fontWeight:
+                          700,
+                      }}
+                    >
+                      Lead Status
+                    </Typography>
+
+                    <Typography
+                      sx={{
+                        mt:
+                          0.25,
+
+                        color:
+                          'text.secondary',
+
+                        fontSize:
+                          12,
+                      }}
+                    >
+                      Current active lead stages
+                    </Typography>
+                  </Box>
+
+
+                  <Divider />
+
+
+                  <Stack
+                    divider={
+                      <Divider
+                        flexItem
+                      />
+                    }
+                  >
+                    {[
+                      {
+                        label:
+                          'New',
+
+                        value:
+                          newLeadCount,
+                      },
+
+                      {
+                        label:
+                          'Contacted',
+
+                        value:
+                          contactedLeadCount,
+                      },
+
+                      {
+                        label:
+                          'Qualified',
+
+                        value:
+                          qualifiedLeadCount,
+                      },
+
+                      {
+                        label:
+                          'Proposal',
+
+                        value:
+                          proposalLeadCount,
+                      },
+                    ].map(
+                      (
+                        item,
+                      ) => (
+                        <Stack
+                          key={
+                            item.label
+                          }
+                          direction="row"
+                          sx={{
+                            px:
+                              2.5,
+
+                            py:
+                              1.35,
+
+                            justifyContent:
+                              'space-between',
+
+                            alignItems:
+                              'center',
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              color:
+                                '#475467',
+
+                              fontSize:
+                                12.5,
+                            }}
+                          >
+                            {item.label}
+                          </Typography>
+
+                          <Typography
+                            sx={{
+                              color:
+                                '#172033',
+
+                              fontSize:
+                                12.5,
+
+                              fontWeight:
+                                700,
+                            }}
+                          >
+                            {item.value}
+                          </Typography>
+                        </Stack>
+                      ),
+                    )}
+                  </Stack>
+                </Card>
+              </Stack>
+            </Box>
+          </>
+        ) : (
+          <>
+            {/*
+              SALES REP /
+              OTHER ROLE VIEW
+            */}
+
+            <Box
+              sx={{
+                display:
+                  'grid',
+
+                gridTemplateColumns: {
                   xs:
                     '1fr',
 
@@ -434,159 +1697,172 @@ function DashboardPage() {
                     'repeat(3, 1fr)',
                 },
 
-              gap:
-                3,
-            }}
-          >
-            {summaryCards.map(
-              (
-                card,
-              ) => (
-                <Card
-                  key={
-                    card.title
-                  }
-                  variant="outlined"
-                >
-                  <CardContent>
-                    <Stack
-                      direction="row"
-                      sx={{
-                        justifyContent:
-                          'space-between',
-
-                        alignItems:
-                          'center',
-                      }}
-                    >
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color:
-                              'text.secondary',
-
-                            textTransform:
-                              'uppercase',
-                          }}
-                        >
-                          {
-                            card.title
-                          }
-                        </Typography>
-
-                        <Typography
-                          variant="h4"
-                          sx={{
-                            fontWeight:
-                              800,
-
-                            mt:
-                              1,
-                          }}
-                        >
-                          {
-                            card.value
-                          }
-                        </Typography>
-                      </Box>
-
-                      {
-                        card.icon
-                      }
-                    </Stack>
-                  </CardContent>
-                </Card>
-              ),
-            )}
-          </Box>
-
-
-          {/* RECENT LEADS */}
-
-          <Card
-            variant="outlined"
-            sx={{
-              mt: 4,
-            }}
-          >
-            <CardContent
-              sx={{
-                p: {
-                  xs: 2.5,
-                  md: 4,
-                },
+                gap:
+                  2.5,
               }}
             >
-              <Stack
-                direction={{
-                  xs:
-                    'column',
+              {salesRepresentativeSummaryCards.map(
+                (
+                  card,
+                ) => (
+                  <Card
+                    key={
+                      card.title
+                    }
+                    variant="outlined"
+                    sx={{
+                      borderColor:
+                        '#e4e8ef',
 
-                  sm:
-                    'row',
-                }}
+                      borderRadius:
+                        '12px',
+
+                      boxShadow:
+                        '0 2px 8px rgba(15, 23, 42, 0.035)',
+                    }}
+                  >
+                    <CardContent>
+                      <Stack
+                        direction="row"
+                        sx={{
+                          justifyContent:
+                            'space-between',
+
+                          alignItems:
+                            'center',
+                        }}
+                      >
+                        <Box>
+                          <Typography
+                            sx={{
+                              color:
+                                '#667085',
+
+                              fontSize:
+                                12.5,
+                            }}
+                          >
+                            {card.title}
+                          </Typography>
+
+                          <Typography
+                            sx={{
+                              mt:
+                                0.6,
+
+                              color:
+                                '#172033',
+
+                              fontSize:
+                                24,
+
+                              fontWeight:
+                                700,
+                            }}
+                          >
+                            {card.value}
+                          </Typography>
+                        </Box>
+
+                        {card.icon}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ),
+              )}
+            </Box>
+
+
+            <Card
+              variant="outlined"
+              sx={{
+                mt:
+                  2.5,
+
+                borderColor:
+                  '#e4e8ef',
+
+                borderRadius:
+                  '12px',
+
+                boxShadow:
+                  '0 2px 10px rgba(15, 23, 42, 0.04)',
+              }}
+            >
+              <Box
                 sx={{
-                  justifyContent:
-                    'space-between',
+                  px:
+                    2.75,
 
-                  alignItems: {
-                    xs:
-                      'flex-start',
-
-                    sm:
-                      'center',
-                  },
-
-                  gap:
-                    2,
-
-                  mb:
-                    recentLeads.length >
-                    0
-                      ? 3
-                      : 0,
+                  py:
+                    2.25,
                 }}
               >
-                <Box>
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      fontWeight:
-                        700,
-                    }}
-                  >
-                    {isSalesRepresentative
-                      ? 'My Recent Leads'
-                      : 'Recent Leads'}
-                  </Typography>
+                <Stack
+                  direction="row"
+                  sx={{
+                    justifyContent:
+                      'space-between',
 
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      mt:
-                        0.5,
-                    }}
-                  >
-                    {isSalesRepresentative
-                      ? 'Recently assigned lead records available to you.'
-                      : 'Most recently created lead records in the CRM.'}
-                  </Typography>
-                </Box>
+                    alignItems:
+                      'center',
 
-
-                <Button
-                  variant="outlined"
-                  onClick={() =>
-                    navigate(
-                      '/leads',
-                    )
-                  }
+                    gap:
+                      2,
+                  }}
                 >
-                  View All Leads
-                </Button>
-              </Stack>
+                  <Box>
+                    <Typography
+                      sx={{
+                        color:
+                          '#172033',
+
+                        fontSize:
+                          16,
+
+                        fontWeight:
+                          700,
+                      }}
+                    >
+                      {isSalesRepresentative
+                        ? 'My Recent Leads'
+                        : 'Recent Leads'}
+                    </Typography>
+
+                    <Typography
+                      sx={{
+                        mt:
+                          0.25,
+
+                        color:
+                          'text.secondary',
+
+                        fontSize:
+                          12.5,
+                      }}
+                    >
+                      {isSalesRepresentative
+                        ? 'Recently assigned lead records'
+                        : 'Recently created lead records'}
+                    </Typography>
+                  </Box>
+
+
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      navigate(
+                        '/leads',
+                      )
+                    }
+                  >
+                    View All
+                  </Button>
+                </Stack>
+              </Box>
+
+
+              <Divider />
 
 
               {recentLeads.length ===
@@ -602,19 +1878,11 @@ function DashboardPage() {
                 >
                   <Typography
                     sx={{
-                      fontWeight:
-                        700,
-                    }}
-                  >
-                    No leads available
-                  </Typography>
+                      color:
+                        'text.secondary',
 
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      mt:
-                        0.75,
+                      fontSize:
+                        13,
                     }}
                   >
                     {isSalesRepresentative
@@ -624,142 +1892,149 @@ function DashboardPage() {
                 </Box>
               ) : (
                 <Stack
-                  spacing={1.5}
+                  divider={
+                    <Divider
+                      flexItem
+                    />
+                  }
                 >
                   {recentLeads.map(
                     (
                       lead,
                     ) => (
-                      <Card
+                      <Box
                         key={
                           lead.id
                         }
-                        variant="outlined"
                         onClick={() =>
                           navigate(
                             `/leads/${lead.id}`,
                           )
                         }
                         sx={{
-                          p:
-                            2,
+                          px:
+                            2.75,
+
+                          py:
+                            1.5,
 
                           cursor:
                             'pointer',
 
-                          boxShadow:
-                            'none',
-
                           '&:hover':
                             {
-                              borderColor:
-                                'primary.main',
-
                               bgcolor:
-                                'action.hover',
+                                '#fafcff',
                             },
                         }}
                       >
                         <Stack
-                          direction={{
-                            xs:
-                              'column',
-
-                            sm:
-                              'row',
-                          }}
+                          direction="row"
                           sx={{
                             justifyContent:
                               'space-between',
 
-                            alignItems: {
-                              xs:
-                                'flex-start',
-
-                              sm:
-                                'center',
-                            },
+                            alignItems:
+                              'center',
 
                             gap:
                               2,
                           }}
                         >
-                          <Box>
-                            <Typography
-                              sx={{
-                                fontWeight:
-                                  800,
-                              }}
-                            >
-                              {
-                                lead.contact_name
-                              }
-                            </Typography>
-
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                            >
-                              {
-                                lead.company_name
-                              }
-                            </Typography>
-
-                            {!isSalesRepresentative && (
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                Assigned to:{' '}
-                                {lead.assigned_to_name ||
-                                  'Unassigned'}
-                              </Typography>
-                            )}
-                          </Box>
-
-
                           <Stack
                             direction="row"
-                            spacing={2}
+                            spacing={1.4}
                             sx={{
                               alignItems:
                                 'center',
 
-                              flexWrap:
-                                'wrap',
+                              minWidth:
+                                0,
                             }}
                           >
-                            <Chip
-                              size="small"
-                              label={
-                                lead.status_display
-                              }
-                              color={
-                                getStatusColor(
-                                  lead.status,
-                                )
-                              }
-                            />
+                            <Avatar
+                              sx={{
+                                width:
+                                  38,
 
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
+                                height:
+                                  38,
+
+                                bgcolor:
+                                  '#edf2ff',
+
+                                color:
+                                  '#1748bf',
+
+                                fontSize:
+                                  12.5,
+
+                                fontWeight:
+                                  700,
+                              }}
                             >
-                              {formatDate(
-                                lead.created_at,
+                              {getLeadInitials(
+                                lead.contact_name,
                               )}
-                            </Typography>
+                            </Avatar>
+
+
+                            <Box>
+                              <Typography
+                                sx={{
+                                  color:
+                                    '#172033',
+
+                                  fontSize:
+                                    13.5,
+
+                                  fontWeight:
+                                    600,
+                                }}
+                              >
+                                {lead.contact_name}
+                              </Typography>
+
+                              <Typography
+                                sx={{
+                                  color:
+                                    '#7a8699',
+
+                                  fontSize:
+                                    11.5,
+                                }}
+                              >
+                                {lead.company_name}
+                              </Typography>
+                            </Box>
                           </Stack>
+
+
+                          <Chip
+                            size="small"
+                            label={
+                              lead.status_display ||
+                              getStatusLabel(
+                                lead.status,
+                              )
+                            }
+                            color={
+                              getStatusColor(
+                                lead.status,
+                              )
+                            }
+                            variant="outlined"
+                          />
                         </Stack>
-                      </Card>
+                      </Box>
                     ),
                   )}
                 </Stack>
               )}
-            </CardContent>
-          </Card>
-        </>
-      )}
+            </Card>
+          </>
+        )}
+      </Box>
     </Box>
   )
 }

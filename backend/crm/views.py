@@ -513,6 +513,7 @@ Do not add any extra keys.
 class LeadQuerysetMixin:
     def get_queryset(self):
         user = self.request.user
+
         profile = getattr(
             user,
             "profile",
@@ -531,10 +532,10 @@ class LeadQuerysetMixin:
 
         role = profile.role
 
-        if (
-            role
-            == UserProfile.Role.SOFTWARE_ENGINEER
-        ):
+        if role in {
+            UserProfile.Role.SOFTWARE_ENGINEER,
+            UserProfile.Role.TECH_LEAD,
+        }:
             return queryset.none()
 
         if (
@@ -764,10 +765,10 @@ class LeadHistoryListView(
         if profile is None:
             return queryset.none()
 
-        if (
-            profile.role
-            == UserProfile.Role.SOFTWARE_ENGINEER
-        ):
+        if profile.role in {
+            UserProfile.Role.SOFTWARE_ENGINEER,
+            UserProfile.Role.TECH_LEAD,
+        }:
             return queryset.none()
 
         if (
@@ -818,7 +819,7 @@ class LeadRescueRadarView(
     permission_classes = [
         IsAuthenticated,
     ]
-    
+
     def post(
         self,
         request,
@@ -950,10 +951,10 @@ class CommunicationListCreateView(
 
         role = profile.role
 
-        if (
-            role
-            == UserProfile.Role.SOFTWARE_ENGINEER
-        ):
+        if role in {
+            UserProfile.Role.SOFTWARE_ENGINEER,
+            UserProfile.Role.TECH_LEAD,
+        }:
             return queryset.none()
 
         if (
@@ -1070,10 +1071,10 @@ class FollowUpListCreateView(
 
         role = profile.role
 
-        if (
-            role
-            == UserProfile.Role.SOFTWARE_ENGINEER
-        ):
+        if role in {
+            UserProfile.Role.SOFTWARE_ENGINEER,
+            UserProfile.Role.TECH_LEAD,
+        }:
             return queryset.none()
 
         if (
@@ -1260,10 +1261,10 @@ class FollowUpDetailView(
         if profile is None:
             return queryset.none()
 
-        if (
-            profile.role
-            == UserProfile.Role.SOFTWARE_ENGINEER
-        ):
+        if profile.role in {
+            UserProfile.Role.SOFTWARE_ENGINEER,
+            UserProfile.Role.TECH_LEAD,
+        }:
             return queryset.none()
 
         if (
@@ -1316,6 +1317,26 @@ class DashboardStatsView(
             )
 
         role = profile.role
+
+        if role in {
+            UserProfile.Role.SOFTWARE_ENGINEER,
+            UserProfile.Role.TECH_LEAD,
+        }:
+            return Response(
+                {
+                    "customers":
+                        0,
+
+                    "leads":
+                        0,
+
+                    "opportunities":
+                        0,
+
+                    "projects":
+                        0,
+                }
+            )
 
         active_statuses = [
             Lead.Status.NEW,

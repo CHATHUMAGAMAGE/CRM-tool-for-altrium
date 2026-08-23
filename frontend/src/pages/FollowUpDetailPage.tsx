@@ -81,7 +81,10 @@ function getFollowUpColor(
   | 'info'
   | 'success'
   | 'error' {
-  if (followUp.is_overdue) {
+  if (
+    followUp.is_overdue &&
+    followUp.status === 'PENDING'
+  ) {
     return 'error'
   }
 
@@ -106,7 +109,10 @@ function getFollowUpColor(
 function getFollowUpLabel(
   followUp: FollowUp,
 ) {
-  if (followUp.is_overdue) {
+  if (
+    followUp.is_overdue &&
+    followUp.status === 'PENDING'
+  ) {
     return 'Overdue'
   }
 
@@ -133,44 +139,96 @@ function DetailRow({
   return (
     <Box
       sx={{
-        display: 'grid',
+        display:
+          'grid',
+
         gridTemplateColumns: {
-          xs: '1fr',
-          sm: '190px minmax(0, 1fr)',
+          xs:
+            '1fr',
+
+          sm:
+            '185px minmax(0, 1fr)',
         },
+
         gap: {
-          xs: 0.5,
-          sm: 2,
+          xs:
+            0.5,
+
+          sm:
+            2.5,
         },
-        py: 1.65,
+
+        px: {
+          xs:
+            2.25,
+
+          sm:
+            2.75,
+        },
+
+        py:
+          1.7,
       }}
     >
       <Stack
         direction="row"
-        spacing={1}
+        spacing={0.9}
         sx={{
-          alignItems: 'center',
-          color: 'text.secondary',
+          alignItems:
+            'center',
+
+          color:
+            '#667085',
         }}
       >
-        {icon}
+        <Box
+          sx={{
+            display:
+              'flex',
+
+            alignItems:
+              'center',
+
+            color:
+              '#7a8699',
+          }}
+        >
+          {icon}
+        </Box>
 
         <Typography
-          variant="body2"
           sx={{
-            fontWeight: 600,
+            fontSize:
+              12.5,
+
+            fontWeight:
+              500,
           }}
         >
           {label}
         </Typography>
       </Stack>
 
+
       <Typography
-        variant="body2"
         sx={{
-          fontWeight: 500,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
+          color:
+            '#172033',
+
+          fontSize:
+            13,
+
+          fontWeight:
+            500,
+
+          lineHeight:
+            1.55,
+
+          whiteSpace:
+            'pre-wrap',
+
+          wordBreak:
+            'break-word',
         }}
       >
         {value}
@@ -181,11 +239,14 @@ function DetailRow({
 
 
 function FollowUpDetailPage() {
-  const navigate = useNavigate()
+  const navigate =
+    useNavigate()
 
   const {
     followUpId,
-  } = useParams()
+  } =
+    useParams()
+
 
   const [
     followUp,
@@ -195,6 +256,7 @@ function FollowUpDetailPage() {
       null,
     )
 
+
   const [
     lead,
     setLead,
@@ -202,6 +264,7 @@ function FollowUpDetailPage() {
     useState<Lead | null>(
       null,
     )
+
 
   const [
     currentUser,
@@ -211,11 +274,13 @@ function FollowUpDetailPage() {
       null,
     )
 
+
   const [
     isLoading,
     setIsLoading,
   ] =
     useState(true)
+
 
   const [
     error,
@@ -223,11 +288,13 @@ function FollowUpDetailPage() {
   ] =
     useState('')
 
+
   const [
     confirmationOpen,
     setConfirmationOpen,
   ] =
     useState(false)
+
 
   const [
     isCompleting,
@@ -235,15 +302,13 @@ function FollowUpDetailPage() {
   ] =
     useState(false)
 
+
   const [
     completionError,
     setCompletionError,
   ] =
     useState('')
 
-  /*
-   * Edit follow-up state
-   */
 
   const [
     editDialogOpen,
@@ -251,11 +316,13 @@ function FollowUpDetailPage() {
   ] =
     useState(false)
 
+
   const [
     isSavingEdit,
     setIsSavingEdit,
   ] =
     useState(false)
+
 
   const [
     editError,
@@ -263,17 +330,20 @@ function FollowUpDetailPage() {
   ] =
     useState('')
 
+
   const [
     editTitle,
     setEditTitle,
   ] =
     useState('')
 
+
   const [
     editDescription,
     setEditDescription,
   ] =
     useState('')
+
 
   const [
     editDueDate,
@@ -282,105 +352,133 @@ function FollowUpDetailPage() {
     useState('')
 
 
-  useEffect(() => {
-    let isMounted = true
+  useEffect(
+    () => {
+      let isMounted =
+        true
 
-    const loadFollowUp =
-      async () => {
-        const numericFollowUpId =
-          Number(
-            followUpId,
-          )
 
-        if (
-          !followUpId ||
-          Number.isNaN(
-            numericFollowUpId,
-          )
-        ) {
-          if (isMounted) {
-            setError(
-              'Invalid follow-up identifier.',
+      const loadFollowUp =
+        async () => {
+          const numericFollowUpId =
+            Number(
+              followUpId,
             )
 
-            setIsLoading(
-              false,
-            )
-          }
 
-          return
-        }
-
-        try {
-          const followUpData =
-            await getFollowUp(
+          if (
+            !followUpId ||
+            Number.isNaN(
               numericFollowUpId,
             )
+          ) {
+            if (
+              isMounted
+            ) {
+              setError(
+                'Invalid follow-up identifier.',
+              )
 
-          const [
-            leadData,
-            user,
-          ] =
-            await Promise.all([
-              getLead(
-                followUpData.lead,
-              ),
+              setIsLoading(
+                false,
+              )
+            }
 
-              getCurrentUser(),
-            ])
-
-          if (!isMounted) {
             return
           }
 
-          setFollowUp(
-            followUpData,
-          )
 
-          setLead(
-            leadData,
-          )
+          try {
+            const followUpData =
+              await getFollowUp(
+                numericFollowUpId,
+              )
 
-          setCurrentUser(
-            user,
-          )
-        } catch (
-          requestError
-        ) {
-          if (!isMounted) {
-            return
-          }
 
-          setError(
-            requestError
-              instanceof Error
-              ? requestError.message
-              : 'Unable to load this follow-up.',
-          )
-        } finally {
-          if (isMounted) {
-            setIsLoading(
-              false,
+            const [
+              leadData,
+              user,
+            ] =
+              await Promise.all([
+                getLead(
+                  followUpData.lead,
+                ),
+
+                getCurrentUser(),
+              ])
+
+
+            if (
+              !isMounted
+            ) {
+              return
+            }
+
+
+            setFollowUp(
+              followUpData,
             )
+
+            setLead(
+              leadData,
+            )
+
+            setCurrentUser(
+              user,
+            )
+          } catch (
+            requestError
+          ) {
+            if (
+              !isMounted
+            ) {
+              return
+            }
+
+
+            setError(
+              requestError
+                instanceof Error
+                ? requestError.message
+                : 'Unable to load this follow-up.',
+            )
+          } finally {
+            if (
+              isMounted
+            ) {
+              setIsLoading(
+                false,
+              )
+            }
           }
         }
+
+
+      void loadFollowUp()
+
+
+      return () => {
+        isMounted =
+          false
       }
-
-    void loadFollowUp()
-
-    return () => {
-      isMounted = false
-    }
-  }, [followUpId])
+    },
+    [
+      followUpId,
+    ],
+  )
 
 
-  if (isLoading) {
+  if (
+    isLoading
+  ) {
     return (
       <Box
         sx={{
-          minHeight: 500,
+          minHeight:
+            500,
 
-          display: 'flex',
+          display:
+            'flex',
 
           alignItems:
             'center',
@@ -390,16 +488,24 @@ function FollowUpDetailPage() {
         }}
       >
         <Stack
-          spacing={2}
+          spacing={1.5}
           sx={{
             alignItems:
               'center',
           }}
         >
-          <CircularProgress />
+          <CircularProgress
+            size={30}
+          />
 
           <Typography
-            color="text.secondary"
+            sx={{
+              color:
+                '#7a8699',
+
+              fontSize:
+                12.5,
+            }}
           >
             Loading follow-up...
           </Typography>
@@ -417,21 +523,29 @@ function FollowUpDetailPage() {
     return (
       <Box
         sx={{
-          p: {
-            xs: 3,
-            md: 5,
+          px: {
+            xs:
+              2.5,
+
+            md:
+              4,
           },
+
+          py:
+            3.5,
         }}
       >
         <Alert
           severity="error"
           sx={{
-            mb: 3,
+            mb:
+              2.5,
           }}
         >
           {error ||
             'Follow-up not found.'}
         </Alert>
+
 
         <Button
           startIcon={
@@ -439,20 +553,16 @@ function FollowUpDetailPage() {
           }
           onClick={() =>
             navigate(
-              '/leads',
+              '/follow-ups',
             )
           }
         >
-          Back to Leads
+          Back to Follow-ups
         </Button>
       </Box>
     )
   }
 
-
-  /*
-   * Permissions
-   */
 
   const canUpdate =
     currentUser?.role ===
@@ -485,20 +595,20 @@ function FollowUpDetailPage() {
     canUpdate
 
 
-  /*
-   * Edit follow-up
-   */
-
   const openEditDialog =
     () => {
-      if (!canEdit) {
+      if (
+        !canEdit
+      ) {
         return
       }
+
 
       const dueDate =
         new Date(
           followUp.due_date,
         )
+
 
       const localDate =
         new Date(
@@ -508,14 +618,17 @@ function FollowUpDetailPage() {
               60_000,
         )
 
+
       setEditTitle(
         followUp.title,
       )
+
 
       setEditDescription(
         followUp.description ||
           '',
       )
+
 
       setEditDueDate(
         localDate
@@ -526,7 +639,11 @@ function FollowUpDetailPage() {
           ),
       )
 
-      setEditError('')
+
+      setEditError(
+        '',
+      )
+
 
       setEditDialogOpen(
         true,
@@ -542,19 +659,26 @@ function FollowUpDetailPage() {
         return
       }
 
+
       setEditDialogOpen(
         false,
       )
 
-      setEditError('')
+
+      setEditError(
+        '',
+      )
     }
 
 
   const handleSaveEdit =
     async () => {
-      if (!canEdit) {
+      if (
+        !canEdit
+      ) {
         return
       }
+
 
       if (
         !editTitle.trim()
@@ -566,7 +690,10 @@ function FollowUpDetailPage() {
         return
       }
 
-      if (!editDueDate) {
+
+      if (
+        !editDueDate
+      ) {
         setEditError(
           'Due date and time are required.',
         )
@@ -574,10 +701,12 @@ function FollowUpDetailPage() {
         return
       }
 
+
       const dueDate =
         new Date(
           editDueDate,
         )
+
 
       if (
         Number.isNaN(
@@ -591,6 +720,7 @@ function FollowUpDetailPage() {
         return
       }
 
+
       if (
         dueDate <=
         new Date()
@@ -602,11 +732,16 @@ function FollowUpDetailPage() {
         return
       }
 
+
       setIsSavingEdit(
         true,
       )
 
-      setEditError('')
+
+      setEditError(
+        '',
+      )
+
 
       try {
         const updated =
@@ -624,9 +759,11 @@ function FollowUpDetailPage() {
             },
           )
 
+
         setFollowUp(
           updated,
         )
+
 
         setEditDialogOpen(
           false,
@@ -648,23 +785,24 @@ function FollowUpDetailPage() {
     }
 
 
-  /*
-   * Complete follow-up
-   */
-
   const handleComplete =
     async () => {
-      if (!canComplete) {
+      if (
+        !canComplete
+      ) {
         return
       }
+
 
       setIsCompleting(
         true,
       )
 
+
       setCompletionError(
         '',
       )
+
 
       try {
         const updated =
@@ -676,9 +814,11 @@ function FollowUpDetailPage() {
             },
           )
 
+
         setFollowUp(
           updated,
         )
+
 
         setConfirmationOpen(
           false,
@@ -700,408 +840,239 @@ function FollowUpDetailPage() {
     }
 
 
+  const isOverdue =
+    followUp.status ===
+      'PENDING' &&
+    followUp.is_overdue
+
+
   return (
     <Box
       sx={{
-        p: {
-          xs: 3,
-          md: 5,
+        px: {
+          xs:
+            2.5,
+
+          md:
+            4,
         },
 
-        maxWidth: 980,
+        py: {
+          xs:
+            3,
 
-        mx: 'auto',
+          md:
+            3.5,
+        },
       }}
     >
-      <Button
-        startIcon={
-          <ArrowBackRounded />
-        }
-        onClick={() =>
-          navigate(
-            `/leads/${lead.id}?tab=follow-ups`,
-          )
-        }
+      <Box
         sx={{
-          mb: 2.5,
+          width:
+            '100%',
 
-          textTransform:
-            'none',
+          maxWidth:
+            1120,
+
+          mx:
+            'auto',
         }}
       >
-        Back to Follow-ups
-      </Button>
+        {/*
+          BACK
+        */}
 
-
-      <Stack
-        direction={{
-          xs: 'column',
-          md: 'row',
-        }}
-        sx={{
-          justifyContent:
-            'space-between',
-
-          alignItems: {
-            xs: 'flex-start',
-            md: 'center',
-          },
-
-          gap: 2,
-
-          mb: 3,
-        }}
-      >
-        <Box>
-          <Stack
-            direction="row"
-            spacing={1.25}
-            sx={{
-              alignItems:
-                'center',
-
-              flexWrap:
-                'wrap',
-            }}
-          >
-            <Typography
-              variant="h5"
-              sx={{
-                fontWeight:
-                  800,
-              }}
-            >
-              {
-                followUp.title
-              }
-            </Typography>
-
-            <Chip
-              size="small"
-
-              label={
-                getFollowUpLabel(
-                  followUp,
-                )
-              }
-
-              color={
-                getFollowUpColor(
-                  followUp,
-                )
-              }
-
-              sx={{
-                fontWeight:
-                  700,
-              }}
-            />
-          </Stack>
-        </Box>
-      </Stack>
-
-
-      <Card
-        variant="outlined"
-        sx={{
-          px: {
-            xs: 2.25,
-            sm: 3,
-          },
-
-          py: 1,
-
-          boxShadow:
-            'none',
-        }}
-      >
-        <DetailRow
-          icon={
-            <PersonOutlineRounded
-              sx={{
-                fontSize:
-                  19,
-              }}
-            />
+        <Button
+          startIcon={
+            <ArrowBackRounded />
           }
-          label="Lead"
-          value={`${lead.contact_name} (${lead.company_name})`}
-        />
-
-        <Divider />
-
-
-        <DetailRow
-          icon={
-            <CalendarTodayRounded
-              sx={{
-                fontSize:
-                  18,
-              }}
-            />
-          }
-          label="Due date and time"
-          value={
-            formatDate(
-              followUp.due_date,
+          onClick={() =>
+            navigate(
+              '/follow-ups',
             )
           }
-        />
-
-        <Divider />
-
-
-        <DetailRow
-          icon={
-            <PersonOutlineRounded
-              sx={{
-                fontSize:
-                  19,
-              }}
-            />
-          }
-          label="Assigned to"
-          value={
-            followUp.assigned_to_name
-              ? `${followUp.assigned_to_name} (Sales Representative)`
-              : 'Unassigned'
-          }
-        />
-
-        <Divider />
-
-
-        <DetailRow
-          icon={
-            <DescriptionRounded
-              sx={{
-                fontSize:
-                  18,
-              }}
-            />
-          }
-          label="Description"
-          value={
-            followUp.description ||
-            'No description provided.'
-          }
-        />
-
-        <Divider />
-
-
-        <DetailRow
-          icon={
-            <PersonOutlineRounded
-              sx={{
-                fontSize:
-                  19,
-              }}
-            />
-          }
-          label="Created by"
-          value={
-            followUp.created_by_name
-          }
-        />
-
-        <Divider />
-
-
-        <DetailRow
-          icon={
-            <EventAvailableRounded
-              sx={{
-                fontSize:
-                  18,
-              }}
-            />
-          }
-          label="Created on"
-          value={
-            formatDate(
-              followUp.created_at,
-            )
-          }
-        />
-
-
-        {followUp.status ===
-          'PENDING' && (
-          <>
-            <Divider />
-
-            <DetailRow
-              icon={
-                <EventAvailableRounded
-                  sx={{
-                    fontSize:
-                      18,
-                  }}
-                />
-              }
-              label="Last updated"
-              value={
-                formatDate(
-                  followUp.updated_at,
-                )
-              }
-            />
-          </>
-        )}
-
-
-        {followUp.completed_at && (
-          <>
-            <Divider />
-
-            <DetailRow
-              icon={
-                <CheckCircleRounded
-                  sx={{
-                    fontSize:
-                      19,
-                  }}
-                />
-              }
-              label="Completed on"
-              value={
-                formatDate(
-                  followUp.completed_at,
-                )
-              }
-            />
-          </>
-        )}
-
-
-        {followUp.completed_by_name && (
-          <>
-            <Divider />
-
-            <DetailRow
-              icon={
-                <PersonOutlineRounded
-                  sx={{
-                    fontSize:
-                      19,
-                  }}
-                />
-              }
-              label="Completed by"
-              value={
-                followUp
-                  .completed_by_name
-              }
-            />
-          </>
-        )}
-      </Card>
-
-
-      <Card
-        variant="outlined"
-        sx={{
-          mt: 2.5,
-
-          p: {
-            xs: 2.25,
-            sm: 3,
-          },
-
-          boxShadow:
-            'none',
-        }}
-      >
-        <Typography
           sx={{
-            fontWeight:
-              800,
+            mb:
+              2,
 
-            mb: 2,
+            px:
+              0,
+
+            minHeight:
+              32,
+
+            color:
+              '#667085',
+
+            fontSize:
+              12.5,
+
+            '&:hover': {
+              bgcolor:
+                'transparent',
+
+              color:
+                '#0b5cff',
+            },
           }}
         >
-          Status
-        </Typography>
+          Back to Follow-ups
+        </Button>
+
+
+        {/*
+          PAGE HEADER
+        */}
 
         <Stack
           direction={{
-            xs: 'column',
-            sm: 'row',
+            xs:
+              'column',
+
+            md:
+              'row',
           }}
           sx={{
             justifyContent:
               'space-between',
 
             alignItems: {
-              xs: 'flex-start',
-              sm: 'center',
+              xs:
+                'flex-start',
+
+              md:
+                'center',
             },
 
-            gap: 2,
+            gap:
+              2,
+
+            mb:
+              2.5,
           }}
         >
-          <Chip
-            size="small"
-
-            label={
-              getFollowUpLabel(
-                followUp,
-              )
-            }
-
-            color={
-              getFollowUpColor(
-                followUp,
-              )
-            }
-
+          <Box
             sx={{
-              fontWeight:
-                700,
+              minWidth:
+                0,
             }}
-          />
+          >
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems:
+                  'center',
 
+                flexWrap:
+                  'wrap',
+              }}
+            >
+              <Typography
+                sx={{
+                  color:
+                    '#172033',
 
-          {followUp.status ===
-            'PENDING' &&
-            canUpdate && (
-              <Stack
-                direction={{
-                  xs: 'column',
-                  sm: 'row',
+                  fontSize: {
+                    xs:
+                      25,
+
+                    md:
+                      29,
+                  },
+
+                  fontWeight:
+                    700,
+
+                  lineHeight:
+                    1.2,
+
+                  letterSpacing:
+                    '-0.02em',
                 }}
-                spacing={1}
               >
-                <Button
-                  variant="outlined"
+                {followUp.title}
+              </Typography>
 
-                  startIcon={
-                    <EditRounded />
-                  }
 
-                  onClick={
-                    openEditDialog
-                  }
+              <Chip
+                size="small"
+                label={
+                  getFollowUpLabel(
+                    followUp,
+                  )
+                }
+                color={
+                  getFollowUpColor(
+                    followUp,
+                  )
+                }
+                variant={
+                  followUp.status ===
+                  'COMPLETED'
+                    ? 'filled'
+                    : 'outlined'
+                }
+              />
+            </Stack>
 
-                  sx={{
-                    textTransform:
-                      'none',
 
-                    fontWeight:
-                      700,
-                  }}
-                >
-                  Edit Follow-up
-                </Button>
+            <Typography
+              sx={{
+                mt:
+                  0.65,
+
+                color:
+                  '#667085',
+
+                fontSize:
+                  13,
+              }}
+            >
+              {lead.contact_name}
+              {' • '}
+              {lead.company_name}
+            </Typography>
+          </Box>
+
+
+          {canUpdate &&
+            followUp.status ===
+              'PENDING' && (
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  flexWrap:
+                    'wrap',
+                }}
+              >
+                {canEdit && (
+                  <Button
+                    variant="outlined"
+                    startIcon={
+                      <EditRounded />
+                    }
+                    onClick={
+                      openEditDialog
+                    }
+                    sx={{
+                      bgcolor:
+                        '#ffffff',
+                    }}
+                  >
+                    Edit
+                  </Button>
+                )}
 
 
                 {canComplete && (
                   <Button
-                    variant="outlined"
-
-                    color="error"
-
+                    variant="contained"
+                    color="success"
+                    startIcon={
+                      <CheckCircleRounded />
+                    }
                     onClick={() => {
                       setCompletionError(
                         '',
@@ -1111,47 +1082,543 @@ function FollowUpDetailPage() {
                         true,
                       )
                     }}
-
-                    sx={{
-                      textTransform:
-                        'none',
-
-                      fontWeight:
-                        700,
-                    }}
                   >
-                    Mark as Completed
+                    Mark Completed
                   </Button>
                 )}
               </Stack>
             )}
         </Stack>
-      </Card>
 
 
-      {/* EDIT FOLLOW-UP DIALOG */}
+        {/*
+          OVERDUE NOTICE
+        */}
+
+        {isOverdue && (
+          <Alert
+            severity="error"
+            sx={{
+              mb:
+                2.5,
+            }}
+          >
+            This follow-up is overdue. Review the action and update or complete it.
+          </Alert>
+        )}
+
+
+        {/*
+          MAIN DETAILS
+        */}
+
+        <Box
+          sx={{
+            display:
+              'grid',
+
+            gridTemplateColumns: {
+              xs:
+                '1fr',
+
+              lg:
+                'minmax(0, 1fr) 300px',
+            },
+
+            gap:
+              2.5,
+
+            alignItems:
+              'start',
+          }}
+        >
+          <Card
+            variant="outlined"
+            sx={{
+              borderColor:
+                '#e4e8ef',
+
+              borderRadius:
+                '12px',
+
+              boxShadow:
+                '0 2px 10px rgba(15, 23, 42, 0.035)',
+
+              overflow:
+                'hidden',
+            }}
+          >
+            <Box
+              sx={{
+                px: {
+                  xs:
+                    2.25,
+
+                  sm:
+                    2.75,
+                },
+
+                py:
+                  2,
+              }}
+            >
+              <Typography
+                sx={{
+                  color:
+                    '#172033',
+
+                  fontSize:
+                    15,
+
+                  fontWeight:
+                    700,
+                }}
+              >
+                Follow-up Details
+              </Typography>
+
+
+              <Typography
+                sx={{
+                  mt:
+                    0.25,
+
+                  color:
+                    '#7a8699',
+
+                  fontSize:
+                    11.5,
+                }}
+              >
+                Scheduled action and ownership information
+              </Typography>
+            </Box>
+
+
+            <Divider />
+
+
+            <DetailRow
+              icon={
+                <PersonOutlineRounded
+                  sx={{
+                    fontSize:
+                      18,
+                  }}
+                />
+              }
+              label="Lead"
+              value={
+                `${lead.contact_name} (${lead.company_name})`
+              }
+            />
+
+
+            <Divider />
+
+
+            <DetailRow
+              icon={
+                <CalendarTodayRounded
+                  sx={{
+                    fontSize:
+                      17,
+                  }}
+                />
+              }
+              label="Due date and time"
+              value={
+                formatDate(
+                  followUp.due_date,
+                )
+              }
+            />
+
+
+            <Divider />
+
+
+            <DetailRow
+              icon={
+                <PersonOutlineRounded
+                  sx={{
+                    fontSize:
+                      18,
+                  }}
+                />
+              }
+              label="Assigned to"
+              value={
+                followUp.assigned_to_name ||
+                'Unassigned'
+              }
+            />
+
+
+            <Divider />
+
+
+            <DetailRow
+              icon={
+                <DescriptionRounded
+                  sx={{
+                    fontSize:
+                      17,
+                  }}
+                />
+              }
+              label="Description"
+              value={
+                followUp.description ||
+                'No description provided.'
+              }
+            />
+
+
+            <Divider />
+
+
+            <DetailRow
+              icon={
+                <PersonOutlineRounded
+                  sx={{
+                    fontSize:
+                      18,
+                  }}
+                />
+              }
+              label="Created by"
+              value={
+                followUp.created_by_name ||
+                '—'
+              }
+            />
+
+
+            <Divider />
+
+
+            <DetailRow
+              icon={
+                <EventAvailableRounded
+                  sx={{
+                    fontSize:
+                      17,
+                  }}
+                />
+              }
+              label="Created"
+              value={
+                formatDate(
+                  followUp.created_at,
+                )
+              }
+            />
+
+
+            {followUp.status ===
+              'PENDING' && (
+              <>
+                <Divider />
+
+                <DetailRow
+                  icon={
+                    <EventAvailableRounded
+                      sx={{
+                        fontSize:
+                          17,
+                      }}
+                    />
+                  }
+                  label="Last updated"
+                  value={
+                    formatDate(
+                      followUp.updated_at,
+                    )
+                  }
+                />
+              </>
+            )}
+
+
+            {followUp.completed_at && (
+              <>
+                <Divider />
+
+                <DetailRow
+                  icon={
+                    <CheckCircleRounded
+                      sx={{
+                        fontSize:
+                          18,
+
+                        color:
+                          '#039855',
+                      }}
+                    />
+                  }
+                  label="Completed"
+                  value={
+                    formatDate(
+                      followUp.completed_at,
+                    )
+                  }
+                />
+              </>
+            )}
+
+
+            {followUp.completed_by_name && (
+              <>
+                <Divider />
+
+                <DetailRow
+                  icon={
+                    <PersonOutlineRounded
+                      sx={{
+                        fontSize:
+                          18,
+                      }}
+                    />
+                  }
+                  label="Completed by"
+                  value={
+                    followUp.completed_by_name
+                  }
+                />
+              </>
+            )}
+          </Card>
+
+
+          {/*
+            STATUS SIDEBAR
+          */}
+
+          <Stack
+            spacing={2}
+          >
+            <Card
+              variant="outlined"
+              sx={{
+                borderColor:
+                  '#e4e8ef',
+
+                borderRadius:
+                  '12px',
+
+                boxShadow:
+                  '0 2px 10px rgba(15, 23, 42, 0.035)',
+
+                overflow:
+                  'hidden',
+              }}
+            >
+              <Box
+                sx={{
+                  px:
+                    2.25,
+
+                  py:
+                    2,
+                }}
+              >
+                <Typography
+                  sx={{
+                    color:
+                      '#172033',
+
+                    fontSize:
+                      14,
+
+                    fontWeight:
+                      700,
+                  }}
+                >
+                  Status
+                </Typography>
+
+
+                <Typography
+                  sx={{
+                    mt:
+                      0.25,
+
+                    color:
+                      '#7a8699',
+
+                    fontSize:
+                      11.5,
+                  }}
+                >
+                  Current follow-up state
+                </Typography>
+              </Box>
+
+
+              <Divider />
+
+
+              <Box
+                sx={{
+                  p:
+                    2.25,
+                }}
+              >
+                <Chip
+                  label={
+                    getFollowUpLabel(
+                      followUp,
+                    )
+                  }
+                  color={
+                    getFollowUpColor(
+                      followUp,
+                    )
+                  }
+                  variant={
+                    followUp.status ===
+                    'COMPLETED'
+                      ? 'filled'
+                      : 'outlined'
+                  }
+                />
+
+
+                <Typography
+                  sx={{
+                    mt:
+                      1.5,
+
+                    color:
+                      '#667085',
+
+                    fontSize:
+                      12,
+
+                    lineHeight:
+                      1.6,
+                  }}
+                >
+                  {followUp.status ===
+                  'COMPLETED'
+                    ? 'This follow-up has been completed.'
+                    : isOverdue
+                      ? 'This action is past its scheduled due date.'
+                      : 'This follow-up is still pending.'}
+                </Typography>
+              </Box>
+            </Card>
+
+
+            <Card
+              variant="outlined"
+              sx={{
+                borderColor:
+                  '#e4e8ef',
+
+                borderRadius:
+                  '12px',
+
+                boxShadow:
+                  '0 2px 10px rgba(15, 23, 42, 0.035)',
+              }}
+            >
+              <Box
+                sx={{
+                  p:
+                    2.25,
+                }}
+              >
+                <Typography
+                  sx={{
+                    color:
+                      '#172033',
+
+                    fontSize:
+                      14,
+
+                    fontWeight:
+                      700,
+                  }}
+                >
+                  Related Lead
+                </Typography>
+
+
+                <Typography
+                  sx={{
+                    mt:
+                      1.25,
+
+                    color:
+                      '#172033',
+
+                    fontSize:
+                      13,
+
+                    fontWeight:
+                      600,
+                  }}
+                >
+                  {lead.contact_name}
+                </Typography>
+
+
+                <Typography
+                  sx={{
+                    mt:
+                      0.15,
+
+                    color:
+                      '#7a8699',
+
+                    fontSize:
+                      11.5,
+                  }}
+                >
+                  {lead.company_name}
+                </Typography>
+
+
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={() =>
+                    navigate(
+                      `/leads/${lead.id}?tab=follow-ups`,
+                    )
+                  }
+                  sx={{
+                    mt:
+                      2,
+
+                    bgcolor:
+                      '#ffffff',
+                  }}
+                >
+                  Open Lead
+                </Button>
+              </Box>
+            </Card>
+          </Stack>
+        </Box>
+      </Box>
+
+
+      {/*
+        EDIT FOLLOW-UP
+      */}
 
       <Dialog
         open={
           editDialogOpen
         }
-
         onClose={
           closeEditDialog
         }
-
         fullWidth
-
         maxWidth="sm"
-
-        slotProps={{
-          paper: {
-            sx: {
-              borderRadius:
-                2,
-            },
-          },
-        }}
       >
         <DialogTitle>
           <Stack
@@ -1163,43 +1630,52 @@ function FollowUpDetailPage() {
               alignItems:
                 'center',
 
-              gap: 2,
+              gap:
+                2,
             }}
           >
             <Box>
               <Typography
-                variant="h6"
                 sx={{
+                  color:
+                    '#172033',
+
+                  fontSize:
+                    18,
+
                   fontWeight:
-                    800,
+                    700,
                 }}
               >
                 Edit Follow-up
               </Typography>
 
+
               <Typography
-                variant="body2"
-                color="text.secondary"
                 sx={{
-                  mt: 0.25,
+                  mt:
+                    0.3,
+
+                  color:
+                    '#7a8699',
+
+                  fontSize:
+                    12,
                 }}
               >
-                Update the planned
-                follow-up details.
+                Update the planned follow-up details.
               </Typography>
             </Box>
 
+
             <IconButton
               size="small"
-
               onClick={
                 closeEditDialog
               }
-
               disabled={
                 isSavingEdit
               }
-
               aria-label="Close edit follow-up dialog"
             >
               <CloseRounded />
@@ -1210,9 +1686,10 @@ function FollowUpDetailPage() {
 
         <DialogContent>
           <Stack
-            spacing={2.5}
+            spacing={2.25}
             sx={{
-              mt: 1,
+              mt:
+                1,
             }}
           >
             {editError && (
@@ -1226,53 +1703,41 @@ function FollowUpDetailPage() {
 
             <TextField
               required
-
               label="Title"
-
               value={
                 editTitle
               }
-
               onChange={(
                 event,
               ) =>
                 setEditTitle(
-                  event.target
-                    .value,
+                  event.target.value,
                 )
               }
-
               slotProps={{
                 htmlInput: {
                   maxLength:
                     255,
                 },
               }}
-
               helperText={`${editTitle.length}/255`}
             />
 
 
             <TextField
               required
-
               type="datetime-local"
-
               label="Due date and time"
-
               value={
                 editDueDate
               }
-
               onChange={(
                 event,
               ) =>
                 setEditDueDate(
-                  event.target
-                    .value,
+                  event.target.value,
                 )
               }
-
               slotProps={{
                 inputLabel: {
                   shrink:
@@ -1284,33 +1749,25 @@ function FollowUpDetailPage() {
 
             <TextField
               multiline
-
-              minRows={5}
-
+              minRows={4}
               label="Description"
-
               placeholder="Add details about the follow-up..."
-
               value={
                 editDescription
               }
-
               onChange={(
                 event,
               ) =>
                 setEditDescription(
-                  event.target
-                    .value,
+                  event.target.value,
                 )
               }
-
               slotProps={{
                 htmlInput: {
                   maxLength:
                     1000,
                 },
               }}
-
               helperText={`${editDescription.length}/1000`}
             />
 
@@ -1318,10 +1775,7 @@ function FollowUpDetailPage() {
             <Alert
               severity="info"
             >
-              The lead and assigned
-              Sales Representative
-              cannot be changed from
-              this screen.
+              The lead and assigned Sales Representative cannot be changed from this screen.
             </Alert>
           </Stack>
         </DialogContent>
@@ -1329,26 +1783,24 @@ function FollowUpDetailPage() {
 
         <DialogActions
           sx={{
-            px: 3,
-            pb: 3,
-            pt: 2,
+            px:
+              3,
+
+            pb:
+              3,
+
+            pt:
+              2,
           }}
         >
           <Button
             variant="outlined"
-
             onClick={
               closeEditDialog
             }
-
             disabled={
               isSavingEdit
             }
-
-            sx={{
-              textTransform:
-                'none',
-            }}
           >
             Cancel
           </Button>
@@ -1356,30 +1808,18 @@ function FollowUpDetailPage() {
 
           <Button
             variant="contained"
-
             onClick={() =>
               void handleSaveEdit()
             }
-
             disabled={
               isSavingEdit ||
               !editTitle.trim() ||
               !editDueDate
             }
-
-            sx={{
-              textTransform:
-                'none',
-
-              fontWeight:
-                700,
-
-              px: 2.5,
-            }}
           >
             {isSavingEdit ? (
               <CircularProgress
-                size={22}
+                size={21}
                 color="inherit"
               />
             ) : (
@@ -1390,13 +1830,14 @@ function FollowUpDetailPage() {
       </Dialog>
 
 
-      {/* MARK AS COMPLETED DIALOG */}
+      {/*
+        COMPLETE FOLLOW-UP
+      */}
 
       <Dialog
         open={
           confirmationOpen
         }
-
         onClose={() => {
           if (
             !isCompleting
@@ -1410,25 +1851,19 @@ function FollowUpDetailPage() {
             )
           }
         }}
-
         fullWidth
-
         maxWidth="xs"
-
-        slotProps={{
-          paper: {
-            sx: {
-              borderRadius:
-                2,
-            },
-          },
-        }}
       >
         <DialogContent
           sx={{
-            pt: 4,
-            px: 4,
-            pb: 2.5,
+            pt:
+              4,
+
+            px:
+              4,
+
+            pb:
+              2,
 
             textAlign:
               'center',
@@ -1436,18 +1871,23 @@ function FollowUpDetailPage() {
         >
           <Box
             sx={{
-              width: 68,
-              height: 68,
+              width:
+                58,
 
-              mx: 'auto',
+              height:
+                58,
 
-              mb: 2,
+              mx:
+                'auto',
+
+              mb:
+                2,
 
               borderRadius:
                 '50%',
 
               bgcolor:
-                'success.main',
+                '#ecfdf3',
 
               display:
                 'flex',
@@ -1459,23 +1899,28 @@ function FollowUpDetailPage() {
                 'center',
 
               color:
-                'common.white',
+                '#039855',
             }}
           >
             <CheckCircleRounded
               sx={{
                 fontSize:
-                  44,
+                  34,
               }}
             />
           </Box>
 
 
           <Typography
-            variant="h6"
             sx={{
+              color:
+                '#172033',
+
+              fontSize:
+                18,
+
               fontWeight:
-                800,
+                700,
             }}
           >
             Mark as Completed?
@@ -1483,20 +1928,27 @@ function FollowUpDetailPage() {
 
 
           <Typography
-            variant="body2"
-            color="text.secondary"
             sx={{
-              mt: 1,
+              mt:
+                0.8,
+
+              mx:
+                'auto',
 
               maxWidth:
                 300,
 
-              mx: 'auto',
+              color:
+                '#667085',
+
+              fontSize:
+                12.5,
+
+              lineHeight:
+                1.6,
             }}
           >
-            Are you sure you want
-            to mark this follow-up
-            as completed?
+            Confirm that this follow-up action has been completed.
           </Typography>
 
 
@@ -1504,15 +1956,14 @@ function FollowUpDetailPage() {
             <Alert
               severity="error"
               sx={{
-                mt: 2.5,
+                mt:
+                  2.5,
 
                 textAlign:
                   'left',
               }}
             >
-              {
-                completionError
-              }
+              {completionError}
             </Alert>
           )}
         </DialogContent>
@@ -1520,14 +1971,18 @@ function FollowUpDetailPage() {
 
         <DialogActions
           sx={{
-            px: 3,
-            pb: 3,
-            pt: 1,
+            px:
+              3,
+
+            pb:
+              3,
+
+            pt:
+              1,
           }}
         >
           <Button
             variant="outlined"
-
             onClick={() => {
               setConfirmationOpen(
                 false,
@@ -1537,15 +1992,9 @@ function FollowUpDetailPage() {
                 '',
               )
             }}
-
             disabled={
               isCompleting
             }
-
-            sx={{
-              textTransform:
-                'none',
-            }}
           >
             Cancel
           </Button>
@@ -1553,30 +2002,21 @@ function FollowUpDetailPage() {
 
           <Button
             variant="contained"
-
+            color="success"
             onClick={() =>
               void handleComplete()
             }
-
             disabled={
               isCompleting
             }
-
-            sx={{
-              textTransform:
-                'none',
-
-              fontWeight:
-                700,
-            }}
           >
             {isCompleting ? (
               <CircularProgress
-                size={22}
+                size={21}
                 color="inherit"
               />
             ) : (
-              'Mark as Completed'
+              'Mark Completed'
             )}
           </Button>
         </DialogActions>
