@@ -11,6 +11,7 @@ import {
   Card,
   Chip,
   CircularProgress,
+  Divider,
   FormControl,
   InputAdornment,
   InputLabel,
@@ -199,6 +200,7 @@ function ActivityPage() {
         '',
       )
 
+
       try {
         const [
           user,
@@ -208,6 +210,7 @@ function ActivityPage() {
             getCurrentUser(),
             getLeads(),
           ])
+
 
         const activityGroups =
           await Promise.all(
@@ -228,6 +231,7 @@ function ActivityPage() {
                       lead.id,
                     ),
                   ])
+
 
                 const communicationActivities:
                 ActivityItem[] =
@@ -336,6 +340,11 @@ function ActivityPage() {
     'SALES_REP'
 
 
+  const isSalesManager =
+    currentUser?.role ===
+    'SALES_MANAGER'
+
+
   const communicationCount =
     useMemo(
       () =>
@@ -425,6 +434,15 @@ function ActivityPage() {
                   .toLowerCase()
                   .includes(
                     query,
+                  ) ||
+                (
+                  activity.communication
+                    .created_by_name ||
+                  ''
+                )
+                  .toLowerCase()
+                  .includes(
+                    query,
                   )
             }
 
@@ -440,6 +458,24 @@ function ActivityPage() {
                     query,
                   ) ||
                 activity.followUp.description
+                  .toLowerCase()
+                  .includes(
+                    query,
+                  ) ||
+                (
+                  activity.followUp
+                    .assigned_to_name ||
+                  ''
+                )
+                  .toLowerCase()
+                  .includes(
+                    query,
+                  ) ||
+                (
+                  activity.followUp
+                    .created_by_name ||
+                  ''
+                )
                   .toLowerCase()
                   .includes(
                     query,
@@ -468,913 +504,1458 @@ function ActivityPage() {
     )
 
 
+  const pageTitle =
+    isSalesRepresentative
+      ? 'My Activity'
+      : isSalesManager
+        ? 'Team Activity'
+        : 'Lead Activity'
+
+
+  const pageDescription =
+    isSalesRepresentative
+      ? 'Review communication and follow-up activity across your assigned leads.'
+      : isSalesManager
+        ? 'Monitor communication and follow-up activity across the sales team.'
+        : 'Review communication and follow-up activity across accessible leads.'
+
+
   return (
     <Box
       sx={{
-        p: {
-          xs: 3,
-          md: 5,
+        px: {
+          xs:
+            2.5,
+
+          md:
+            4,
+        },
+
+        py: {
+          xs:
+            3,
+
+          md:
+            3.5,
         },
       }}
     >
-      {/* HEADER */}
-
-      <Stack
-        direction={{
-          xs: 'column',
-          sm: 'row',
-        }}
-        sx={{
-          justifyContent:
-            'space-between',
-
-          alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
-          },
-
-          gap: 2,
-
-          mb: 4,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight:
-                800,
-            }}
-          >
-            {isSalesRepresentative
-              ? 'My Activity'
-              : 'Lead Activity'}
-          </Typography>
-
-          <Typography
-            color="text.secondary"
-          >
-            {isSalesRepresentative
-              ? 'Review communications and follow-up activity across your assigned leads.'
-              : 'Review communications and follow-up activity across accessible leads.'}
-          </Typography>
-        </Box>
-
-
-        <Button
-          startIcon={
-            <RefreshRounded />
-          }
-          onClick={() =>
-            void loadActivities()
-          }
-          disabled={
-            isLoading
-          }
-        >
-          Refresh
-        </Button>
-      </Stack>
-
-
-      {error && (
-        <Alert
-          severity="error"
-          sx={{
-            mb:
-              3,
-          }}
-        >
-          {error}
-        </Alert>
-      )}
-
-
-      {/* SUMMARY */}
-
       <Box
         sx={{
-          display:
-            'grid',
+          width:
+            '100%',
 
-          gridTemplateColumns:
-            {
-              xs:
-                '1fr',
+          maxWidth:
+            1500,
 
-              sm:
-                'repeat(3, 1fr)',
-            },
-
-          gap:
-            2,
-
-          mb:
-            3,
+          mx:
+            'auto',
         }}
       >
-        <Card
-          variant="outlined"
-          sx={{
-            p:
-              2.5,
-          }}
-        >
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
-            Total Activity
-          </Typography>
+        {/*
+          HEADER
+        */}
 
-          <Typography
-            variant="h4"
-            sx={{
-              mt:
-                0.5,
-
-              fontWeight:
-                800,
-            }}
-          >
-            {
-              activities.length
-            }
-          </Typography>
-        </Card>
-
-
-        <Card
-          variant="outlined"
-          sx={{
-            p:
-              2.5,
-          }}
-        >
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
-            Communications
-          </Typography>
-
-          <Typography
-            variant="h4"
-            sx={{
-              mt:
-                0.5,
-
-              fontWeight:
-                800,
-            }}
-          >
-            {
-              communicationCount
-            }
-          </Typography>
-        </Card>
-
-
-        <Card
-          variant="outlined"
-          sx={{
-            p:
-              2.5,
-          }}
-        >
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
-            Follow-ups
-          </Typography>
-
-          <Typography
-            variant="h4"
-            sx={{
-              mt:
-                0.5,
-
-              fontWeight:
-                800,
-            }}
-          >
-            {
-              followUpCount
-            }
-          </Typography>
-        </Card>
-      </Box>
-
-
-      {/* FILTERS */}
-
-      <Card
-        variant="outlined"
-        sx={{
-          p:
-            2,
-
-          mb:
-            3,
-        }}
-      >
         <Stack
           direction={{
             xs:
               'column',
 
-            md:
+            sm:
               'row',
           }}
-          spacing={
-            2
-          }
-        >
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Search lead, company or activity"
-            value={
-              search
-            }
-            onChange={(
-              event,
-            ) =>
-              setSearch(
-                event.target.value,
-              )
-            }
-            slotProps={{
-              input:
-                {
-                  startAdornment:
-                    (
-                      <InputAdornment position="start">
-                        <SearchRounded />
-                      </InputAdornment>
-                    ),
-                },
-            }}
-          />
-
-
-          <FormControl
-            size="small"
-            sx={{
-              minWidth:
-                220,
-            }}
-          >
-            <InputLabel>
-              Activity type
-            </InputLabel>
-
-            <Select
-              value={
-                activityFilter
-              }
-              label="Activity type"
-              onChange={(
-                event,
-              ) =>
-                setActivityFilter(
-                  event.target
-                    .value as ActivityFilter,
-                )
-              }
-            >
-              <MenuItem
-                value="ALL"
-              >
-                All activity
-              </MenuItem>
-
-              <MenuItem
-                value="COMMUNICATION"
-              >
-                Communications
-              </MenuItem>
-
-              <MenuItem
-                value="FOLLOW_UP"
-              >
-                Follow-ups
-              </MenuItem>
-            </Select>
-          </FormControl>
-        </Stack>
-      </Card>
-
-
-      {/* TIMELINE */}
-
-      {isLoading ? (
-        <Box
           sx={{
-            py:
-              8,
-
-            display:
-              'flex',
-
             justifyContent:
-              'center',
+              'space-between',
+
+            alignItems: {
+              xs:
+                'flex-start',
+
+              sm:
+                'center',
+            },
+
+            gap:
+              2,
+
+            mb:
+              3,
           }}
         >
-          <Stack
-            spacing={
-              2
-            }
-            sx={{
-              alignItems:
-                'center',
-            }}
-          >
-            <CircularProgress />
+          <Box>
+            <Typography
+              sx={{
+                color:
+                  '#172033',
+
+                fontSize: {
+                  xs:
+                    27,
+
+                  md:
+                    30,
+                },
+
+                fontWeight:
+                  700,
+
+                lineHeight:
+                  1.2,
+
+                letterSpacing:
+                  '-0.02em',
+              }}
+            >
+              {pageTitle}
+            </Typography>
+
 
             <Typography
-              color="text.secondary"
+              sx={{
+                mt:
+                  0.65,
+
+                color:
+                  '#667085',
+
+                fontSize:
+                  13.5,
+
+                lineHeight:
+                  1.5,
+              }}
             >
-              Loading activity...
+              {pageDescription}
             </Typography>
-          </Stack>
-        </Box>
-      ) : filteredActivities.length ===
-        0 ? (
+          </Box>
+
+
+          <Button
+            variant="outlined"
+            startIcon={
+              <RefreshRounded />
+            }
+            onClick={() =>
+              void loadActivities()
+            }
+            disabled={
+              isLoading
+            }
+            sx={{
+              bgcolor:
+                '#ffffff',
+            }}
+          >
+            Refresh
+          </Button>
+        </Stack>
+
+
+        {error && (
+          <Alert
+            severity="error"
+            sx={{
+              mb:
+                2.5,
+            }}
+          >
+            {error}
+          </Alert>
+        )}
+
+
+        {/*
+          SUMMARY
+        */}
+
+        <Card
+          variant="outlined"
+          sx={{
+            mb:
+              2.5,
+
+            borderColor:
+              '#e4e8ef',
+
+            borderRadius:
+              '12px',
+
+            boxShadow:
+              '0 2px 8px rgba(15, 23, 42, 0.035)',
+
+            overflow:
+              'hidden',
+          }}
+        >
+          <Box
+            sx={{
+              display:
+                'grid',
+
+              gridTemplateColumns: {
+                xs:
+                  '1fr',
+
+                sm:
+                  'repeat(3, 1fr)',
+              },
+            }}
+          >
+            {[
+              {
+                label:
+                  'Total Activity',
+
+                value:
+                  activities.length,
+              },
+
+              {
+                label:
+                  'Communications',
+
+                value:
+                  communicationCount,
+              },
+
+              {
+                label:
+                  'Follow-ups',
+
+                value:
+                  followUpCount,
+              },
+            ].map(
+              (
+                item,
+                index,
+              ) => (
+                <Box
+                  key={
+                    item.label
+                  }
+                  sx={{
+                    minHeight:
+                      88,
+
+                    px: {
+                      xs:
+                        2.25,
+
+                      md:
+                        2.75,
+                    },
+
+                    py:
+                      2,
+
+                    display:
+                      'flex',
+
+                    flexDirection:
+                      'column',
+
+                    justifyContent:
+                      'center',
+
+                    borderRight: {
+                      xs:
+                        'none',
+
+                      sm:
+                        index <
+                        2
+                          ? '1px solid #edf0f4'
+                          : 'none',
+                    },
+
+                    borderBottom: {
+                      xs:
+                        index <
+                        2
+                          ? '1px solid #edf0f4'
+                          : 'none',
+
+                      sm:
+                        'none',
+                    },
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color:
+                        '#667085',
+
+                      fontSize:
+                        12.5,
+
+                      fontWeight:
+                        500,
+                    }}
+                  >
+                    {item.label}
+                  </Typography>
+
+
+                  <Typography
+                    sx={{
+                      mt:
+                        0.4,
+
+                      color:
+                        '#172033',
+
+                      fontSize:
+                        24,
+
+                      fontWeight:
+                        700,
+
+                      lineHeight:
+                        1.2,
+                    }}
+                  >
+                    {item.value}
+                  </Typography>
+                </Box>
+              ),
+            )}
+          </Box>
+        </Card>
+
+
+        {/*
+          FILTERS
+        */}
+
         <Card
           variant="outlined"
           sx={{
             p:
-              5,
+              1.75,
 
-            textAlign:
-              'center',
+            mb:
+              2.5,
+
+            borderColor:
+              '#e4e8ef',
+
+            borderRadius:
+              '12px',
+
+            boxShadow:
+              '0 2px 8px rgba(15, 23, 42, 0.025)',
           }}
         >
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight:
-                800,
-            }}
-          >
-            No activity found
-          </Typography>
+          <Stack
+            direction={{
+              xs:
+                'column',
 
-          <Typography
-            color="text.secondary"
-            sx={{
-              mt:
-                0.75,
+              md:
+                'row',
             }}
+            spacing={
+              1.25
+            }
           >
-            Try changing your search or filter.
-          </Typography>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Search lead, company, representative or activity..."
+              value={
+                search
+              }
+              onChange={(
+                event,
+              ) =>
+                setSearch(
+                  event.target.value,
+                )
+              }
+              slotProps={{
+                input: {
+                  startAdornment:
+                    (
+                      <InputAdornment position="start">
+                        <SearchRounded
+                          sx={{
+                            color:
+                              '#7a8699',
+
+                            fontSize:
+                              20,
+                          }}
+                        />
+                      </InputAdornment>
+                    ),
+                },
+              }}
+            />
+
+
+            <FormControl
+              size="small"
+              sx={{
+                minWidth:
+                  210,
+              }}
+            >
+              <InputLabel>
+                Activity type
+              </InputLabel>
+
+              <Select
+                value={
+                  activityFilter
+                }
+                label="Activity type"
+                onChange={(
+                  event,
+                ) =>
+                  setActivityFilter(
+                    event.target
+                      .value as ActivityFilter,
+                  )
+                }
+              >
+                <MenuItem value="ALL">
+                  All activity
+                </MenuItem>
+
+                <MenuItem value="COMMUNICATION">
+                  Communications
+                </MenuItem>
+
+                <MenuItem value="FOLLOW_UP">
+                  Follow-ups
+                </MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
         </Card>
-      ) : (
-        <Stack
-          spacing={
-            2
-          }
+
+
+        {/*
+          ACTIVITY FEED
+        */}
+
+        <Card
+          variant="outlined"
+          sx={{
+            borderColor:
+              '#e4e8ef',
+
+            borderRadius:
+              '12px',
+
+            boxShadow:
+              '0 2px 10px rgba(15, 23, 42, 0.035)',
+
+            overflow:
+              'hidden',
+          }}
         >
-          {filteredActivities.map(
-            (
-              activity,
-            ) => {
-              if (
-                activity.type ===
-                'COMMUNICATION'
-              ) {
-                const {
-                  communication,
-                  lead,
-                } =
-                  activity
+          <Box
+            sx={{
+              px: {
+                xs:
+                  2.25,
+
+                md:
+                  2.75,
+              },
+
+              py:
+                2,
+            }}
+          >
+            <Stack
+              direction="row"
+              sx={{
+                justifyContent:
+                  'space-between',
+
+                alignItems:
+                  'center',
+
+                gap:
+                  2,
+              }}
+            >
+              <Box>
+                <Typography
+                  sx={{
+                    color:
+                      '#172033',
+
+                    fontSize:
+                      15,
+
+                    fontWeight:
+                      700,
+                  }}
+                >
+                  Activity Feed
+                </Typography>
 
 
-                return (
-                  <Card
-                    key={
-                      activity.id
-                    }
-                    variant="outlined"
-                    onClick={() =>
-                      navigate(
-                        `/leads/${lead.id}?tab=communications`,
-                      )
-                    }
-                    sx={{
-                      p:
-                        2.5,
+                <Typography
+                  sx={{
+                    mt:
+                      0.2,
 
-                      cursor:
-                        'pointer',
+                    color:
+                      '#7a8699',
 
-                      boxShadow:
-                        'none',
+                    fontSize:
+                      11.5,
+                  }}
+                >
+                  {isSalesRepresentative
+                    ? 'Recent activity across your assigned leads'
+                    : 'Recent sales lead activity'}
+                </Typography>
+              </Box>
 
-                      '&:hover':
-                        {
-                          borderColor:
-                            'primary.main',
 
-                          bgcolor:
-                            'action.hover',
-                        },
-                    }}
-                  >
-                    <Stack
-                      direction={{
-                        xs:
-                          'column',
+              {!isLoading && (
+                <Typography
+                  sx={{
+                    color:
+                      '#667085',
 
-                        md:
-                          'row',
-                      }}
-                      sx={{
-                        justifyContent:
-                          'space-between',
+                    fontSize:
+                      12,
+                  }}
+                >
+                  {filteredActivities.length}{' '}
+                  {filteredActivities.length ===
+                  1
+                    ? 'event'
+                    : 'events'}
+                </Typography>
+              )}
+            </Stack>
+          </Box>
 
-                        gap:
-                          2,
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={
-                          2
+
+          <Divider />
+
+
+          {isLoading ? (
+            <Box
+              sx={{
+                minHeight:
+                  240,
+
+                display:
+                  'flex',
+
+                alignItems:
+                  'center',
+
+                justifyContent:
+                  'center',
+              }}
+            >
+              <Stack
+                spacing={1.5}
+                sx={{
+                  alignItems:
+                    'center',
+                }}
+              >
+                <CircularProgress
+                  size={30}
+                />
+
+                <Typography
+                  sx={{
+                    color:
+                      '#7a8699',
+
+                    fontSize:
+                      12.5,
+                  }}
+                >
+                  Loading activity...
+                </Typography>
+              </Stack>
+            </Box>
+          ) : filteredActivities.length ===
+            0 ? (
+            <Box
+              sx={{
+                py:
+                  6,
+
+                px:
+                  3,
+
+                textAlign:
+                  'center',
+              }}
+            >
+              <EventRounded
+                sx={{
+                  color:
+                    '#98a2b3',
+
+                  fontSize:
+                    34,
+                }}
+              />
+
+              <Typography
+                sx={{
+                  mt:
+                    1.25,
+
+                  color:
+                    '#172033',
+
+                  fontSize:
+                    14,
+
+                  fontWeight:
+                    600,
+                }}
+              >
+                No activity found
+              </Typography>
+
+
+              <Typography
+                sx={{
+                  mt:
+                    0.4,
+
+                  color:
+                    '#7a8699',
+
+                  fontSize:
+                    12.5,
+                }}
+              >
+                Try changing your search or filter.
+              </Typography>
+            </Box>
+          ) : (
+            <Stack
+              divider={
+                <Divider
+                  flexItem
+                />
+              }
+            >
+              {filteredActivities.map(
+                (
+                  activity,
+                ) => {
+                  if (
+                    activity.type ===
+                    'COMMUNICATION'
+                  ) {
+                    const {
+                      communication,
+                      lead,
+                    } =
+                      activity
+
+
+                    return (
+                      <Box
+                        key={
+                          activity.id
+                        }
+                        onClick={() =>
+                          navigate(
+                            `/leads/${lead.id}?tab=communications`,
+                          )
                         }
                         sx={{
-                          alignItems:
-                            'flex-start',
+                          px: {
+                            xs:
+                              2.25,
+
+                            md:
+                              2.75,
+                          },
+
+                          py:
+                            1.75,
+
+                          cursor:
+                            'pointer',
+
+                          transition:
+                            'background-color 120ms ease',
+
+                          '&:hover':
+                            {
+                              bgcolor:
+                                '#fafcff',
+                            },
                         }}
                       >
                         <Box
                           sx={{
-                            width:
-                              42,
-
-                            height:
-                              42,
-
-                            borderRadius:
-                              1.5,
-
-                            flexShrink:
-                              0,
-
                             display:
-                              'flex',
+                              'grid',
+
+                            gridTemplateColumns: {
+                              xs:
+                                '1fr',
+
+                              md:
+                                'minmax(300px, 1.4fr) minmax(170px, 0.65fr) minmax(180px, 0.65fr) 80px',
+                            },
+
+                            gap: {
+                              xs:
+                                1.5,
+
+                              md:
+                                2.5,
+                            },
 
                             alignItems:
                               'center',
-
-                            justifyContent:
-                              'center',
-
-                            bgcolor:
-                              'primary.main',
-
-                            color:
-                              'common.white',
                           }}
                         >
-                          {getCommunicationIcon(
-                            communication.communication_type,
-                          )}
-                        </Box>
-
-
-                        <Box>
                           <Stack
                             direction="row"
-                            spacing={
-                              1
-                            }
+                            spacing={1.5}
                             sx={{
+                              minWidth:
+                                0,
+
                               alignItems:
-                                'center',
-
-                              flexWrap:
-                                'wrap',
-
-                              mb:
-                                0.75,
+                                'flex-start',
                             }}
                           >
-                            <Chip
-                              size="small"
-                              label={
-                                communication.communication_type_display
-                              }
-                              color="primary"
-                              variant="outlined"
-                            />
-
-                            <Typography
+                            <Box
                               sx={{
-                                fontWeight:
-                                  800,
+                                width:
+                                  36,
+
+                                height:
+                                  36,
+
+                                borderRadius:
+                                  '9px',
+
+                                flexShrink:
+                                  0,
+
+                                display:
+                                  'flex',
+
+                                alignItems:
+                                  'center',
+
+                                justifyContent:
+                                  'center',
+
+                                bgcolor:
+                                  '#eef4ff',
+
+                                color:
+                                  '#0b5cff',
                               }}
                             >
-                              {
-                                communication.summary
-                              }
-                            </Typography>
+                              {getCommunicationIcon(
+                                communication.communication_type,
+                              )}
+                            </Box>
+
+
+                            <Box
+                              sx={{
+                                minWidth:
+                                  0,
+                              }}
+                            >
+                              <Stack
+                                direction="row"
+                                spacing={0.8}
+                                sx={{
+                                  alignItems:
+                                    'center',
+
+                                  flexWrap:
+                                    'wrap',
+
+                                  mb:
+                                    0.35,
+                                }}
+                              >
+                                <Typography
+                                  sx={{
+                                    color:
+                                      '#172033',
+
+                                    fontSize:
+                                      13.5,
+
+                                    fontWeight:
+                                      600,
+                                  }}
+                                >
+                                  {communication.summary}
+                                </Typography>
+
+
+                                <Chip
+                                  size="small"
+                                  label={
+                                    communication.communication_type_display
+                                  }
+                                  color="primary"
+                                  variant="outlined"
+                                  sx={{
+                                    bgcolor:
+                                      '#ffffff',
+
+                                    fontSize:
+                                      10.5,
+                                  }}
+                                />
+                              </Stack>
+
+
+                              <Typography
+                                sx={{
+                                  color:
+                                    '#475467',
+
+                                  fontSize:
+                                    12.5,
+
+                                  fontWeight:
+                                    500,
+                                }}
+                              >
+                                {lead.contact_name}
+                              </Typography>
+
+
+                              <Typography
+                                sx={{
+                                  mt:
+                                    0.15,
+
+                                  color:
+                                    '#98a2b3',
+
+                                  fontSize:
+                                    11.5,
+                                }}
+                              >
+                                {lead.company_name}
+                              </Typography>
+
+
+                              {communication.notes && (
+                                <Typography
+                                  sx={{
+                                    mt:
+                                      0.65,
+
+                                    color:
+                                      '#667085',
+
+                                    fontSize:
+                                      11.5,
+
+                                    lineHeight:
+                                      1.5,
+
+                                    display:
+                                      '-webkit-box',
+
+                                    WebkitLineClamp:
+                                      2,
+
+                                    WebkitBoxOrient:
+                                      'vertical',
+
+                                    overflow:
+                                      'hidden',
+                                  }}
+                                >
+                                  {communication.notes}
+                                </Typography>
+                              )}
+                            </Box>
                           </Stack>
 
 
-                          <Typography
-                            sx={{
-                              fontWeight:
-                                700,
-                            }}
-                          >
-                            {
-                              lead.contact_name
-                            }
-                          </Typography>
-
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                          >
-                            {
-                              lead.company_name
-                            }
-                          </Typography>
-
-
-                          {communication.notes && (
+                          <Box>
                             <Typography
-                              variant="body2"
-                              color="text.secondary"
                               sx={{
-                                mt:
-                                  1.25,
+                                color:
+                                  '#98a2b3',
 
-                                whiteSpace:
-                                  'pre-wrap',
+                                fontSize:
+                                  10.5,
+
+                                fontWeight:
+                                  600,
+
+                                textTransform:
+                                  'uppercase',
+
+                                letterSpacing:
+                                  '0.04em',
                               }}
                             >
-                              {
-                                communication.notes
-                              }
+                              Date
                             </Typography>
-                          )}
+
+
+                            <Stack
+                              direction="row"
+                              spacing={0.6}
+                              sx={{
+                                mt:
+                                  0.4,
+
+                                alignItems:
+                                  'center',
+
+                                color:
+                                  '#475467',
+                              }}
+                            >
+                              <CalendarTodayRounded
+                                sx={{
+                                  fontSize:
+                                    15,
+                                }}
+                              />
+
+                              <Typography
+                                sx={{
+                                  fontSize:
+                                    11.5,
+
+                                  lineHeight:
+                                    1.45,
+                                }}
+                              >
+                                {formatDate(
+                                  communication.communication_date,
+                                )}
+                              </Typography>
+                            </Stack>
+                          </Box>
+
+
+                          <Box>
+                            <Typography
+                              sx={{
+                                color:
+                                  '#98a2b3',
+
+                                fontSize:
+                                  10.5,
+
+                                fontWeight:
+                                  600,
+
+                                textTransform:
+                                  'uppercase',
+
+                                letterSpacing:
+                                  '0.04em',
+                              }}
+                            >
+                              Recorded By
+                            </Typography>
+
+
+                            <Stack
+                              direction="row"
+                              spacing={0.6}
+                              sx={{
+                                mt:
+                                  0.4,
+
+                                alignItems:
+                                  'center',
+
+                                color:
+                                  '#475467',
+                              }}
+                            >
+                              <PersonOutlineRounded
+                                sx={{
+                                  fontSize:
+                                    16,
+                                }}
+                              />
+
+                              <Typography
+                                sx={{
+                                  fontSize:
+                                    12,
+
+                                  fontWeight:
+                                    500,
+                                }}
+                              >
+                                {communication.created_by_name ||
+                                  'Unknown'}
+                              </Typography>
+                            </Stack>
+                          </Box>
+
+
+                          <Button
+                            size="small"
+                            onClick={(
+                              event,
+                            ) => {
+                              event.stopPropagation()
+
+                              navigate(
+                                `/leads/${lead.id}?tab=communications`,
+                              )
+                            }}
+                            sx={{
+                              minHeight:
+                                32,
+
+                              px:
+                                1.25,
+
+                              fontSize:
+                                12,
+                            }}
+                          >
+                            Open
+                          </Button>
                         </Box>
-                      </Stack>
-
-
-                      <Stack
-                        spacing={
-                          0.75
-                        }
-                        sx={{
-                          minWidth: {
-                            xs:
-                              0,
-
-                            md:
-                              250,
-                          },
-                        }}
-                      >
-                        <Stack
-                          direction="row"
-                          spacing={
-                            0.75
-                          }
-                          sx={{
-                            alignItems:
-                              'center',
-
-                            color:
-                              'text.secondary',
-                          }}
-                        >
-                          <CalendarTodayRounded
-                            sx={{
-                              fontSize:
-                                17,
-                            }}
-                          />
-
-                          <Typography
-                            variant="body2"
-                          >
-                            {formatDate(
-                              communication.communication_date,
-                            )}
-                          </Typography>
-                        </Stack>
-
-
-                        <Stack
-                          direction="row"
-                          spacing={
-                            0.75
-                          }
-                          sx={{
-                            alignItems:
-                              'center',
-
-                            color:
-                              'text.secondary',
-                          }}
-                        >
-                          <PersonOutlineRounded
-                            sx={{
-                              fontSize:
-                                18,
-                            }}
-                          />
-
-                          <Typography
-                            variant="body2"
-                          >
-                            Recorded by{' '}
-                            {
-                              communication.created_by_name
-                            }
-                          </Typography>
-                        </Stack>
-                      </Stack>
-                    </Stack>
-                  </Card>
-                )
-              }
-
-
-              const {
-                followUp,
-                lead,
-              } =
-                activity
-
-
-              return (
-                <Card
-                  key={
-                    activity.id
-                  }
-                  variant="outlined"
-                  onClick={() =>
-                    navigate(
-                      `/follow-ups/${followUp.id}`,
+                      </Box>
                     )
                   }
-                  sx={{
-                    p:
-                      2.5,
 
-                    cursor:
-                      'pointer',
 
-                    boxShadow:
-                      'none',
+                  const {
+                    followUp,
+                    lead,
+                  } =
+                    activity
 
-                    '&:hover':
-                      {
-                        borderColor:
-                          'primary.main',
 
-                        bgcolor:
-                          'action.hover',
-                      },
-                  }}
-                >
-                  <Stack
-                    direction={{
-                      xs:
-                        'column',
+                  const isOverdue =
+                    followUp.status ===
+                      'PENDING' &&
+                    followUp.is_overdue
 
-                      md:
-                        'row',
-                    }}
-                    sx={{
-                      justifyContent:
-                        'space-between',
 
-                      gap:
-                        2,
-                    }}
-                  >
-                    <Stack
-                      direction="row"
-                      spacing={
-                        2
+                  return (
+                    <Box
+                      key={
+                        activity.id
+                      }
+                      onClick={() =>
+                        navigate(
+                          `/follow-ups/${followUp.id}`,
+                        )
                       }
                       sx={{
-                        alignItems:
-                          'flex-start',
+                        px: {
+                          xs:
+                            2.25,
+
+                          md:
+                            2.75,
+                        },
+
+                        py:
+                          1.75,
+
+                        cursor:
+                          'pointer',
+
+                        transition:
+                          'background-color 120ms ease',
+
+                        '&:hover':
+                          {
+                            bgcolor:
+                              '#fafcff',
+                          },
                       }}
                     >
                       <Box
                         sx={{
-                          width:
-                            42,
-
-                          height:
-                            42,
-
-                          borderRadius:
-                            1.5,
-
-                          flexShrink:
-                            0,
-
                           display:
-                            'flex',
+                            'grid',
+
+                          gridTemplateColumns: {
+                            xs:
+                              '1fr',
+
+                            md:
+                              'minmax(300px, 1.4fr) minmax(170px, 0.65fr) minmax(180px, 0.65fr) 80px',
+                          },
+
+                          gap: {
+                            xs:
+                              1.5,
+
+                            md:
+                              2.5,
+                          },
 
                           alignItems:
                             'center',
-
-                          justifyContent:
-                            'center',
-
-                          bgcolor:
-                            followUp.is_overdue &&
-                            followUp.status ===
-                              'PENDING'
-                              ? 'error.main'
-                              : 'info.main',
-
-                          color:
-                            'common.white',
                         }}
                       >
-                        <EventRounded
-                          fontSize="small"
-                        />
-                      </Box>
-
-
-                      <Box>
                         <Stack
                           direction="row"
-                          spacing={
-                            1
-                          }
+                          spacing={1.5}
                           sx={{
+                            minWidth:
+                              0,
+
                             alignItems:
-                              'center',
-
-                            flexWrap:
-                              'wrap',
-
-                            mb:
-                              0.75,
+                              'flex-start',
                           }}
                         >
-                          <Chip
-                            size="small"
-                            label="Follow-up"
-                            color="info"
-                            variant="outlined"
-                          />
-
-                          <Typography
+                          <Box
                             sx={{
-                              fontWeight:
-                                800,
+                              width:
+                                36,
+
+                              height:
+                                36,
+
+                              borderRadius:
+                                '9px',
+
+                              flexShrink:
+                                0,
+
+                              display:
+                                'flex',
+
+                              alignItems:
+                                'center',
+
+                              justifyContent:
+                                'center',
+
+                              bgcolor:
+                                isOverdue
+                                  ? '#fef3f2'
+                                  : '#ecfdf3',
+
+                              color:
+                                isOverdue
+                                  ? '#d92d20'
+                                  : '#039855',
                             }}
                           >
-                            {
-                              followUp.title
-                            }
-                          </Typography>
+                            <EventRounded
+                              fontSize="small"
+                            />
+                          </Box>
+
+
+                          <Box
+                            sx={{
+                              minWidth:
+                                0,
+                            }}
+                          >
+                            <Stack
+                              direction="row"
+                              spacing={0.8}
+                              sx={{
+                                alignItems:
+                                  'center',
+
+                                flexWrap:
+                                  'wrap',
+
+                                mb:
+                                  0.35,
+                              }}
+                            >
+                              <Typography
+                                sx={{
+                                  color:
+                                    '#172033',
+
+                                  fontSize:
+                                    13.5,
+
+                                  fontWeight:
+                                    600,
+                                }}
+                              >
+                                {followUp.title}
+                              </Typography>
+
+
+                              <Chip
+                                size="small"
+                                label={
+                                  isOverdue
+                                    ? 'Overdue'
+                                    : 'Follow-up'
+                                }
+                                color={
+                                  isOverdue
+                                    ? 'error'
+                                    : 'success'
+                                }
+                                variant="outlined"
+                                sx={{
+                                  bgcolor:
+                                    '#ffffff',
+
+                                  fontSize:
+                                    10.5,
+                                }}
+                              />
+                            </Stack>
+
+
+                            <Typography
+                              sx={{
+                                color:
+                                  '#475467',
+
+                                fontSize:
+                                  12.5,
+
+                                fontWeight:
+                                  500,
+                              }}
+                            >
+                              {lead.contact_name}
+                            </Typography>
+
+
+                            <Typography
+                              sx={{
+                                mt:
+                                  0.15,
+
+                                color:
+                                  '#98a2b3',
+
+                                fontSize:
+                                  11.5,
+                              }}
+                            >
+                              {lead.company_name}
+                            </Typography>
+
+
+                            {followUp.description && (
+                              <Typography
+                                sx={{
+                                  mt:
+                                    0.65,
+
+                                  color:
+                                    '#667085',
+
+                                  fontSize:
+                                    11.5,
+
+                                  lineHeight:
+                                    1.5,
+
+                                  display:
+                                    '-webkit-box',
+
+                                  WebkitLineClamp:
+                                    2,
+
+                                  WebkitBoxOrient:
+                                    'vertical',
+
+                                  overflow:
+                                    'hidden',
+                                }}
+                              >
+                                {followUp.description}
+                              </Typography>
+                            )}
+                          </Box>
                         </Stack>
 
 
-                        <Typography
-                          sx={{
-                            fontWeight:
-                              700,
-                          }}
-                        >
-                          {
-                            lead.contact_name
-                          }
-                        </Typography>
-
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
-                          {
-                            lead.company_name
-                          }
-                        </Typography>
-
-
-                        {followUp.description && (
+                        <Box>
                           <Typography
-                            variant="body2"
-                            color="text.secondary"
                             sx={{
-                              mt:
-                                1.25,
+                              color:
+                                '#98a2b3',
 
-                              whiteSpace:
-                                'pre-wrap',
+                              fontSize:
+                                10.5,
+
+                              fontWeight:
+                                600,
+
+                              textTransform:
+                                'uppercase',
+
+                              letterSpacing:
+                                '0.04em',
                             }}
                           >
-                            {
-                              followUp.description
-                            }
+                            Due
                           </Typography>
-                        )}
+
+
+                          <Stack
+                            direction="row"
+                            spacing={0.6}
+                            sx={{
+                              mt:
+                                0.4,
+
+                              alignItems:
+                                'center',
+
+                              color:
+                                isOverdue
+                                  ? 'error.main'
+                                  : '#475467',
+                            }}
+                          >
+                            <CalendarTodayRounded
+                              sx={{
+                                fontSize:
+                                  15,
+                              }}
+                            />
+
+                            <Typography
+                              sx={{
+                                fontSize:
+                                  11.5,
+
+                                fontWeight:
+                                  isOverdue
+                                    ? 600
+                                    : 500,
+
+                                lineHeight:
+                                  1.45,
+                              }}
+                            >
+                              {formatDate(
+                                followUp.due_date,
+                              )}
+                            </Typography>
+                          </Stack>
+                        </Box>
+
+
+                        <Box>
+                          <Typography
+                            sx={{
+                              color:
+                                '#98a2b3',
+
+                              fontSize:
+                                10.5,
+
+                              fontWeight:
+                                600,
+
+                              textTransform:
+                                'uppercase',
+
+                              letterSpacing:
+                                '0.04em',
+                            }}
+                          >
+                            Assigned To
+                          </Typography>
+
+
+                          <Stack
+                            direction="row"
+                            spacing={0.6}
+                            sx={{
+                              mt:
+                                0.4,
+
+                              alignItems:
+                                'center',
+
+                              color:
+                                '#475467',
+                            }}
+                          >
+                            <PersonOutlineRounded
+                              sx={{
+                                fontSize:
+                                  16,
+                              }}
+                            />
+
+                            <Typography
+                              sx={{
+                                fontSize:
+                                  12,
+
+                                fontWeight:
+                                  500,
+                              }}
+                            >
+                              {followUp.assigned_to_name ||
+                                'Unassigned'}
+                            </Typography>
+                          </Stack>
+                        </Box>
+
+
+                        <Button
+                          size="small"
+                          onClick={(
+                            event,
+                          ) => {
+                            event.stopPropagation()
+
+                            navigate(
+                              `/follow-ups/${followUp.id}`,
+                            )
+                          }}
+                          sx={{
+                            minHeight:
+                              32,
+
+                            px:
+                              1.25,
+
+                            fontSize:
+                              12,
+                          }}
+                        >
+                          Open
+                        </Button>
                       </Box>
-                    </Stack>
-
-
-                    <Stack
-                      spacing={
-                        0.75
-                      }
-                      sx={{
-                        minWidth: {
-                          xs:
-                            0,
-
-                          md:
-                            250,
-                        },
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={
-                          0.75
-                        }
-                        sx={{
-                          alignItems:
-                            'center',
-
-                          color:
-                            followUp.is_overdue &&
-                            followUp.status ===
-                              'PENDING'
-                              ? 'error.main'
-                              : 'text.secondary',
-                        }}
-                      >
-                        <CalendarTodayRounded
-                          sx={{
-                            fontSize:
-                              17,
-                          }}
-                        />
-
-                        <Typography
-                          variant="body2"
-                        >
-                          Due:{' '}
-                          {formatDate(
-                            followUp.due_date,
-                          )}
-                        </Typography>
-                      </Stack>
-
-
-                      <Stack
-                        direction="row"
-                        spacing={
-                          0.75
-                        }
-                        sx={{
-                          alignItems:
-                            'center',
-
-                          color:
-                            'text.secondary',
-                        }}
-                      >
-                        <PersonOutlineRounded
-                          sx={{
-                            fontSize:
-                              18,
-                          }}
-                        />
-
-                        <Typography
-                          variant="body2"
-                        >
-                          Assigned to{' '}
-                          {followUp.assigned_to_name ||
-                            'Unassigned'}
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                  </Stack>
-                </Card>
-              )
-            },
+                    </Box>
+                  )
+                },
+              )}
+            </Stack>
           )}
-        </Stack>
-      )}
+        </Card>
+      </Box>
     </Box>
   )
 }

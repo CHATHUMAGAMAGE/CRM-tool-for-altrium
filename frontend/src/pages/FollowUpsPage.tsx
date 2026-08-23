@@ -11,6 +11,7 @@ import {
   Card,
   Chip,
   CircularProgress,
+  Divider,
   FormControl,
   InputAdornment,
   InputLabel,
@@ -23,10 +24,6 @@ import {
 
 import {
   CalendarTodayRounded,
-  CheckCircleOutlineRounded,
-  ErrorOutlineRounded,
-  EventRounded,
-  PersonOutlineRounded,
   RefreshRounded,
   SearchRounded,
 } from '@mui/icons-material'
@@ -52,6 +49,7 @@ import {
 type FollowUpFilter =
   | 'ALL'
   | FollowUpStatus
+
 
 type FollowUpView =
   | 'ALL'
@@ -96,7 +94,8 @@ function getFollowUpColor(
   | 'error' {
   if (
     followUp.is_overdue &&
-    followUp.status === 'PENDING'
+    followUp.status ===
+      'PENDING'
   ) {
     return 'error'
   }
@@ -122,13 +121,15 @@ function getFollowUpLabel(
 ) {
   if (
     followUp.is_overdue &&
-    followUp.status === 'PENDING'
+    followUp.status ===
+      'PENDING'
   ) {
     return 'Overdue'
   }
 
   if (
-    followUp.status === 'PENDING'
+    followUp.status ===
+    'PENDING'
   ) {
     return 'Upcoming'
   }
@@ -153,51 +154,56 @@ function sortFollowUps(
       const secondFollowUp =
         second.followUp
 
-      /*
-       * Overdue pending follow-ups first.
-       */
+
+      const firstIsOverdue =
+        firstFollowUp
+          .is_overdue &&
+        firstFollowUp.status ===
+          'PENDING'
+
+      const secondIsOverdue =
+        secondFollowUp
+          .is_overdue &&
+        secondFollowUp.status ===
+          'PENDING'
+
+
       if (
-        firstFollowUp.is_overdue &&
-        firstFollowUp.status === 'PENDING' &&
-        !(
-          secondFollowUp.is_overdue &&
-          secondFollowUp.status === 'PENDING'
-        )
+        firstIsOverdue &&
+        !secondIsOverdue
       ) {
         return -1
       }
 
+
       if (
-        secondFollowUp.is_overdue &&
-        secondFollowUp.status === 'PENDING' &&
-        !(
-          firstFollowUp.is_overdue &&
-          firstFollowUp.status === 'PENDING'
-        )
+        secondIsOverdue &&
+        !firstIsOverdue
       ) {
         return 1
       }
 
-      /*
-       * Pending follow-ups before completed/cancelled.
-       */
+
       if (
-        firstFollowUp.status === 'PENDING' &&
-        secondFollowUp.status !== 'PENDING'
+        firstFollowUp.status ===
+          'PENDING' &&
+        secondFollowUp.status !==
+          'PENDING'
       ) {
         return -1
       }
 
+
       if (
-        secondFollowUp.status === 'PENDING' &&
-        firstFollowUp.status !== 'PENDING'
+        secondFollowUp.status ===
+          'PENDING' &&
+        firstFollowUp.status !==
+          'PENDING'
       ) {
         return 1
       }
 
-      /*
-       * Otherwise sort by due date.
-       */
+
       return (
         new Date(
           firstFollowUp.due_date,
@@ -283,6 +289,7 @@ function FollowUpsPage() {
         '',
       )
 
+
       try {
         const [
           user,
@@ -292,6 +299,7 @@ function FollowUpsPage() {
             getCurrentUser(),
             getLeads(),
           ])
+
 
         const followUpGroups =
           await Promise.all(
@@ -303,6 +311,7 @@ function FollowUpsPage() {
                   await getLeadFollowUps(
                     lead.id,
                   )
+
 
                 return leadFollowUps.map(
                   (
@@ -316,12 +325,15 @@ function FollowUpsPage() {
             ),
           )
 
+
         const combinedFollowUps =
           followUpGroups.flat()
+
 
         setCurrentUser(
           user,
         )
+
 
         setFollowUps(
           sortFollowUps(
@@ -356,6 +368,11 @@ function FollowUpsPage() {
   const isSalesRepresentative =
     currentUser?.role ===
     'SALES_REP'
+
+
+  const isSalesManager =
+    currentUser?.role ===
+    'SALES_MANAGER'
 
 
   const pendingCount =
@@ -415,6 +432,7 @@ function FollowUpsPage() {
             .trim()
             .toLowerCase()
 
+
         return followUps.filter(
           (
             item,
@@ -424,6 +442,7 @@ function FollowUpsPage() {
               lead,
             } =
               item
+
 
             const matchesSearch =
               !query ||
@@ -456,11 +475,13 @@ function FollowUpsPage() {
                   query,
                 )
 
+
             const matchesStatus =
               statusFilter ===
                 'ALL' ||
               followUp.status ===
                 statusFilter
+
 
             const matchesView =
               viewFilter ===
@@ -480,6 +501,7 @@ function FollowUpsPage() {
                 !followUp.is_overdue
               )
 
+
             return (
               matchesSearch &&
               matchesStatus &&
@@ -497,812 +519,1098 @@ function FollowUpsPage() {
     )
 
 
+  const pageTitle =
+    isSalesRepresentative
+      ? 'My Follow-ups'
+      : isSalesManager
+        ? 'Team Follow-ups'
+        : 'Follow-ups'
+
+
+  const pageDescription =
+    isSalesRepresentative
+      ? 'Track upcoming, overdue and completed actions for your leads.'
+      : isSalesManager
+        ? 'Monitor follow-up activity across the sales team.'
+        : 'Track follow-up activity across accessible leads.'
+
+
   return (
     <Box
       sx={{
-        p: {
-          xs: 3,
-          md: 5,
+        px: {
+          xs:
+            2.5,
+
+          md:
+            4,
+        },
+
+        py: {
+          xs:
+            3,
+
+          md:
+            3.5,
         },
       }}
     >
-      {/* HEADER */}
-
-      <Stack
-        direction={{
-          xs: 'column',
-          sm: 'row',
-        }}
-        sx={{
-          justifyContent:
-            'space-between',
-
-          alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
-          },
-
-          gap:
-            2,
-
-          mb:
-            4,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight:
-                800,
-            }}
-          >
-            {isSalesRepresentative
-              ? 'My Follow-ups'
-              : 'Follow-ups'}
-          </Typography>
-
-          <Typography
-            color="text.secondary"
-          >
-            {isSalesRepresentative
-              ? 'Track upcoming, overdue and completed actions for your leads.'
-              : 'Track follow-up activity across accessible leads.'}
-          </Typography>
-        </Box>
-
-
-        <Button
-          startIcon={
-            <RefreshRounded />
-          }
-          onClick={() =>
-            void loadFollowUps()
-          }
-          disabled={
-            isLoading
-          }
-        >
-          Refresh
-        </Button>
-      </Stack>
-
-
-      {error && (
-        <Alert
-          severity="error"
-          sx={{
-            mb:
-              3,
-          }}
-        >
-          {error}
-        </Alert>
-      )}
-
-
-      {/* SUMMARY */}
-
       <Box
         sx={{
-          display:
-            'grid',
+          width:
+            '100%',
 
-          gridTemplateColumns:
-            {
-              xs:
-                '1fr',
+          maxWidth:
+            1500,
 
-              sm:
-                'repeat(2, 1fr)',
-
-              lg:
-                'repeat(4, 1fr)',
-            },
-
-          gap:
-            2,
-
-          mb:
-            3,
+          mx:
+            'auto',
         }}
       >
-        <Card
-          variant="outlined"
-          sx={{
-            p:
-              2.5,
-          }}
-        >
-          <Stack
-            direction="row"
-            sx={{
-              justifyContent:
-                'space-between',
+        {/*
+          HEADER
+        */}
 
-              alignItems:
-                'center',
-            }}
-          >
-            <Box>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Total Follow-ups
-              </Typography>
-
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight:
-                    800,
-
-                  mt:
-                    0.5,
-                }}
-              >
-                {
-                  followUps.length
-                }
-              </Typography>
-            </Box>
-
-            <EventRounded
-              color="primary"
-            />
-          </Stack>
-        </Card>
-
-
-        <Card
-          variant="outlined"
-          sx={{
-            p:
-              2.5,
-          }}
-        >
-          <Stack
-            direction="row"
-            sx={{
-              justifyContent:
-                'space-between',
-
-              alignItems:
-                'center',
-            }}
-          >
-            <Box>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Pending
-              </Typography>
-
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight:
-                    800,
-
-                  mt:
-                    0.5,
-                }}
-              >
-                {
-                  pendingCount
-                }
-              </Typography>
-            </Box>
-
-            <CalendarTodayRounded
-              color="primary"
-            />
-          </Stack>
-        </Card>
-
-
-        <Card
-          variant="outlined"
-          sx={{
-            p:
-              2.5,
-          }}
-        >
-          <Stack
-            direction="row"
-            sx={{
-              justifyContent:
-                'space-between',
-
-              alignItems:
-                'center',
-            }}
-          >
-            <Box>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Overdue
-              </Typography>
-
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight:
-                    800,
-
-                  mt:
-                    0.5,
-
-                  color:
-                    overdueCount >
-                    0
-                      ? 'error.main'
-                      : 'text.primary',
-                }}
-              >
-                {
-                  overdueCount
-                }
-              </Typography>
-            </Box>
-
-            <ErrorOutlineRounded
-              color={
-                overdueCount >
-                0
-                  ? 'error'
-                  : 'disabled'
-              }
-            />
-          </Stack>
-        </Card>
-
-
-        <Card
-          variant="outlined"
-          sx={{
-            p:
-              2.5,
-          }}
-        >
-          <Stack
-            direction="row"
-            sx={{
-              justifyContent:
-                'space-between',
-
-              alignItems:
-                'center',
-            }}
-          >
-            <Box>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Completed
-              </Typography>
-
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight:
-                    800,
-
-                  mt:
-                    0.5,
-                }}
-              >
-                {
-                  completedCount
-                }
-              </Typography>
-            </Box>
-
-            <CheckCircleOutlineRounded
-              color="success"
-            />
-          </Stack>
-        </Card>
-      </Box>
-
-
-      {/* FILTERS */}
-
-      <Card
-        variant="outlined"
-        sx={{
-          p:
-            2,
-
-          mb:
-            3,
-        }}
-      >
         <Stack
           direction={{
             xs:
               'column',
 
-            lg:
+            sm:
               'row',
           }}
-          spacing={
-            2
-          }
-        >
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Search follow-up, lead, company or assignee"
-            value={
-              search
-            }
-            onChange={(
-              event,
-            ) =>
-              setSearch(
-                event.target.value,
-              )
-            }
-            slotProps={{
-              input:
-                {
-                  startAdornment:
-                    (
-                      <InputAdornment position="start">
-                        <SearchRounded />
-                      </InputAdornment>
-                    ),
-                },
-            }}
-          />
-
-
-          <FormControl
-            size="small"
-            sx={{
-              minWidth:
-                180,
-            }}
-          >
-            <InputLabel>
-              View
-            </InputLabel>
-
-            <Select
-              value={
-                viewFilter
-              }
-              label="View"
-              onChange={(
-                event,
-              ) =>
-                setViewFilter(
-                  event.target
-                    .value as FollowUpView,
-                )
-              }
-            >
-              <MenuItem
-                value="ALL"
-              >
-                All
-              </MenuItem>
-
-              <MenuItem
-                value="UPCOMING"
-              >
-                Upcoming
-              </MenuItem>
-
-              <MenuItem
-                value="OVERDUE"
-              >
-                Overdue
-              </MenuItem>
-            </Select>
-          </FormControl>
-
-
-          <FormControl
-            size="small"
-            sx={{
-              minWidth:
-                180,
-            }}
-          >
-            <InputLabel>
-              Status
-            </InputLabel>
-
-            <Select
-              value={
-                statusFilter
-              }
-              label="Status"
-              onChange={(
-                event,
-              ) =>
-                setStatusFilter(
-                  event.target
-                    .value as FollowUpFilter,
-                )
-              }
-            >
-              <MenuItem
-                value="ALL"
-              >
-                All statuses
-              </MenuItem>
-
-              <MenuItem
-                value="PENDING"
-              >
-                Pending
-              </MenuItem>
-
-              <MenuItem
-                value="COMPLETED"
-              >
-                Completed
-              </MenuItem>
-
-              <MenuItem
-                value="CANCELLED"
-              >
-                Cancelled
-              </MenuItem>
-            </Select>
-          </FormControl>
-        </Stack>
-      </Card>
-
-
-      {/* CONTENT */}
-
-      {isLoading ? (
-        <Box
           sx={{
-            py:
-              8,
-
-            display:
-              'flex',
-
             justifyContent:
-              'center',
+              'space-between',
+
+            alignItems: {
+              xs:
+                'flex-start',
+
+              sm:
+                'center',
+            },
+
+            gap:
+              2,
+
+            mb:
+              3,
           }}
         >
-          <Stack
-            spacing={
-              2
-            }
-            sx={{
-              alignItems:
-                'center',
-            }}
-          >
-            <CircularProgress />
+          <Box>
+            <Typography
+              sx={{
+                color:
+                  '#172033',
+
+                fontSize: {
+                  xs:
+                    27,
+
+                  md:
+                    30,
+                },
+
+                fontWeight:
+                  700,
+
+                lineHeight:
+                  1.2,
+
+                letterSpacing:
+                  '-0.02em',
+              }}
+            >
+              {pageTitle}
+            </Typography>
+
 
             <Typography
-              color="text.secondary"
+              sx={{
+                mt:
+                  0.65,
+
+                color:
+                  '#667085',
+
+                fontSize:
+                  13.5,
+
+                lineHeight:
+                  1.5,
+              }}
             >
-              Loading follow-ups...
+              {pageDescription}
             </Typography>
-          </Stack>
-        </Box>
-      ) : filteredFollowUps.length ===
-        0 ? (
+          </Box>
+
+
+          <Button
+            variant="outlined"
+            startIcon={
+              <RefreshRounded />
+            }
+            onClick={() =>
+              void loadFollowUps()
+            }
+            disabled={
+              isLoading
+            }
+            sx={{
+              bgcolor:
+                '#ffffff',
+            }}
+          >
+            Refresh
+          </Button>
+        </Stack>
+
+
+        {error && (
+          <Alert
+            severity="error"
+            sx={{
+              mb:
+                2.5,
+            }}
+          >
+            {error}
+          </Alert>
+        )}
+
+
+        {/*
+          SUMMARY STRIP
+        */}
+
         <Card
           variant="outlined"
           sx={{
-            p:
-              5,
+            mb:
+              2.5,
 
-            textAlign:
-              'center',
+            borderColor:
+              '#e4e8ef',
+
+            borderRadius:
+              '12px',
+
+            boxShadow:
+              '0 2px 8px rgba(15, 23, 42, 0.035)',
+
+            overflow:
+              'hidden',
           }}
         >
-          <EventRounded
-            color="disabled"
+          <Box
             sx={{
-              fontSize:
-                48,
-            }}
-          />
+              display:
+                'grid',
 
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight:
-                800,
+              gridTemplateColumns: {
+                xs:
+                  'repeat(2, 1fr)',
 
-              mt:
-                1,
+                md:
+                  'repeat(4, 1fr)',
+              },
             }}
           >
-            No follow-ups found
-          </Typography>
+            {[
+              {
+                label:
+                  'Total Follow-ups',
 
-          <Typography
-            color="text.secondary"
-            sx={{
-              mt:
-                0.75,
-            }}
-          >
-            Try changing your search or filters.
-          </Typography>
-        </Card>
-      ) : (
-        <Stack
-          spacing={
-            2
-          }
-        >
-          {filteredFollowUps.map(
-            (
-              item,
-            ) => {
-              const {
-                followUp,
-                lead,
-              } =
-                item
+                value:
+                  followUps.length,
+              },
 
-              return (
-                <Card
+              {
+                label:
+                  'Pending',
+
+                value:
+                  pendingCount,
+              },
+
+              {
+                label:
+                  'Overdue',
+
+                value:
+                  overdueCount,
+              },
+
+              {
+                label:
+                  'Completed',
+
+                value:
+                  completedCount,
+              },
+            ].map(
+              (
+                item,
+                index,
+              ) => (
+                <Box
                   key={
-                    followUp.id
-                  }
-                  variant="outlined"
-                  onClick={() =>
-                    navigate(
-                      `/follow-ups/${followUp.id}`,
-                    )
+                    item.label
                   }
                   sx={{
-                    p: {
+                    minHeight:
+                      88,
+
+                    px: {
                       xs:
                         2.25,
 
-                      sm:
+                      md:
                         2.75,
                     },
 
-                    cursor:
-                      'pointer',
+                    py:
+                      2,
 
-                    boxShadow:
-                      'none',
+                    display:
+                      'flex',
 
-                    '&:hover':
-                      {
-                        borderColor:
-                          'primary.main',
+                    flexDirection:
+                      'column',
 
-                        bgcolor:
-                          'action.hover',
-                      },
-                  }}
-                >
-                  <Stack
-                    direction={{
+                    justifyContent:
+                      'center',
+
+                    borderRight: {
                       xs:
-                        'column',
+                        index %
+                          2 ===
+                        0
+                          ? '1px solid #edf0f4'
+                          : 'none',
 
                       md:
-                        'row',
-                    }}
-                    sx={{
-                      justifyContent:
-                        'space-between',
+                        index <
+                        3
+                          ? '1px solid #edf0f4'
+                          : 'none',
+                    },
 
-                      gap:
-                        2,
+                    borderBottom: {
+                      xs:
+                        index <
+                        2
+                          ? '1px solid #edf0f4'
+                          : 'none',
+
+                      md:
+                        'none',
+                    },
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color:
+                        '#667085',
+
+                      fontSize:
+                        12.5,
+
+                      fontWeight:
+                        500,
                     }}
                   >
-                    <Box
-                      sx={{
-                        flex:
-                          1,
+                    {item.label}
+                  </Typography>
 
-                        minWidth:
-                          0,
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={
-                          1
-                        }
-                        sx={{
-                          alignItems:
-                            'center',
 
-                          flexWrap:
-                            'wrap',
+                  <Typography
+                    sx={{
+                      mt:
+                        0.4,
 
-                          mb:
-                            1,
-                        }}
-                      >
-                        <Chip
-                          size="small"
-                          label={
-                            getFollowUpLabel(
-                              followUp,
-                            )
-                          }
-                          color={
-                            getFollowUpColor(
-                              followUp,
-                            )
-                          }
+                      color:
+                        item.label ===
+                          'Overdue' &&
+                        overdueCount >
+                          0
+                          ? 'error.main'
+                          : '#172033',
+
+                      fontSize:
+                        24,
+
+                      fontWeight:
+                        700,
+
+                      lineHeight:
+                        1.2,
+                    }}
+                  >
+                    {item.value}
+                  </Typography>
+                </Box>
+              ),
+            )}
+          </Box>
+        </Card>
+
+
+        {/*
+          FILTERS
+        */}
+
+        <Card
+          variant="outlined"
+          sx={{
+            mb:
+              2.5,
+
+            p:
+              1.75,
+
+            borderColor:
+              '#e4e8ef',
+
+            borderRadius:
+              '12px',
+
+            boxShadow:
+              '0 2px 8px rgba(15, 23, 42, 0.025)',
+          }}
+        >
+          <Stack
+            direction={{
+              xs:
+                'column',
+
+              lg:
+                'row',
+            }}
+            spacing={
+              1.25
+            }
+          >
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Search follow-up, lead, company or assignee..."
+              value={
+                search
+              }
+              onChange={(
+                event,
+              ) =>
+                setSearch(
+                  event.target.value,
+                )
+              }
+              slotProps={{
+                input: {
+                  startAdornment:
+                    (
+                      <InputAdornment position="start">
+                        <SearchRounded
                           sx={{
-                            fontWeight:
-                              700,
-                          }}
-                        />
-
-                        <Typography
-                          sx={{
-                            fontWeight:
-                              800,
+                            color:
+                              '#7a8699',
 
                             fontSize:
-                              16,
+                              20,
                           }}
-                        >
-                          {
-                            followUp.title
-                          }
-                        </Typography>
-                      </Stack>
+                        />
+                      </InputAdornment>
+                    ),
+                },
+              }}
+            />
 
 
-                      <Typography
-                        sx={{
-                          fontWeight:
-                            700,
-                        }}
-                      >
-                        {
-                          lead.contact_name
-                        }
-                      </Typography>
+            <FormControl
+              size="small"
+              sx={{
+                minWidth:
+                  170,
+              }}
+            >
+              <InputLabel>
+                View
+              </InputLabel>
 
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                      >
-                        {
-                          lead.company_name
-                        }
-                      </Typography>
+              <Select
+                value={
+                  viewFilter
+                }
+                label="View"
+                onChange={(
+                  event,
+                ) =>
+                  setViewFilter(
+                    event.target
+                      .value as FollowUpView,
+                  )
+                }
+              >
+                <MenuItem value="ALL">
+                  All
+                </MenuItem>
+
+                <MenuItem value="UPCOMING">
+                  Upcoming
+                </MenuItem>
+
+                <MenuItem value="OVERDUE">
+                  Overdue
+                </MenuItem>
+              </Select>
+            </FormControl>
 
 
-                      {followUp.description && (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{
-                            mt:
-                              1.5,
+            <FormControl
+              size="small"
+              sx={{
+                minWidth:
+                  180,
+              }}
+            >
+              <InputLabel>
+                Status
+              </InputLabel>
 
-                            whiteSpace:
-                              'pre-wrap',
-                          }}
-                        >
-                          {
-                            followUp.description
-                          }
-                        </Typography>
-                      )}
-                    </Box>
+              <Select
+                value={
+                  statusFilter
+                }
+                label="Status"
+                onChange={(
+                  event,
+                ) =>
+                  setStatusFilter(
+                    event.target
+                      .value as FollowUpFilter,
+                  )
+                }
+              >
+                <MenuItem value="ALL">
+                  All statuses
+                </MenuItem>
+
+                <MenuItem value="PENDING">
+                  Pending
+                </MenuItem>
+
+                <MenuItem value="COMPLETED">
+                  Completed
+                </MenuItem>
+
+                <MenuItem value="CANCELLED">
+                  Cancelled
+                </MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+        </Card>
 
 
-                    <Stack
-                      spacing={
-                        1
+        {/*
+          FOLLOW-UP LIST
+        */}
+
+        <Card
+          variant="outlined"
+          sx={{
+            borderColor:
+              '#e4e8ef',
+
+            borderRadius:
+              '12px',
+
+            boxShadow:
+              '0 2px 10px rgba(15, 23, 42, 0.035)',
+
+            overflow:
+              'hidden',
+          }}
+        >
+          <Box
+            sx={{
+              px: {
+                xs:
+                  2.25,
+
+                md:
+                  2.75,
+              },
+
+              py:
+                2,
+            }}
+          >
+            <Stack
+              direction="row"
+              sx={{
+                justifyContent:
+                  'space-between',
+
+                alignItems:
+                  'center',
+
+                gap:
+                  2,
+              }}
+            >
+              <Box>
+                <Typography
+                  sx={{
+                    color:
+                      '#172033',
+
+                    fontSize:
+                      15,
+
+                    fontWeight:
+                      700,
+                  }}
+                >
+                  Follow-up List
+                </Typography>
+
+                <Typography
+                  sx={{
+                    mt:
+                      0.2,
+
+                    color:
+                      '#7a8699',
+
+                    fontSize:
+                      11.5,
+                  }}
+                >
+                  {isSalesRepresentative
+                    ? 'Actions scheduled for your assigned leads'
+                    : 'Sales team follow-up records'}
+                </Typography>
+              </Box>
+
+
+              {!isLoading && (
+                <Typography
+                  sx={{
+                    color:
+                      '#667085',
+
+                    fontSize:
+                      12,
+                  }}
+                >
+                  {filteredFollowUps.length}{' '}
+                  {filteredFollowUps.length ===
+                  1
+                    ? 'follow-up'
+                    : 'follow-ups'}
+                </Typography>
+              )}
+            </Stack>
+          </Box>
+
+
+          <Divider />
+
+
+          {isLoading ? (
+            <Box
+              sx={{
+                minHeight:
+                  220,
+
+                display:
+                  'flex',
+
+                alignItems:
+                  'center',
+
+                justifyContent:
+                  'center',
+              }}
+            >
+              <Stack
+                spacing={1.5}
+                sx={{
+                  alignItems:
+                    'center',
+                }}
+              >
+                <CircularProgress
+                  size={30}
+                />
+
+                <Typography
+                  sx={{
+                    color:
+                      '#7a8699',
+
+                    fontSize:
+                      12.5,
+                  }}
+                >
+                  Loading follow-ups...
+                </Typography>
+              </Stack>
+            </Box>
+          ) : filteredFollowUps.length ===
+            0 ? (
+            <Box
+              sx={{
+                py:
+                  6,
+
+                px:
+                  3,
+
+                textAlign:
+                  'center',
+              }}
+            >
+              <CalendarTodayRounded
+                sx={{
+                  color:
+                    '#98a2b3',
+
+                  fontSize:
+                    34,
+                }}
+              />
+
+              <Typography
+                sx={{
+                  mt:
+                    1.25,
+
+                  color:
+                    '#172033',
+
+                  fontSize:
+                    14,
+
+                  fontWeight:
+                    600,
+                }}
+              >
+                No follow-ups found
+              </Typography>
+
+              <Typography
+                sx={{
+                  mt:
+                    0.4,
+
+                  color:
+                    '#7a8699',
+
+                  fontSize:
+                    12.5,
+                }}
+              >
+                Try changing your search or filters.
+              </Typography>
+            </Box>
+          ) : (
+            <Stack
+              divider={
+                <Divider
+                  flexItem
+                />
+              }
+            >
+              {filteredFollowUps.map(
+                (
+                  item,
+                ) => {
+                  const {
+                    followUp,
+                    lead,
+                  } =
+                    item
+
+
+                  const isOverdue =
+                    followUp.status ===
+                      'PENDING' &&
+                    followUp.is_overdue
+
+
+                  return (
+                    <Box
+                      key={
+                        followUp.id
+                      }
+                      onClick={() =>
+                        navigate(
+                          `/follow-ups/${followUp.id}`,
+                        )
                       }
                       sx={{
-                        minWidth: {
+                        px: {
                           xs:
-                            0,
+                            2.25,
 
                           md:
-                            260,
+                            2.75,
                         },
+
+                        py:
+                          1.75,
+
+                        cursor:
+                          'pointer',
+
+                        transition:
+                          'background-color 120ms ease',
+
+                        '&:hover':
+                          {
+                            bgcolor:
+                              '#fafcff',
+                          },
                       }}
                     >
-                      <Stack
-                        direction="row"
-                        spacing={
-                          0.75
-                        }
+                      <Box
                         sx={{
+                          display:
+                            'grid',
+
+                          gridTemplateColumns: {
+                            xs:
+                              '1fr',
+
+                            md:
+                              'minmax(240px, 1.25fr) minmax(180px, 0.8fr) minmax(180px, 0.8fr) minmax(120px, 0.45fr)',
+                          },
+
+                          gap: {
+                            xs:
+                              1.5,
+
+                            md:
+                              2.5,
+                          },
+
                           alignItems:
                             'center',
-
-                          color:
-                            followUp.is_overdue &&
-                            followUp.status ===
-                              'PENDING'
-                              ? 'error.main'
-                              : 'text.secondary',
                         }}
                       >
-                        <CalendarTodayRounded
-                          sx={{
-                            fontSize:
-                              18,
-                          }}
-                        />
+                        {/*
+                          FOLLOW-UP
+                        */}
 
-                        <Typography
-                          variant="body2"
+                        <Box
+                          sx={{
+                            minWidth:
+                              0,
+                          }}
                         >
-                          Due:{' '}
-                          {formatDate(
-                            followUp.due_date,
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            sx={{
+                              mb:
+                                0.4,
+
+                              alignItems:
+                                'center',
+
+                              flexWrap:
+                                'wrap',
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                color:
+                                  '#172033',
+
+                                fontSize:
+                                  13.5,
+
+                                fontWeight:
+                                  600,
+
+                                lineHeight:
+                                  1.4,
+                              }}
+                            >
+                              {followUp.title}
+                            </Typography>
+
+
+                            <Chip
+                              size="small"
+                              label={
+                                getFollowUpLabel(
+                                  followUp,
+                                )
+                              }
+                              color={
+                                getFollowUpColor(
+                                  followUp,
+                                )
+                              }
+                              variant="outlined"
+                              sx={{
+                                bgcolor:
+                                  '#ffffff',
+
+                                fontSize:
+                                  10.5,
+                              }}
+                            />
+                          </Stack>
+
+
+                          <Typography
+                            sx={{
+                              color:
+                                '#475467',
+
+                              fontSize:
+                                12.5,
+
+                              fontWeight:
+                                500,
+                            }}
+                          >
+                            {lead.contact_name}
+                          </Typography>
+
+
+                          <Typography
+                            sx={{
+                              mt:
+                                0.15,
+
+                              color:
+                                '#98a2b3',
+
+                              fontSize:
+                                11.5,
+
+                              overflow:
+                                'hidden',
+
+                              textOverflow:
+                                'ellipsis',
+
+                              whiteSpace:
+                                'nowrap',
+                            }}
+                          >
+                            {lead.company_name}
+                          </Typography>
+
+
+                          {followUp.description && (
+                            <Typography
+                              sx={{
+                                mt:
+                                  0.7,
+
+                                color:
+                                  '#667085',
+
+                                fontSize:
+                                  11.5,
+
+                                lineHeight:
+                                  1.5,
+
+                                display:
+                                  '-webkit-box',
+
+                                WebkitLineClamp:
+                                  2,
+
+                                WebkitBoxOrient:
+                                  'vertical',
+
+                                overflow:
+                                  'hidden',
+                              }}
+                            >
+                              {followUp.description}
+                            </Typography>
                           )}
-                        </Typography>
-                      </Stack>
+                        </Box>
 
 
-                      <Stack
-                        direction="row"
-                        spacing={
-                          0.75
-                        }
-                        sx={{
-                          alignItems:
-                            'center',
+                        {/*
+                          DUE
+                        */}
 
-                          color:
-                            'text.secondary',
-                        }}
-                      >
-                        <PersonOutlineRounded
+                        <Box>
+                          <Typography
+                            sx={{
+                              color:
+                                '#98a2b3',
+
+                              fontSize:
+                                10.5,
+
+                              fontWeight:
+                                600,
+
+                              textTransform:
+                                'uppercase',
+
+                              letterSpacing:
+                                '0.04em',
+                            }}
+                          >
+                            Due
+                          </Typography>
+
+                          <Typography
+                            sx={{
+                              mt:
+                                0.4,
+
+                              color:
+                                isOverdue
+                                  ? 'error.main'
+                                  : '#475467',
+
+                              fontSize:
+                                12,
+
+                              fontWeight:
+                                isOverdue
+                                  ? 600
+                                  : 500,
+
+                              lineHeight:
+                                1.45,
+                            }}
+                          >
+                            {formatDate(
+                              followUp.due_date,
+                            )}
+                          </Typography>
+                        </Box>
+
+
+                        {/*
+                          ASSIGNED
+                        */}
+
+                        <Box>
+                          <Typography
+                            sx={{
+                              color:
+                                '#98a2b3',
+
+                              fontSize:
+                                10.5,
+
+                              fontWeight:
+                                600,
+
+                              textTransform:
+                                'uppercase',
+
+                              letterSpacing:
+                                '0.04em',
+                            }}
+                          >
+                            Assigned To
+                          </Typography>
+
+                          <Typography
+                            sx={{
+                              mt:
+                                0.4,
+
+                              color:
+                                '#475467',
+
+                              fontSize:
+                                12,
+
+                              fontWeight:
+                                500,
+                            }}
+                          >
+                            {followUp.assigned_to_name ||
+                              'Unassigned'}
+                          </Typography>
+
+
+                          <Typography
+                            sx={{
+                              mt:
+                                0.2,
+
+                              color:
+                                '#98a2b3',
+
+                              fontSize:
+                                10.5,
+                            }}
+                          >
+                            Created by{' '}
+                            {followUp.created_by_name}
+                          </Typography>
+                        </Box>
+
+
+                        {/*
+                          ACTION
+                        */}
+
+                        <Box
                           sx={{
-                            fontSize:
-                              19,
+                            textAlign: {
+                              xs:
+                                'left',
+
+                              md:
+                                'right',
+                            },
                           }}
-                        />
-
-                        <Typography
-                          variant="body2"
                         >
-                          Assigned to:{' '}
-                          {followUp.assigned_to_name ||
-                            'Unassigned'}
-                        </Typography>
-                      </Stack>
+                          <Button
+                            size="small"
+                            onClick={(
+                              event,
+                            ) => {
+                              event.stopPropagation()
 
+                              navigate(
+                                `/follow-ups/${followUp.id}`,
+                              )
+                            }}
+                            sx={{
+                              minHeight:
+                                32,
 
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                      >
-                        Created by{' '}
-                        {
-                          followUp.created_by_name
-                        }
-                      </Typography>
-                    </Stack>
-                  </Stack>
-                </Card>
-              )
-            },
+                              px:
+                                1.25,
+
+                              fontSize:
+                                12,
+                            }}
+                          >
+                            Open
+                          </Button>
+                        </Box>
+                      </Box>
+                    </Box>
+                  )
+                },
+              )}
+            </Stack>
           )}
-        </Stack>
-      )}
+        </Card>
+      </Box>
     </Box>
   )
 }

@@ -16,7 +16,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ---------------------------------------------------------------------
 
 env = environ.Env()
-environ.Env.read_env(BASE_DIR / ".env")
+
+environ.Env.read_env(
+    BASE_DIR / ".env"
+)
 
 
 def environment_list(
@@ -26,7 +29,10 @@ def environment_list(
     """Read a comma-separated environment variable as a clean list."""
     return [
         item.strip()
-        for item in env.list(variable_name, default=default)
+        for item in env.list(
+            variable_name,
+            default=default,
+        )
         if item.strip()
     ]
 
@@ -35,7 +41,9 @@ def environment_list(
 # Core security settings
 # ---------------------------------------------------------------------
 
-SECRET_KEY = env("SECRET_KEY")
+SECRET_KEY = env(
+    "SECRET_KEY"
+)
 
 DEBUG = env.bool(
     "DEBUG",
@@ -50,14 +58,22 @@ ALLOWED_HOSTS = environment_list(
     ],
 )
 
+
 # Render automatically provides this variable to web services.
+
 render_hostname = env(
     "RENDER_EXTERNAL_HOSTNAME",
     default="",
 )
 
-if render_hostname and render_hostname not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(render_hostname)
+if (
+    render_hostname
+    and render_hostname
+    not in ALLOWED_HOSTS
+):
+    ALLOWED_HOSTS.append(
+        render_hostname
+    )
 
 
 # ---------------------------------------------------------------------
@@ -108,14 +124,25 @@ ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
     {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "BACKEND": (
+            "django.template.backends.django.DjangoTemplates"
+        ),
         "DIRS": [],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
-                "django.template.context_processors.request",
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
+                (
+                    "django.template.context_processors."
+                    "request"
+                ),
+                (
+                    "django.contrib.auth.context_processors."
+                    "auth"
+                ),
+                (
+                    "django.contrib.messages.context_processors."
+                    "messages"
+                ),
             ],
         },
     },
@@ -136,26 +163,45 @@ database_url = env(
 
 if database_url:
     DATABASES = {
-        "default": env.db_url("DATABASE_URL"),
+        "default": env.db_url(
+            "DATABASE_URL"
+        ),
     }
 else:
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": env("DB_NAME"),
-            "USER": env("DB_USER"),
-            "PASSWORD": env("DB_PASSWORD"),
-            "HOST": env("DB_HOST"),
-            "PORT": env("DB_PORT"),
-        }
+            "ENGINE": (
+                "django.db.backends.postgresql"
+            ),
+            "NAME": env(
+                "DB_NAME"
+            ),
+            "USER": env(
+                "DB_USER"
+            ),
+            "PASSWORD": env(
+                "DB_PASSWORD"
+            ),
+            "HOST": env(
+                "DB_HOST"
+            ),
+            "PORT": env(
+                "DB_PORT"
+            ),
+        },
     }
 
-DATABASES["default"]["CONN_MAX_AGE"] = env.int(
+
+DATABASES["default"][
+    "CONN_MAX_AGE"
+] = env.int(
     "DB_CONN_MAX_AGE",
     default=600,
 )
 
-DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
+DATABASES["default"][
+    "CONN_HEALTH_CHECKS"
+] = True
 
 
 # ---------------------------------------------------------------------
@@ -211,12 +257,27 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT = (
+    BASE_DIR / "staticfiles"
+)
+
+
+# ---------------------------------------------------------------------
+# Uploaded media files
+# ---------------------------------------------------------------------
+
+MEDIA_URL = "/media/"
+
+MEDIA_ROOT = (
+    BASE_DIR / "media"
+)
+
 
 STORAGES = {
     "default": {
         "BACKEND": (
-            "django.core.files.storage.FileSystemStorage"
+            "django.core.files.storage."
+            "FileSystemStorage"
         ),
     },
     "staticfiles": {
@@ -232,7 +293,9 @@ STORAGES = {
 # Default model field
 # ---------------------------------------------------------------------
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+DEFAULT_AUTO_FIELD = (
+    "django.db.models.BigAutoField"
+)
 
 
 # ---------------------------------------------------------------------
@@ -241,8 +304,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication."
-        "JWTAuthentication",
+        (
+            "rest_framework_simplejwt."
+            "authentication.JWTAuthentication"
+        ),
     ),
     "DEFAULT_THROTTLE_RATES": {
         "password_reset": "5/hour",
@@ -287,7 +352,10 @@ PASSWORD_RESET_TIMEOUT = env.int(
 
 EMAIL_BACKEND = env(
     "EMAIL_BACKEND",
-    default="django.core.mail.backends.console.EmailBackend",
+    default=(
+        "django.core.mail.backends."
+        "console.EmailBackend"
+    ),
 )
 
 EMAIL_HOST = env(
@@ -329,6 +397,7 @@ DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL",
     default="no-reply@eleven.local",
 )
+
 PASSWORD_RESET_EMAIL_PROVIDER = env(
     "PASSWORD_RESET_EMAIL_PROVIDER",
     default="django",
@@ -353,6 +422,7 @@ BREVO_TIMEOUT_SECONDS = env.int(
     "BREVO_TIMEOUT_SECONDS",
     default=10,
 )
+
 
 # ---------------------------------------------------------------------
 # Production HTTPS and browser security
@@ -382,12 +452,16 @@ CSRF_COOKIE_SECURE = env.bool(
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
-SECURE_REFERRER_POLICY = "same-origin"
+SECURE_REFERRER_POLICY = (
+    "same-origin"
+)
 
 X_FRAME_OPTIONS = "DENY"
 
+
 # Keep HSTS disabled during the first deployment.
 # Enable it after HTTPS and the final domain are verified.
+
 SECURE_HSTS_SECONDS = env.int(
     "SECURE_HSTS_SECONDS",
     default=0,

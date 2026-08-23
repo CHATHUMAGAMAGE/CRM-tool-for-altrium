@@ -6,11 +6,41 @@ class UserProfile(models.Model):
     class Role(models.TextChoices):
         ADMIN = "ADMIN", "Administrator"
         MARKETING = "MARKETING", "Marketing Employee"
-        SALES_REP = "SALES_REP", "Sales Representative"
-        SALES_MANAGER = "SALES_MANAGER", "Sales Manager"
-        PROJECT_MANAGER = "PROJECT_MANAGER", "Project Manager"
-        SOFTWARE_ENGINEER = "SOFTWARE_ENGINEER", "Software Engineer"
-        DIRECTOR = "DIRECTOR", "Director"
+
+        SALES_REP = (
+            "SALES_REP",
+            "Sales Representative",
+        )
+
+        SALES_MANAGER = (
+            "SALES_MANAGER",
+            "Sales Manager",
+        )
+
+        TECH_LEAD = (
+            "TECH_LEAD",
+            "Tech Lead",
+        )
+
+        FINANCIAL_OFFICER = (
+            "FINANCIAL_OFFICER",
+            "Financial Officer",
+        )
+
+        PROJECT_MANAGER = (
+            "PROJECT_MANAGER",
+            "Project Manager",
+        )
+
+        SOFTWARE_ENGINEER = (
+            "SOFTWARE_ENGINEER",
+            "Software Engineer",
+        )
+
+        DIRECTOR = (
+            "DIRECTOR",
+            "Director",
+        )
 
     user = models.OneToOneField(
         User,
@@ -30,4 +60,7 @@ class UserProfile(models.Model):
     )
 
     def __str__(self):
-        return f"{self.user.username} - {self.get_role_display()}"
+        return (
+            f"{self.user.username} - "
+            f"{self.get_role_display()}"
+        )
