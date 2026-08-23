@@ -84,6 +84,62 @@ class Lead(models.Model):
         return f"{self.company_name} - {self.contact_name}"
 
 
+class LeadHistory(models.Model):
+    class EventType(models.TextChoices):
+        CREATED = "CREATED", "Created"
+        UPDATED = "UPDATED", "Updated"
+        ASSIGNED = "ASSIGNED", "Assigned"
+        UNASSIGNED = "UNASSIGNED", "Unassigned"
+        STATUS_CHANGED = "STATUS_CHANGED", "Status Changed"
+        QUALIFIED = "QUALIFIED", "Qualified"
+        DISQUALIFIED = "DISQUALIFIED", "Disqualified"
+        WON = "WON", "Won"
+        LOST = "LOST", "Lost"
+
+    lead = models.ForeignKey(
+        Lead,
+        on_delete=models.CASCADE,
+        related_name="history",
+    )
+
+    event_type = models.CharField(
+        max_length=30,
+        choices=EventType.choices,
+    )
+
+    description = models.TextField()
+
+    performed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="lead_history_events",
+    )
+
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        default=timezone.now,
+        editable=False,
+    )
+
+    class Meta:
+        ordering = [
+            "-created_at",
+            "-id",
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.get_event_type_display()} - "
+            f"{self.lead}"
+        )
+
+
 class Communication(models.Model):
     class CommunicationType(models.TextChoices):
         CALL = "CALL", "Call"
@@ -126,7 +182,10 @@ class Communication(models.Model):
             )
 
     def __str__(self):
-        communication_type = self.get_communication_type_display()
+        communication_type = (
+            self.get_communication_type_display()
+        )
+
         return f"{communication_type} - {self.lead}"
 
 

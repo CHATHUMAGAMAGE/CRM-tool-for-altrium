@@ -1,18 +1,32 @@
-import { useEffect, useState } from 'react'
+import {
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react'
+
 import {
   Avatar,
   Box,
   Button,
+  Collapse,
   Divider,
   Stack,
   Typography,
 } from '@mui/material'
+
+import type {
+  SxProps,
+  Theme,
+} from '@mui/material/styles'
+
 import {
   AdminPanelSettingsOutlined,
   BarChartRounded,
   CalendarMonthOutlined,
   ChatBubbleOutlineRounded,
   DashboardOutlined,
+  ExpandLessRounded,
+  ExpandMoreRounded,
   GroupsOutlined,
   KeyboardArrowDownRounded,
   LogoutRounded,
@@ -20,14 +34,20 @@ import {
   PieChartOutlineRounded,
   StorageOutlined,
 } from '@mui/icons-material'
-import { useLocation, useNavigate } from 'react-router'
+
+import {
+  useLocation,
+  useNavigate,
+} from 'react-router'
 
 import BrandLogo from '../BrandLogo'
+
 import {
   getCurrentUser,
   logoutUser,
   type CurrentUser,
 } from '../../services/auth'
+
 import {
   hasRequiredRole,
   type UserRole,
@@ -40,33 +60,14 @@ export const SIDEBAR_WIDTH = 296
 type NavigationItem = {
   label: string
   path?: string
-  icon: React.ReactNode
+  icon: ReactNode
   allowedRoles?: UserRole[]
   available?: boolean
   visible?: boolean
 }
 
 
-const navigationItems: NavigationItem[] = [
-  {
-    label: 'Dashboard',
-    path: '/dashboard',
-    icon: <DashboardOutlined />,
-    available: true,
-    visible: true,
-  },
-  {
-    label: 'Leads',
-    path: '/leads',
-    icon: <PeopleOutlineRounded />,
-    available: true,
-    visible: true,
-  },
-
-  // Sprint 2 / later functionality.
-  // Keep these definitions so they can be enabled later
-  // without rebuilding the sidebar.
-
+const futureNavigationItems: NavigationItem[] = [
   {
     label: 'Sales Pipeline',
     icon: <BarChartRounded />,
@@ -78,12 +79,6 @@ const navigationItems: NavigationItem[] = [
     path: '/customers',
     icon: <GroupsOutlined />,
     available: true,
-    visible: false,
-  },
-  {
-    label: 'Activities',
-    icon: <CalendarMonthOutlined />,
-    available: false,
     visible: false,
   },
   {
@@ -104,16 +99,6 @@ const navigationItems: NavigationItem[] = [
     available: false,
     visible: false,
   },
-
-  // Admin user-management functionality is already working.
-  {
-    label: 'Administration',
-    path: '/admin',
-    icon: <AdminPanelSettingsOutlined />,
-    allowedRoles: ['ADMIN'],
-    available: true,
-    visible: true,
-  },
 ]
 
 
@@ -130,11 +115,33 @@ function AppSidebar({
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [currentUser, setCurrentUser] =
-    useState<CurrentUser | null>(null)
+  const [
+    currentUser,
+    setCurrentUser,
+  ] = useState<CurrentUser | null>(null)
 
-  const [isLoggingOut, setIsLoggingOut] =
-    useState(false)
+  const [
+    isLoggingOut,
+    setIsLoggingOut,
+  ] = useState(false)
+
+
+  /*
+   * Treat Leads, Follow-ups and Activity
+   * as one navigation section.
+   */
+  const isLeadSectionPath =
+    location.pathname === '/leads' ||
+    location.pathname.startsWith('/leads/') ||
+    location.pathname === '/follow-ups' ||
+    location.pathname.startsWith('/follow-ups/') ||
+    location.pathname === '/activity'
+
+
+  const [
+    leadsExpanded,
+    setLeadsExpanded,
+  ] = useState(isLeadSectionPath)
 
 
   useEffect(() => {
@@ -142,7 +149,8 @@ function AppSidebar({
 
     const loadCurrentUser = async () => {
       try {
-        const user = await getCurrentUser()
+        const user =
+          await getCurrentUser()
 
         if (isMounted) {
           setCurrentUser(user)
@@ -162,17 +170,23 @@ function AppSidebar({
   }, [])
 
 
-  const handleNavigation = (
-    item: NavigationItem,
-  ) => {
-    if (
-      !item.path ||
-      item.available === false
-    ) {
-      return
+  /*
+   * Automatically expand the Leads section
+   * whenever the user navigates to one of
+   * its child pages.
+   */
+  useEffect(() => {
+    if (isLeadSectionPath) {
+      setLeadsExpanded(true)
     }
+  }, [isLeadSectionPath])
 
-    navigate(item.path)
+
+  const handleNavigate = (
+    path: string,
+  ) => {
+    navigate(path)
+
     onNavigate?.()
   }
 
@@ -188,32 +202,13 @@ function AppSidebar({
 
     onNavigate?.()
 
-    navigate('/login', {
-      replace: true,
-    })
+    navigate(
+      '/login',
+      {
+        replace: true,
+      },
+    )
   }
-
-
-  const visibleNavigationItems =
-    navigationItems.filter((item) => {
-      // Hide features that are not part of
-      // the current Sprint 1 interface.
-      if (item.visible === false) {
-        return false
-      }
-
-      if (!item.allowedRoles) {
-        return true
-      }
-
-      return (
-        currentUser !== null &&
-        hasRequiredRole(
-          currentUser.role,
-          item.allowedRoles,
-        )
-      )
-    })
 
 
   const displayName =
@@ -222,68 +217,283 @@ function AppSidebar({
     'ELEVEN User'
 
 
-  const initials = displayName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) =>
-      part.charAt(0).toUpperCase(),
-    )
-    .join('')
-
-
-  const isItemActive = (
-    item: NavigationItem,
-  ) => {
-    if (!item.path) {
-      return false
-    }
-
-    if (item.path === '/dashboard') {
-      return (
-        location.pathname === '/dashboard'
+  const initials =
+    displayName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(
+        (part) =>
+          part
+            .charAt(0)
+            .toUpperCase(),
       )
-    }
+      .join('')
 
-    return (
-      location.pathname === item.path ||
-      location.pathname.startsWith(
-        `${item.path}/`,
-      )
+
+  const isSalesRepresentative =
+    currentUser?.role ===
+    'SALES_REP'
+
+
+  const leadListLabel =
+    isSalesRepresentative
+      ? 'My Leads'
+      : 'All Leads'
+
+
+  const isDashboardActive =
+    location.pathname ===
+    '/dashboard'
+
+
+  const isLeadListActive =
+    location.pathname ===
+    '/leads'
+
+
+  const isFollowUpsActive =
+    location.pathname ===
+      '/follow-ups' ||
+    location.pathname.startsWith(
+      '/follow-ups/',
     )
-  }
+
+
+  const isActivityActive =
+    location.pathname ===
+    '/activity'
+
+
+  const canSeeAdministration =
+    currentUser !== null &&
+    hasRequiredRole(
+      currentUser.role,
+      ['ADMIN'],
+    )
+
+
+  /*
+   * Main sidebar navigation styling.
+   *
+   * The end-icon styling is included here
+   * so we do not need to combine nested
+   * SxProps arrays, which caused the
+   * TypeScript overload error.
+   */
+  const navigationButtonSx = (
+    active: boolean,
+  ): SxProps<Theme> => ({
+    position: 'relative',
+
+    minHeight: 48,
+
+    justifyContent:
+      'flex-start',
+
+    gap: 0.8,
+
+    px: 2,
+
+    borderRadius: '8px',
+
+    textTransform: 'none',
+
+    fontSize: 15,
+
+    fontWeight:
+      active
+        ? 700
+        : 500,
+
+    color:
+      active
+        ? '#0b5cff'
+        : '#26344d',
+
+    backgroundColor:
+      active
+        ? '#eef4ff'
+        : 'transparent',
+
+    '& .MuiButton-startIcon': {
+      marginRight: 1,
+
+      color:
+        active
+          ? '#0b5cff'
+          : '#34445f',
+
+      '& svg': {
+        fontSize: 22,
+      },
+    },
+
+    '& .MuiButton-endIcon': {
+      marginLeft: 'auto',
+
+      color:
+        active
+          ? '#0b5cff'
+          : '#657087',
+
+      '& svg': {
+        fontSize: 20,
+      },
+    },
+
+    ...(active
+      ? {
+          '&::before': {
+            content: '""',
+
+            position:
+              'absolute',
+
+            left: -8,
+
+            top: 7,
+
+            bottom: 7,
+
+            width: 3,
+
+            borderRadius:
+              '0 3px 3px 0',
+
+            backgroundColor:
+              '#0b5cff',
+          },
+        }
+      : {}),
+
+    '&:hover': {
+      backgroundColor:
+        active
+          ? '#e8f0ff'
+          : '#f7f9fc',
+    },
+  })
+
+
+  const childButtonSx = (
+    active: boolean,
+  ): SxProps<Theme> => ({
+    minHeight: 40,
+
+    justifyContent:
+      'flex-start',
+
+    pl: 5.6,
+
+    pr: 2,
+
+    borderRadius: '8px',
+
+    textTransform: 'none',
+
+    fontSize: 14,
+
+    fontWeight:
+      active
+        ? 700
+        : 500,
+
+    color:
+      active
+        ? '#0b5cff'
+        : '#56647a',
+
+    backgroundColor:
+      active
+        ? '#f3f7ff'
+        : 'transparent',
+
+    '& .MuiButton-startIcon': {
+      minWidth: 0,
+
+      marginRight: 1.1,
+
+      color:
+        active
+          ? '#0b5cff'
+          : '#68758c',
+
+      '& svg': {
+        fontSize: 18,
+      },
+    },
+
+    '&:hover': {
+      backgroundColor:
+        active
+          ? '#edf3ff'
+          : '#f7f9fc',
+    },
+  })
 
 
   return (
     <Box
       component="aside"
       sx={{
-        width: SIDEBAR_WIDTH,
-        height: mobile ? '100%' : '100vh',
+        width:
+          SIDEBAR_WIDTH,
 
-        display: mobile
-          ? 'flex'
-          : {
-              xs: 'none',
-              md: 'flex',
-            },
+        height:
+          mobile
+            ? '100%'
+            : '100vh',
 
-        flexDirection: 'column',
+        /*
+         * Desktop sidebar stays attached
+         * to the viewport while page
+         * content scrolls independently.
+         */
+        position:
+          mobile
+            ? 'relative'
+            : 'sticky',
+
+        top: 0,
+
+        alignSelf:
+          'flex-start',
+
+        display:
+          mobile
+            ? 'flex'
+            : {
+                xs: 'none',
+                md: 'flex',
+              },
+
+        flexDirection:
+          'column',
+
         flexShrink: 0,
-        boxSizing: 'border-box',
 
-        borderRight: '1px solid',
-        borderColor: '#e5e9f0',
+        boxSizing:
+          'border-box',
 
-        backgroundColor: '#ffffff',
+        borderRight:
+          '1px solid',
+
+        borderColor:
+          '#e5e9f0',
+
+        backgroundColor:
+          '#ffffff',
 
         px: 2,
+
         py: 2.5,
 
         overflowY: 'auto',
       }}
     >
-      {/* Brand */}
+      {/* BRAND */}
+
       <Box
         sx={{
           px: 1,
@@ -294,23 +504,35 @@ function AppSidebar({
           variant="horizontal"
           sx={{
             width: 190,
+
             maxHeight: 54,
-            objectFit: 'contain',
-            objectPosition: 'left center',
+
+            objectFit:
+              'contain',
+
+            objectPosition:
+              'left center',
           }}
         />
 
         <Typography
           variant="caption"
           sx={{
-            display: 'block',
+            display:
+              'block',
+
             mt: 0.7,
+
             ml: 5.6,
 
-            color: '#778198',
+            color:
+              '#778198',
 
-            letterSpacing: '0.13em',
+            letterSpacing:
+              '0.13em',
+
             fontWeight: 700,
+
             fontSize: 11,
           }}
         >
@@ -319,147 +541,271 @@ function AppSidebar({
       </Box>
 
 
-      {/* Main navigation */}
+      {/* MAIN NAVIGATION */}
+
       <Stack spacing={0.45}>
-        {visibleNavigationItems.map((item) => {
-          const isActive =
-            isItemActive(item)
+        {/* DASHBOARD */}
 
-          const isAvailable =
-            item.available !== false
+        <Button
+          startIcon={
+            <DashboardOutlined />
+          }
+          onClick={() =>
+            handleNavigate(
+              '/dashboard',
+            )
+          }
+          sx={
+            navigationButtonSx(
+              isDashboardActive,
+            )
+          }
+        >
+          Dashboard
+        </Button>
 
-          return (
+
+        {/* LEADS SECTION */}
+
+        <Button
+          startIcon={
+            <PeopleOutlineRounded />
+          }
+          endIcon={
+            leadsExpanded
+              ? (
+                <ExpandLessRounded />
+              )
+              : (
+                <ExpandMoreRounded />
+              )
+          }
+          onClick={() =>
+            setLeadsExpanded(
+              (current) =>
+                !current,
+            )
+          }
+          sx={
+            navigationButtonSx(
+              isLeadSectionPath,
+            )
+          }
+        >
+          Leads
+        </Button>
+
+
+        <Collapse
+          in={leadsExpanded}
+          timeout="auto"
+          unmountOnExit
+        >
+          <Stack
+            spacing={0.25}
+            sx={{
+              mt: 0.25,
+              mb: 0.5,
+            }}
+          >
+            {/* MY LEADS / ALL LEADS */}
+
             <Button
-              key={item.label}
-              startIcon={item.icon}
-
-              onClick={() =>
-                handleNavigation(item)
+              startIcon={
+                <PeopleOutlineRounded />
               }
-
-              aria-disabled={!isAvailable}
-
-              sx={{
-                position: 'relative',
-
-                minHeight: 48,
-
-                justifyContent: 'flex-start',
-
-                gap: 0.8,
-                px: 2,
-
-                borderRadius: '8px',
-
-                textTransform: 'none',
-
-                fontSize: 15,
-
-                fontWeight: isActive
-                  ? 700
-                  : 500,
-
-                color: isActive
-                  ? '#0b5cff'
-                  : '#26344d',
-
-                backgroundColor: isActive
-                  ? '#eef4ff'
-                  : 'transparent',
-
-                cursor: isAvailable
-                  ? 'pointer'
-                  : 'default',
-
-                '& .MuiButton-startIcon': {
-                  marginRight: 1,
-
-                  color: isActive
-                    ? '#0b5cff'
-                    : '#34445f',
-
-                  '& svg': {
-                    fontSize: 22,
-                  },
-                },
-
-                '&::before': isActive
-                  ? {
-                      content: '""',
-
-                      position: 'absolute',
-
-                      left: -8,
-                      top: 7,
-                      bottom: 7,
-
-                      width: 3,
-
-                      borderRadius:
-                        '0 3px 3px 0',
-
-                      backgroundColor:
-                        '#0b5cff',
-                    }
-                  : undefined,
-
-                '&:hover': {
-                  backgroundColor:
-                    isActive
-                      ? '#e8f0ff'
-                      : isAvailable
-                        ? '#f7f9fc'
-                        : 'transparent',
-                },
-              }}
+              onClick={() =>
+                handleNavigate(
+                  '/leads',
+                )
+              }
+              sx={
+                childButtonSx(
+                  isLeadListActive,
+                )
+              }
             >
-              {item.label}
+              {leadListLabel}
             </Button>
+
+
+            {/* FOLLOW-UPS */}
+
+            <Button
+              startIcon={
+                <CalendarMonthOutlined />
+              }
+              onClick={() =>
+                handleNavigate(
+                  '/follow-ups',
+                )
+              }
+              sx={
+                childButtonSx(
+                  isFollowUpsActive,
+                )
+              }
+            >
+              Follow-ups
+            </Button>
+
+
+            {/* ACTIVITY */}
+
+            <Button
+              startIcon={
+                <ChatBubbleOutlineRounded />
+              }
+              onClick={() =>
+                handleNavigate(
+                  '/activity',
+                )
+              }
+              sx={
+                childButtonSx(
+                  isActivityActive,
+                )
+              }
+            >
+              Activity
+            </Button>
+          </Stack>
+        </Collapse>
+
+
+        {/* FUTURE FEATURES */}
+
+        {futureNavigationItems
+          .filter(
+            (item) =>
+              item.visible !==
+              false,
           )
-        })}
+          .map(
+            (item) => (
+              <Button
+                key={
+                  item.label
+                }
+                startIcon={
+                  item.icon
+                }
+                disabled={
+                  item.available ===
+                  false
+                }
+                onClick={() => {
+                  if (
+                    item.path
+                  ) {
+                    handleNavigate(
+                      item.path,
+                    )
+                  }
+                }}
+                sx={
+                  navigationButtonSx(
+                    false,
+                  )
+                }
+              >
+                {item.label}
+              </Button>
+            ),
+          )}
+
+
+        {/* ADMINISTRATION */}
+
+        {canSeeAdministration && (
+          <Button
+            startIcon={
+              <AdminPanelSettingsOutlined />
+            }
+            onClick={() =>
+              handleNavigate(
+                '/admin',
+              )
+            }
+            sx={
+              navigationButtonSx(
+                location.pathname ===
+                  '/admin' ||
+                  location.pathname.startsWith(
+                    '/admin/',
+                  ),
+              )
+            }
+          >
+            Administration
+          </Button>
+        )}
       </Stack>
 
 
-      <Box sx={{ flexGrow: 1 }} />
+      {/*
+       * Push logout/user controls to
+       * the bottom of the viewport.
+       */}
+      <Box
+        sx={{
+          flexGrow: 1,
+        }}
+      />
 
 
-      {/* Bottom utilities */}
+      {/* BOTTOM UTILITIES */}
+
       <Divider
         sx={{
           my: 2.2,
-          borderColor: '#e4e8ef',
+
+          borderColor:
+            '#e4e8ef',
         }}
       />
 
 
       <Stack spacing={0.4}>
         <Button
-          startIcon={<LogoutRounded />}
-          onClick={handleLogout}
-          disabled={isLoggingOut}
-
+          startIcon={
+            <LogoutRounded />
+          }
+          onClick={
+            handleLogout
+          }
+          disabled={
+            isLoggingOut
+          }
           sx={{
             minHeight: 46,
 
-            justifyContent: 'flex-start',
+            justifyContent:
+              'flex-start',
 
             px: 2,
 
-            borderRadius: '8px',
+            borderRadius:
+              '8px',
 
-            color: '#26344d',
+            color:
+              '#26344d',
 
-            textTransform: 'none',
+            textTransform:
+              'none',
 
             fontSize: 15,
+
             fontWeight: 500,
 
-            '& .MuiButton-startIcon svg': {
-              fontSize: 22,
-            },
+            '& .MuiButton-startIcon svg':
+              {
+                fontSize: 22,
+              },
 
             '&:hover': {
-              backgroundColor: '#f7f9fc',
+              backgroundColor:
+                '#f7f9fc',
             },
           }}
         >
@@ -470,40 +816,54 @@ function AppSidebar({
       </Stack>
 
 
-      {/* Signed-in user card */}
+      {/* SIGNED-IN USER */}
+
       <Box
         sx={{
           mt: 2.2,
+
           p: 1.5,
 
           minHeight: 72,
 
           display: 'flex',
 
-          alignItems: 'center',
+          alignItems:
+            'center',
 
           gap: 1.25,
 
-          border: '1px solid',
-          borderColor: '#dfe4ec',
+          flexShrink: 0,
 
-          borderRadius: '8px',
+          border:
+            '1px solid',
 
-          backgroundColor: '#ffffff',
+          borderColor:
+            '#dfe4ec',
+
+          borderRadius:
+            '8px',
+
+          backgroundColor:
+            '#ffffff',
         }}
       >
         <Avatar
           sx={{
             width: 42,
+
             height: 42,
 
             flexShrink: 0,
 
-            backgroundColor: '#edf2ff',
+            backgroundColor:
+              '#edf2ff',
 
-            color: '#1548c7',
+            color:
+              '#1548c7',
 
             fontWeight: 700,
+
             fontSize: 15,
           }}
         >
@@ -514,21 +874,29 @@ function AppSidebar({
         <Box
           sx={{
             minWidth: 0,
+
             flexGrow: 1,
           }}
         >
           <Typography
             sx={{
-              color: '#111827',
+              color:
+                '#111827',
 
               fontSize: 14,
+
               fontWeight: 700,
 
               lineHeight: 1.25,
 
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
+              overflow:
+                'hidden',
+
+              textOverflow:
+                'ellipsis',
+
+              whiteSpace:
+                'nowrap',
             }}
           >
             {displayName}
@@ -539,15 +907,21 @@ function AppSidebar({
             sx={{
               mt: 0.25,
 
-              color: '#68758c',
+              color:
+                '#68758c',
 
               fontSize: 11.5,
 
               lineHeight: 1.3,
 
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
+              overflow:
+                'hidden',
+
+              textOverflow:
+                'ellipsis',
+
+              whiteSpace:
+                'nowrap',
             }}
           >
             {currentUser?.role_display ??
@@ -558,7 +932,8 @@ function AppSidebar({
 
         <KeyboardArrowDownRounded
           sx={{
-            color: '#657087',
+            color:
+              '#657087',
 
             fontSize: 20,
 

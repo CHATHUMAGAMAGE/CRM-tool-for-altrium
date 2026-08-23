@@ -9,7 +9,9 @@ from .views import (
     FollowUpListCreateView,
     LeadConvertView,
     LeadDetailView,
+    LeadHistoryListView,
     LeadListCreateView,
+    LeadRescueRadarView,
 )
 
 
@@ -33,6 +35,18 @@ urlpatterns = [
         "leads/<int:pk>/",
         LeadDetailView.as_view(),
         name="lead-detail",
+    ),
+
+    path(
+        "leads/<int:lead_id>/history/",
+        LeadHistoryListView.as_view(),
+        name="lead-history",
+    ),
+
+    path(
+        "leads/<int:pk>/rescue-radar/",
+        LeadRescueRadarView.as_view(),
+        name="lead-rescue-radar",
     ),
 
     path(
