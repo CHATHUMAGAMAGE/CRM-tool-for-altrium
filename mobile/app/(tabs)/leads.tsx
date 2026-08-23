@@ -12,9 +12,12 @@ import {
   View,
 } from 'react-native';
 
+import { useAppTheme } from '@/context/ThemeContext';
 import { getLeads, type Lead } from '@/services/leads';
 
 export default function LeadsScreen() {
+  const { colors } = useAppTheme();
+
   const [leads, setLeads] = useState<Lead[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -70,58 +73,104 @@ export default function LeadsScreen() {
     }
   };
 
-  const getStatusStyle = (status: Lead['status']) => {
-  switch (status) {
-    case 'QUALIFIED':
-    case 'WON':
-      return styles.statusSuccess;
+  const getStatusStyle = (
+    status: Lead['status'],
+  ) => {
+    switch (status) {
+      case 'QUALIFIED':
+      case 'WON':
+        return {
+          backgroundColor:
+            colors.successBackground,
+        };
 
-    case 'LOST':
-      return styles.statusLost;
+      case 'LOST':
+        return {
+          backgroundColor:
+            colors.dangerBackground,
+        };
 
-    case 'CONTACTED':
-    case 'PROPOSAL':
-      return styles.statusActive;
+      case 'CONTACTED':
+      case 'PROPOSAL':
+        return {
+          backgroundColor:
+            colors.warningBackground,
+        };
 
-    case 'NEW':
-    case 'DISQUALIFIED':
-    default:
-      return styles.statusNew;
-  }
-};
+      case 'NEW':
+      case 'DISQUALIFIED':
+      default:
+        return {
+          backgroundColor:
+            colors.primarySoft,
+        };
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        { backgroundColor: colors.background },
+      ]}
+    >
       <ScrollView
         contentContainerStyle={styles.container}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
+            tintColor={colors.primary}
           />
         }
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Assigned Leads</Text>
+          <Text
+            style={[
+              styles.title,
+              { color: colors.text },
+            ]}
+          >
+            Assigned Leads
+          </Text>
 
-          <Text style={styles.subtitle}>
+          <Text
+            style={[
+              styles.subtitle,
+              { color: colors.secondaryText },
+            ]}
+          >
             Manage and follow up with your assigned leads.
           </Text>
         </View>
 
         {/* Search */}
-        <View style={styles.searchContainer}>
+        <View
+          style={[
+            styles.searchContainer,
+            {
+              backgroundColor:
+                colors.inputBackground,
+              borderColor: colors.border,
+            },
+          ]}
+        >
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder="Search leads..."
-            placeholderTextColor="#8A919F"
+            placeholderTextColor={
+              colors.placeholder
+            }
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
             onSubmitEditing={handleSearch}
-            style={styles.searchInput}
+            style={[
+              styles.searchInput,
+              { color: colors.text },
+            ]}
           />
         </View>
 
@@ -130,67 +179,135 @@ export default function LeadsScreen() {
           <View style={styles.centerState}>
             <ActivityIndicator
               size="large"
-              color="#1557E8"
+              color={colors.primary}
             />
 
-            <Text style={styles.stateText}>
+            <Text
+              style={[
+                styles.stateText,
+                { color: colors.secondaryText },
+              ]}
+            >
               Loading leads...
             </Text>
           </View>
         ) : errorMessage ? (
-          /* Error */
-          <View style={styles.stateCard}>
-            <Text style={styles.errorTitle}>
+          <View
+            style={[
+              styles.stateCard,
+              {
+                backgroundColor:
+                  colors.cardSecondary,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.errorTitle,
+                { color: colors.danger },
+              ]}
+            >
               Unable to load leads
             </Text>
 
-            <Text style={styles.errorText}>
+            <Text
+              style={[
+                styles.errorText,
+                { color: colors.secondaryText },
+              ]}
+            >
               {errorMessage}
             </Text>
           </View>
         ) : leads.length === 0 ? (
-          /* Empty */
-          <View style={styles.stateCard}>
-            <Text style={styles.emptyTitle}>
+          <View
+            style={[
+              styles.stateCard,
+              {
+                backgroundColor:
+                  colors.cardSecondary,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.emptyTitle,
+                { color: colors.text },
+              ]}
+            >
               No leads found
             </Text>
 
-            <Text style={styles.emptyText}>
+            <Text
+              style={[
+                styles.emptyText,
+                { color: colors.secondaryText },
+              ]}
+            >
               {search.trim()
                 ? 'No leads match your search.'
                 : 'You currently have no assigned leads.'}
             </Text>
           </View>
         ) : (
-          /* Lead list */
           <View style={styles.leadsContainer}>
-            <Text style={styles.resultsText}>
+            <Text
+              style={[
+                styles.resultsText,
+                { color: colors.secondaryText },
+              ]}
+            >
               {leads.length}{' '}
-              {leads.length === 1 ? 'lead' : 'leads'}
+              {leads.length === 1
+                ? 'lead'
+                : 'leads'}
             </Text>
 
             {leads.map((lead) => (
               <Pressable
                 key={lead.id}
                 onPress={() =>
-                 router.push({
-                 pathname: '/lead/[id]',
-                params: { id: String(lead.id) },
-               })
-            }
+                  router.push({
+                    pathname: '/lead/[id]',
+                    params: {
+                      id: String(lead.id),
+                    },
+                  })
+                }
                 style={({ pressed }) => [
                   styles.leadCard,
-                  pressed && styles.leadCardPressed,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                  },
+                  pressed &&
+                    styles.leadCardPressed,
                 ]}
               >
-                {/* Card Header */}
                 <View style={styles.cardHeader}>
-                  <View style={styles.companyContainer}>
-                    <Text style={styles.companyName}>
+                  <View
+                    style={styles.companyContainer}
+                  >
+                    <Text
+                      style={[
+                        styles.companyName,
+                        { color: colors.text },
+                      ]}
+                    >
                       {lead.company_name}
                     </Text>
 
-                    <Text style={styles.contactName}>
+                    <Text
+                      style={[
+                        styles.contactName,
+                        {
+                          color:
+                            colors.secondaryText,
+                        },
+                      ]}
+                    >
                       {lead.contact_name}
                     </Text>
                   </View>
@@ -198,38 +315,83 @@ export default function LeadsScreen() {
                   <View
                     style={[
                       styles.statusBadge,
-                      getStatusStyle(lead.status),
+                      getStatusStyle(
+                        lead.status,
+                      ),
                     ]}
                   >
-                    <Text style={styles.statusText}>
+                    <Text
+                      style={[
+                        styles.statusText,
+                        {
+                          color:
+                            colors.statusText,
+                        },
+                      ]}
+                    >
                       {lead.status_display}
                     </Text>
                   </View>
                 </View>
 
-                {/* Lead Details */}
-                <View style={styles.detailsContainer}>
+                <View
+                  style={[
+                    styles.detailsContainer,
+                    {
+                      borderTopColor:
+                        colors.divider,
+                    },
+                  ]}
+                >
                   {lead.email ? (
-                    <Text style={styles.detailText}>
+                    <Text
+                      style={[
+                        styles.detailText,
+                        {
+                          color:
+                            colors.secondaryText,
+                        },
+                      ]}
+                    >
                       {lead.email}
                     </Text>
                   ) : null}
 
                   {lead.phone ? (
-                    <Text style={styles.detailText}>
+                    <Text
+                      style={[
+                        styles.detailText,
+                        {
+                          color:
+                            colors.secondaryText,
+                        },
+                      ]}
+                    >
                       {lead.phone}
                     </Text>
                   ) : null}
 
                   {lead.source ? (
-                    <Text style={styles.detailText}>
+                    <Text
+                      style={[
+                        styles.detailText,
+                        {
+                          color:
+                            colors.secondaryText,
+                        },
+                      ]}
+                    >
                       Source: {lead.source}
                     </Text>
                   ) : null}
                 </View>
 
-                {/* Tap hint */}
-                <Text style={styles.viewDetailsText}>
+                <Text
+                  style={[
+                    styles.viewDetailsText,
+                    { color: colors.primary },
+                  ]}
+                >
                   Tap to view details
                 </Text>
               </Pressable>
@@ -244,7 +406,6 @@ export default function LeadsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
 
   container: {
@@ -258,14 +419,12 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: '#111827',
     fontSize: 28,
     fontWeight: '800',
     marginBottom: 6,
   },
 
   subtitle: {
-    color: '#6B7280',
     fontSize: 15,
     lineHeight: 21,
   },
@@ -273,9 +432,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     height: 52,
     borderWidth: 1,
-    borderColor: '#D7DBE3',
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
     marginBottom: 22,
   },
 
@@ -283,7 +440,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: '#111827',
   },
 
   centerState: {
@@ -293,41 +449,34 @@ const styles = StyleSheet.create({
   },
 
   stateText: {
-    color: '#6B7280',
     fontSize: 15,
     marginTop: 12,
   },
 
   stateCard: {
     borderWidth: 1,
-    borderColor: '#E1E5EC',
     borderRadius: 16,
     padding: 22,
-    backgroundColor: '#F8FAFC',
   },
 
   errorTitle: {
-    color: '#B42318',
     fontSize: 17,
     fontWeight: '700',
     marginBottom: 6,
   },
 
   errorText: {
-    color: '#7A271A',
     fontSize: 14,
     lineHeight: 20,
   },
 
   emptyTitle: {
-    color: '#111827',
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 6,
   },
 
   emptyText: {
-    color: '#6B7280',
     fontSize: 14,
     lineHeight: 20,
   },
@@ -337,16 +486,13 @@ const styles = StyleSheet.create({
   },
 
   resultsText: {
-    color: '#6B7280',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 2,
   },
 
   leadCard: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E1E5EC',
     borderRadius: 16,
     padding: 18,
   },
@@ -367,14 +513,12 @@ const styles = StyleSheet.create({
   },
 
   companyName: {
-    color: '#111827',
     fontSize: 17,
     fontWeight: '700',
     marginBottom: 5,
   },
 
   contactName: {
-    color: '#6B7280',
     fontSize: 14,
   },
 
@@ -384,24 +528,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
 
-  statusNew: {
-    backgroundColor: '#E8EEFF',
-  },
-
-  statusActive: {
-    backgroundColor: '#FFF4D6',
-  },
-
-  statusSuccess: {
-    backgroundColor: '#DCFCE7',
-  },
-
-  statusLost: {
-    backgroundColor: '#FEE2E2',
-  },
-
   statusText: {
-    color: '#374151',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -410,17 +537,14 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: '#EEF0F4',
     gap: 6,
   },
 
   detailText: {
-    color: '#6B7280',
     fontSize: 14,
   },
 
   viewDetailsText: {
-    color: '#1557E8',
     fontSize: 13,
     fontWeight: '600',
     marginTop: 14,

@@ -27,7 +27,11 @@ import {
   type LeadStatus,
 } from '@/services/leads';
 
+import { useAppTheme } from '@/context/ThemeContext';
+
 export default function LeadDetailsScreen() {
+  const { colors } = useAppTheme();
+
   const { id } =
     useLocalSearchParams<{ id: string }>();
 
@@ -265,32 +269,60 @@ export default function LeadDetailsScreen() {
     switch (status) {
       case 'QUALIFIED':
       case 'WON':
-        return styles.statusSuccess;
+        return {
+          backgroundColor:
+            colors.successBackground,
+        };
 
       case 'LOST':
-        return styles.statusLost;
+        return {
+          backgroundColor:
+            colors.dangerBackground,
+        };
 
       case 'CONTACTED':
       case 'PROPOSAL':
-        return styles.statusActive;
+        return {
+          backgroundColor:
+            colors.warningBackground,
+        };
 
       case 'NEW':
       case 'DISQUALIFIED':
       default:
-        return styles.statusNew;
+        return {
+          backgroundColor:
+            colors.primarySoft,
+        };
     }
   };
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          {
+            backgroundColor:
+              colors.background,
+          },
+        ]}
+      >
         <View style={styles.centerState}>
           <ActivityIndicator
             size="large"
-            color="#1557E8"
+            color={colors.primary}
           />
 
-          <Text style={styles.stateText}>
+          <Text
+            style={[
+              styles.stateText,
+              {
+                color:
+                  colors.secondaryText,
+              },
+            ]}
+          >
             Loading lead details...
           </Text>
         </View>
@@ -300,23 +332,63 @@ export default function LeadDetailsScreen() {
 
   if (errorMessage && !lead) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          {
+            backgroundColor:
+              colors.background,
+          },
+        ]}
+      >
         <View style={styles.errorContainer}>
           <Pressable
             onPress={() => router.back()}
             style={styles.backButton}
           >
-            <Text style={styles.backButtonText}>
+            <Text
+              style={[
+                styles.backButtonText,
+                {
+                  color: colors.primary,
+                },
+              ]}
+            >
               ← Back
             </Text>
           </Pressable>
 
-          <View style={styles.stateCard}>
-            <Text style={styles.errorTitle}>
+          <View
+            style={[
+              styles.stateCard,
+              {
+                backgroundColor:
+                  colors.cardSecondary,
+                borderColor:
+                  colors.border,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.errorTitle,
+                {
+                  color: colors.danger,
+                },
+              ]}
+            >
               Unable to load lead
             </Text>
 
-            <Text style={styles.errorText}>
+            <Text
+              style={[
+                styles.errorText,
+                {
+                  color:
+                    colors.secondaryText,
+                },
+              ]}
+            >
               {errorMessage}
             </Text>
 
@@ -325,7 +397,13 @@ export default function LeadDetailsScreen() {
                 setIsLoading(true);
                 void loadLead();
               }}
-              style={styles.retryButton}
+              style={[
+                styles.retryButton,
+                {
+                  backgroundColor:
+                    colors.primary,
+                },
+              ]}
             >
               <Text
                 style={styles.retryButtonText}
@@ -341,9 +419,25 @@ export default function LeadDetailsScreen() {
 
   if (!lead) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          {
+            backgroundColor:
+              colors.background,
+          },
+        ]}
+      >
         <View style={styles.centerState}>
-          <Text style={styles.stateText}>
+          <Text
+            style={[
+              styles.stateText,
+              {
+                color:
+                  colors.secondaryText,
+              },
+            ]}
+          >
             Lead details are unavailable.
           </Text>
         </View>
@@ -356,7 +450,15 @@ export default function LeadDetailsScreen() {
     lead.status === 'LOST';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        {
+          backgroundColor:
+            colors.background,
+        },
+      ]}
+    >
       <ScrollView
         contentContainerStyle={styles.container}
       >
@@ -365,21 +467,51 @@ export default function LeadDetailsScreen() {
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <Text style={styles.backButtonText}>
+          <Text
+            style={[
+              styles.backButtonText,
+              {
+                color: colors.primary,
+              },
+            ]}
+          >
             ← Back
           </Text>
         </Pressable>
 
         {/* Header */}
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+            {
+              borderBottomColor:
+                colors.border,
+            },
+          ]}
+        >
           <View
             style={styles.headerTextContainer}
           >
-            <Text style={styles.companyName}>
+            <Text
+              style={[
+                styles.companyName,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
               {lead.company_name}
             </Text>
 
-            <Text style={styles.contactName}>
+            <Text
+              style={[
+                styles.contactName,
+                {
+                  color:
+                    colors.secondaryText,
+                },
+              ]}
+            >
               {lead.contact_name}
             </Text>
           </View>
@@ -390,7 +522,15 @@ export default function LeadDetailsScreen() {
               getStatusStyle(lead.status),
             ]}
           >
-            <Text style={styles.statusText}>
+            <Text
+              style={[
+                styles.statusText,
+                {
+                  color:
+                    colors.statusText,
+                },
+              ]}
+            >
               {lead.status_display}
             </Text>
           </View>
@@ -398,12 +538,37 @@ export default function LeadDetailsScreen() {
 
         {/* Lifecycle Action */}
         {!isClosedLead ? (
-          <View style={styles.actionSection}>
-            <Text style={styles.actionTitle}>
+          <View
+            style={[
+              styles.actionSection,
+              {
+                backgroundColor:
+                  colors.cardSecondary,
+                borderColor:
+                  colors.border,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.actionTitle,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
               Lead Status
             </Text>
 
-            <Text style={styles.actionDescription}>
+            <Text
+              style={[
+                styles.actionDescription,
+                {
+                  color:
+                    colors.secondaryText,
+                },
+              ]}
+            >
               Update the current stage of this
               lead.
             </Text>
@@ -416,6 +581,10 @@ export default function LeadDetailsScreen() {
               }
               style={({ pressed }) => [
                 styles.secondaryButton,
+                {
+                  borderColor:
+                    colors.primary,
+                },
                 pressed &&
                   !isUpdatingStatus &&
                   !isConverting &&
@@ -423,7 +592,13 @@ export default function LeadDetailsScreen() {
               ]}
             >
               <Text
-                style={styles.secondaryButtonText}
+                style={[
+                  styles.secondaryButtonText,
+                  {
+                    color:
+                      colors.primary,
+                  },
+                ]}
               >
                 Update Lead Status
               </Text>
@@ -434,12 +609,37 @@ export default function LeadDetailsScreen() {
         {/* Conversion Action */}
         {lead.status !== 'WON' &&
         lead.status !== 'LOST' ? (
-          <View style={styles.actionSection}>
-            <Text style={styles.actionTitle}>
+          <View
+            style={[
+              styles.actionSection,
+              {
+                backgroundColor:
+                  colors.cardSecondary,
+                borderColor:
+                  colors.border,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.actionTitle,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
               Lead Action
             </Text>
 
-            <Text style={styles.actionDescription}>
+            <Text
+              style={[
+                styles.actionDescription,
+                {
+                  color:
+                    colors.secondaryText,
+                },
+              ]}
+            >
               Convert this lead into a customer
               once the opportunity is confirmed.
             </Text>
@@ -449,6 +649,10 @@ export default function LeadDetailsScreen() {
               disabled={isConverting}
               style={({ pressed }) => [
                 styles.convertButton,
+                {
+                  backgroundColor:
+                    colors.primary,
+                },
                 pressed &&
                   !isConverting &&
                   styles.convertButtonPressed,
@@ -470,26 +674,65 @@ export default function LeadDetailsScreen() {
             </Pressable>
 
             {errorMessage ? (
-              <Text style={styles.actionError}>
+              <Text
+                style={[
+                  styles.actionError,
+                  {
+                    color:
+                      colors.danger,
+                  },
+                ]}
+              >
                 {errorMessage}
               </Text>
             ) : null}
           </View>
         ) : lead.status === 'WON' ? (
-          <View style={styles.convertedCard}>
-            <Text style={styles.convertedTitle}>
+          <View
+            style={[
+              styles.convertedCard,
+              {
+                backgroundColor:
+                  colors.successBackground,
+                borderColor:
+                  colors.successBackground,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.convertedTitle,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
               ✓ Customer Converted
             </Text>
 
             <Text
-              style={styles.convertedDescription}
+              style={[
+                styles.convertedDescription,
+                {
+                  color:
+                    colors.secondaryText,
+                },
+              ]}
             >
               This lead has already been converted
               into a customer.
             </Text>
 
             {lead.converted_at ? (
-              <Text style={styles.convertedDate}>
+              <Text
+                style={[
+                  styles.convertedDate,
+                  {
+                    color:
+                      colors.secondaryText,
+                  },
+                ]}
+              >
                 Converted on{' '}
                 {formatDate(lead.converted_at)}
               </Text>
@@ -499,12 +742,37 @@ export default function LeadDetailsScreen() {
 
         {/* Lost Lead */}
         {lead.status === 'LOST' ? (
-          <View style={styles.lostCard}>
-            <Text style={styles.lostCardTitle}>
+          <View
+            style={[
+              styles.lostCard,
+              {
+                backgroundColor:
+                  colors.dangerBackground,
+                borderColor:
+                  colors.dangerBackground,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.lostCardTitle,
+                {
+                  color: colors.danger,
+                },
+              ]}
+            >
               Lead Lost
             </Text>
 
-            <Text style={styles.lostCardText}>
+            <Text
+              style={[
+                styles.lostCardText,
+                {
+                  color:
+                    colors.secondaryText,
+                },
+              ]}
+            >
               This lead is closed and can no longer
               be progressed through the normal
               lifecycle.
@@ -514,16 +782,34 @@ export default function LeadDetailsScreen() {
 
         {/* Contact Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: colors.text,
+              },
+            ]}
+          >
             Contact Information
           </Text>
 
-          <View style={styles.infoCard}>
+          <View
+            style={[
+              styles.infoCard,
+              {
+                backgroundColor:
+                  colors.card,
+                borderColor:
+                  colors.border,
+              },
+            ]}
+          >
             <InfoRow
               label="Email"
               value={
                 lead.email || 'Not provided'
               }
+              colors={colors}
             />
 
             <InfoRow
@@ -531,6 +817,7 @@ export default function LeadDetailsScreen() {
               value={
                 lead.phone || 'Not provided'
               }
+              colors={colors}
             />
 
             <InfoRow
@@ -539,17 +826,35 @@ export default function LeadDetailsScreen() {
                 lead.source || 'Not provided'
               }
               isLast
+              colors={colors}
             />
           </View>
         </View>
 
         {/* Qualification */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: colors.text,
+              },
+            ]}
+          >
             Qualification
           </Text>
 
-          <View style={styles.infoCard}>
+          <View
+            style={[
+              styles.infoCard,
+              {
+                backgroundColor:
+                  colors.card,
+                borderColor:
+                  colors.border,
+              },
+            ]}
+          >
             <InfoRow
               label="Qualification Notes"
               value={
@@ -557,17 +862,35 @@ export default function LeadDetailsScreen() {
                 'No qualification notes available.'
               }
               isLast
+              colors={colors}
             />
           </View>
         </View>
 
         {/* Assignment */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: colors.text,
+              },
+            ]}
+          >
             Assignment
           </Text>
 
-          <View style={styles.infoCard}>
+          <View
+            style={[
+              styles.infoCard,
+              {
+                backgroundColor:
+                  colors.card,
+                borderColor:
+                  colors.border,
+              },
+            ]}
+          >
             <InfoRow
               label="Assigned To"
               value={
@@ -575,6 +898,7 @@ export default function LeadDetailsScreen() {
                 lead.assigned_to_username ||
                 'Unassigned'
               }
+              colors={colors}
             />
 
             <InfoRow
@@ -584,22 +908,41 @@ export default function LeadDetailsScreen() {
                 lead.created_by_username
               }
               isLast
+              colors={colors}
             />
           </View>
         </View>
 
         {/* Lead Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: colors.text,
+              },
+            ]}
+          >
             Lead Information
           </Text>
 
-          <View style={styles.infoCard}>
+          <View
+            style={[
+              styles.infoCard,
+              {
+                backgroundColor:
+                  colors.card,
+                borderColor:
+                  colors.border,
+              },
+            ]}
+          >
             <InfoRow
               label="Created"
               value={formatDate(
                 lead.created_at,
               )}
+              colors={colors}
             />
 
             <InfoRow
@@ -607,6 +950,7 @@ export default function LeadDetailsScreen() {
               value={formatDate(
                 lead.updated_at,
               )}
+              colors={colors}
             />
 
             <InfoRow
@@ -619,6 +963,7 @@ export default function LeadDetailsScreen() {
                   : 'Not converted'
               }
               isLast
+              colors={colors}
             />
           </View>
         </View>
@@ -627,15 +972,33 @@ export default function LeadDetailsScreen() {
         {lead.status === 'LOST' &&
         lead.lost_reason ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
               Lost Reason
             </Text>
 
-            <View style={styles.infoCard}>
+            <View
+              style={[
+                styles.infoCard,
+                {
+                  backgroundColor:
+                    colors.card,
+                  borderColor:
+                    colors.border,
+                },
+              ]}
+            >
               <InfoRow
                 label="Reason"
                 value={lead.lost_reason}
                 isLast
+                colors={colors}
               />
             </View>
           </View>
@@ -644,13 +1007,44 @@ export default function LeadDetailsScreen() {
 
       {/* Status Modal */}
       {statusModalVisible ? (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
+        <View
+          style={[
+            styles.modalOverlay,
+            {
+              backgroundColor:
+                colors.modalOverlay,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor:
+                  colors.card,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.modalTitle,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
               Update Lead Status
             </Text>
 
-            <Text style={styles.modalSubtitle}>
+            <Text
+              style={[
+                styles.modalSubtitle,
+                {
+                  color:
+                    colors.secondaryText,
+                },
+              ]}
+            >
               Select the new lifecycle stage.
             </Text>
 
@@ -680,15 +1074,31 @@ export default function LeadDetailsScreen() {
                       }}
                       style={[
                         styles.statusOption,
-                        isSelected &&
-                          styles.statusOptionSelected,
+                        {
+                          borderColor:
+                            colors.border,
+                          backgroundColor:
+                            colors.cardSecondary,
+                        },
+                        isSelected && {
+                          backgroundColor:
+                            colors.primarySoft,
+                          borderColor:
+                            colors.primary,
+                        },
                       ]}
                     >
                       <Text
                         style={[
                           styles.statusOptionText,
-                          isSelected &&
-                            styles.statusOptionTextSelected,
+                          {
+                            color:
+                              colors.statusText,
+                          },
+                          isSelected && {
+                            color:
+                              colors.primary,
+                          },
                         ]}
                       >
                         {getStatusLabel(status)}
@@ -704,7 +1114,12 @@ export default function LeadDetailsScreen() {
                 style={styles.lostReasonContainer}
               >
                 <Text
-                  style={styles.lostReasonLabel}
+                  style={[
+                    styles.lostReasonLabel,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
                 >
                   Reason for losing this lead
                 </Text>
@@ -713,16 +1128,35 @@ export default function LeadDetailsScreen() {
                   value={lostReason}
                   onChangeText={setLostReason}
                   placeholder="Enter the reason..."
-                  placeholderTextColor="#8A919F"
+                  placeholderTextColor={
+                    colors.placeholder
+                  }
                   multiline
                   editable={!isUpdatingStatus}
-                  style={styles.lostReasonInput}
+                  style={[
+                    styles.lostReasonInput,
+                    {
+                      backgroundColor:
+                        colors.inputBackground,
+                      borderColor:
+                        colors.border,
+                      color: colors.text,
+                    },
+                  ]}
                 />
               </View>
             ) : null}
 
             {errorMessage ? (
-              <Text style={styles.actionError}>
+              <Text
+                style={[
+                  styles.actionError,
+                  {
+                    color:
+                      colors.danger,
+                  },
+                ]}
+              >
                 {errorMessage}
               </Text>
             ) : null}
@@ -731,10 +1165,22 @@ export default function LeadDetailsScreen() {
               <Pressable
                 onPress={handleCloseStatusModal}
                 disabled={isUpdatingStatus}
-                style={styles.modalCancelButton}
+                style={[
+                  styles.modalCancelButton,
+                  {
+                    borderColor:
+                      colors.border,
+                  },
+                ]}
               >
                 <Text
-                  style={styles.modalCancelText}
+                  style={[
+                    styles.modalCancelText,
+                    {
+                      color:
+                        colors.statusText,
+                    },
+                  ]}
                 >
                   Cancel
                 </Text>
@@ -750,6 +1196,10 @@ export default function LeadDetailsScreen() {
                 }
                 style={[
                   styles.modalConfirmButton,
+                  {
+                    backgroundColor:
+                      colors.primary,
+                  },
                   (isUpdatingStatus ||
                     !selectedStatus) &&
                     styles.modalConfirmButtonDisabled,
@@ -779,23 +1229,48 @@ function InfoRow({
   label,
   value,
   isLast = false,
+  colors,
 }: {
   label: string;
   value: string;
   isLast?: boolean;
+  colors: {
+    text: string;
+    secondaryText: string;
+    divider: string;
+  };
 }) {
   return (
     <View
       style={[
         styles.infoRow,
-        !isLast && styles.infoRowBorder,
+        !isLast && {
+          borderBottomColor:
+            colors.divider,
+          borderBottomWidth: 1,
+        },
       ]}
     >
-      <Text style={styles.infoLabel}>
+      <Text
+        style={[
+          styles.infoLabel,
+          {
+            color:
+              colors.secondaryText,
+          },
+        ]}
+      >
         {label}
       </Text>
 
-      <Text style={styles.infoValue}>
+      <Text
+        style={[
+          styles.infoValue,
+          {
+            color: colors.text,
+          },
+        ]}
+      >
         {value}
       </Text>
     </View>
@@ -815,7 +1290,6 @@ function formatDate(value: string) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
 
   container: {
@@ -837,7 +1311,6 @@ const styles = StyleSheet.create({
   },
 
   stateText: {
-    color: '#6B7280',
     fontSize: 15,
     marginTop: 12,
   },
@@ -849,7 +1322,6 @@ const styles = StyleSheet.create({
   },
 
   backButtonText: {
-    color: '#1557E8',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -861,7 +1333,6 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
 
   headerTextContainer: {
@@ -869,14 +1340,12 @@ const styles = StyleSheet.create({
   },
 
   companyName: {
-    color: '#111827',
     fontSize: 27,
     fontWeight: '800',
     marginBottom: 7,
   },
 
   contactName: {
-    color: '#6B7280',
     fontSize: 16,
   },
 
@@ -886,24 +1355,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
 
-  statusNew: {
-    backgroundColor: '#E8EEFF',
-  },
-
-  statusActive: {
-    backgroundColor: '#FFF4D6',
-  },
-
-  statusSuccess: {
-    backgroundColor: '#DCFCE7',
-  },
-
-  statusLost: {
-    backgroundColor: '#FEE2E2',
-  },
-
   statusText: {
-    color: '#374151',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -912,20 +1364,16 @@ const styles = StyleSheet.create({
     marginTop: 22,
     padding: 18,
     borderRadius: 16,
-    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E1E5EC',
   },
 
   actionTitle: {
-    color: '#111827',
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 6,
   },
 
   actionDescription: {
-    color: '#6B7280',
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 16,
@@ -935,7 +1383,6 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1557E8',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -945,7 +1392,6 @@ const styles = StyleSheet.create({
   },
 
   secondaryButtonText: {
-    color: '#1557E8',
     fontSize: 15,
     fontWeight: '700',
   },
@@ -953,7 +1399,6 @@ const styles = StyleSheet.create({
   convertButton: {
     height: 50,
     borderRadius: 12,
-    backgroundColor: '#1557E8',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -973,7 +1418,6 @@ const styles = StyleSheet.create({
   },
 
   actionError: {
-    color: '#B42318',
     fontSize: 14,
     lineHeight: 20,
     marginTop: 10,
@@ -983,26 +1427,21 @@ const styles = StyleSheet.create({
     marginTop: 22,
     padding: 18,
     borderRadius: 16,
-    backgroundColor: '#DCFCE7',
     borderWidth: 1,
-    borderColor: '#BBF7D0',
   },
 
   convertedTitle: {
-    color: '#166534',
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 6,
   },
 
   convertedDescription: {
-    color: '#166534',
     fontSize: 14,
     lineHeight: 20,
   },
 
   convertedDate: {
-    color: '#166534',
     fontSize: 13,
     marginTop: 8,
   },
@@ -1011,20 +1450,16 @@ const styles = StyleSheet.create({
     marginTop: 22,
     padding: 18,
     borderRadius: 16,
-    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: '#FECACA',
   },
 
   lostCardTitle: {
-    color: '#991B1B',
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 6,
   },
 
   lostCardText: {
-    color: '#991B1B',
     fontSize: 14,
     lineHeight: 20,
   },
@@ -1034,16 +1469,13 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: '#111827',
     fontSize: 19,
     fontWeight: '700',
     marginBottom: 12,
   },
 
   infoCard: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E1E5EC',
     borderRadius: 16,
     paddingHorizontal: 18,
   },
@@ -1052,41 +1484,30 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
 
-  infoRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEF0F4',
-  },
-
   infoLabel: {
-    color: '#6B7280',
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 5,
   },
 
   infoValue: {
-    color: '#111827',
     fontSize: 15,
     lineHeight: 21,
   },
 
   stateCard: {
     borderWidth: 1,
-    borderColor: '#E1E5EC',
     borderRadius: 16,
     padding: 22,
-    backgroundColor: '#F8FAFC',
   },
 
   errorTitle: {
-    color: '#B42318',
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 7,
   },
 
   errorText: {
-    color: '#7A271A',
     fontSize: 14,
     lineHeight: 20,
   },
@@ -1094,7 +1515,6 @@ const styles = StyleSheet.create({
   retryButton: {
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#1557E8',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 18,
@@ -1112,12 +1532,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     justifyContent: 'flex-end',
   },
 
   modalCard: {
-    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 22,
@@ -1127,14 +1545,12 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    color: '#111827',
     fontSize: 21,
     fontWeight: '800',
     marginBottom: 6,
   },
 
   modalSubtitle: {
-    color: '#6B7280',
     fontSize: 14,
     marginBottom: 18,
   },
@@ -1147,25 +1563,13 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#E1E5EC',
     borderRadius: 12,
     marginBottom: 10,
   },
 
-  statusOptionSelected: {
-    backgroundColor: '#E8EEFF',
-    borderColor: '#1557E8',
-  },
-
   statusOptionText: {
-    color: '#374151',
     fontSize: 15,
     fontWeight: '600',
-  },
-
-  statusOptionTextSelected: {
-    color: '#1557E8',
-    fontWeight: '700',
   },
 
   lostReasonContainer: {
@@ -1173,7 +1577,6 @@ const styles = StyleSheet.create({
   },
 
   lostReasonLabel: {
-    color: '#111827',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
@@ -1182,12 +1585,10 @@ const styles = StyleSheet.create({
   lostReasonInput: {
     minHeight: 90,
     borderWidth: 1,
-    borderColor: '#D7DBE3',
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#111827',
     textAlignVertical: 'top',
   },
 
@@ -1202,13 +1603,11 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D7DBE3',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   modalCancelText: {
-    color: '#374151',
     fontSize: 15,
     fontWeight: '700',
   },
@@ -1217,7 +1616,6 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     borderRadius: 12,
-    backgroundColor: '#1557E8',
     alignItems: 'center',
     justifyContent: 'center',
   },

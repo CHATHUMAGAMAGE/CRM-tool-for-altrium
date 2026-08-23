@@ -1,17 +1,20 @@
 import {
   DarkTheme,
   DefaultTheme,
-  ThemeProvider,
+  ThemeProvider as NavigationThemeProvider,
 } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import {
+  ThemeProvider,
+  useAppTheme,
+} from '@/context/ThemeContext';
 
 function RootNavigator() {
-  const colorScheme = useColorScheme();
+  const { theme } = useAppTheme();
   const { status } = useAuth();
 
   if (status === 'loading') {
@@ -19,8 +22,8 @@ function RootNavigator() {
   }
 
   return (
-    <ThemeProvider
-      value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
+    <NavigationThemeProvider
+      value={theme === 'dark' ? DarkTheme : DefaultTheme}
     >
       <Stack>
         <Stack.Protected guard={status === 'authenticated'}>
@@ -56,15 +59,19 @@ function RootNavigator() {
         />
       </Stack>
 
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      <StatusBar
+        style={theme === 'dark' ? 'light' : 'dark'}
+      />
+    </NavigationThemeProvider>
   );
 }
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootNavigator />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

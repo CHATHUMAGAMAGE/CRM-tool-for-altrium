@@ -3,18 +3,45 @@ import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAppTheme } from '@/context/ThemeContext';
+
+const BLUE = '#1557E8';
+
+const LIGHT_TAB_BACKGROUND = '#FFFFFF';
+const LIGHT_INACTIVE = '#8A8F98';
+
+const DARK_TAB_BACKGROUND = '#111111';
+const DARK_INACTIVE = '#8F949C';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { theme } = useAppTheme();
+
+  const isDark = theme === 'dark';
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
+
+        tabBarActiveTintColor: BLUE,
+
+        tabBarInactiveTintColor: isDark
+          ? DARK_INACTIVE
+          : LIGHT_INACTIVE,
+
+        tabBarStyle: {
+          backgroundColor: isDark
+            ? DARK_TAB_BACKGROUND
+            : LIGHT_TAB_BACKGROUND,
+          borderTopWidth: 0,
+          elevation: 0,
+        },
+
+        tabBarLabelStyle: {
+          fontSize: 13,
+          fontWeight: '600',
+        },
       }}
     >
       <Tabs.Screen
@@ -46,13 +73,13 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="explore"
+        name="profile"
         options={{
-          title: 'Explore',
+          title: 'Profile',
           tabBarIcon: ({ color }) => (
             <IconSymbol
               size={28}
-              name="paperplane.fill"
+              name="person.fill"
               color={color}
             />
           ),

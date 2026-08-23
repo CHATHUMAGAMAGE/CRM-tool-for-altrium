@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
+import { useAppTheme } from '@/context/ThemeContext';
 import {
   getDashboardStats,
   type DashboardStats,
@@ -18,6 +19,7 @@ import {
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
+  const { colors } = useAppTheme();
 
   const [isLoggingOut, setIsLoggingOut] =
     useState(false);
@@ -70,10 +72,6 @@ export default function HomeScreen() {
   );
 
   const handleLogout = async () => {
-    console.log(
-      'LOGOUT BUTTON PRESSED',
-    );
-
     setIsLoggingOut(true);
 
     try {
@@ -96,49 +94,74 @@ export default function HomeScreen() {
       return (
         <ActivityIndicator
           size="small"
-          color="#1557E8"
+          color={colors.primary}
         />
       );
     }
 
     return (
-      <Text style={styles.cardNumber}>
+      <Text
+        style={[
+          styles.cardNumber,
+          { color: colors.primary },
+        ]}
+      >
         {value}
       </Text>
     );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        { backgroundColor: colors.background },
+      ]}
+    >
       <ScrollView
-        contentContainerStyle={
-          styles.container
-        }
+        contentContainerStyle={styles.container}
       >
         {/* Header */}
-
         <View style={styles.header}>
           <View>
             <Text style={styles.brand}>
-              <Text style={styles.eleven}>
+              <Text
+                style={[
+                  styles.eleven,
+                  { color: colors.primary },
+                ]}
+              >
                 ELEVEN
               </Text>
 
-              <Text style={styles.crm}>
+              <Text
+                style={[
+                  styles.crm,
+                  { color: colors.text },
+                ]}
+              >
                 {' '}
                 CRM
               </Text>
             </Text>
 
-            <Text style={styles.welcome}>
+            <Text
+              style={[
+                styles.welcome,
+                { color: colors.text },
+              ]}
+            >
               Welcome back! 👋
             </Text>
           </View>
 
-          <View style={styles.avatar}>
-            <Text
-              style={styles.avatarText}
-            >
+          <View
+            style={[
+              styles.avatar,
+              { backgroundColor: colors.primary },
+            ]}
+          >
+            <Text style={styles.avatarText}>
               {user?.username
                 ?.charAt(0)
                 .toUpperCase() || 'U'}
@@ -147,32 +170,48 @@ export default function HomeScreen() {
         </View>
 
         {/* Welcome Card */}
-
-        <View style={styles.welcomeCard}>
-          <Text
-            style={styles.welcomeCardTitle}
-          >
+        <View
+          style={[
+            styles.welcomeCard,
+            { backgroundColor: colors.primary },
+          ]}
+        >
+          <Text style={styles.welcomeCardTitle}>
             Good to see you!
           </Text>
 
-          <Text
-            style={styles.welcomeCardText}
-          >
+          <Text style={styles.welcomeCardText}>
             Manage your customers, leads and
             sales activities from one place.
           </Text>
         </View>
 
         {/* Overview */}
-
-        <Text style={styles.sectionTitle}>
+        <Text
+          style={[
+            styles.sectionTitle,
+            { color: colors.text },
+          ]}
+        >
           Overview
         </Text>
 
         {statsError ? (
-          <View style={styles.errorCard}>
+          <View
+            style={[
+              styles.errorCard,
+              {
+                backgroundColor:
+                  colors.dangerBackground,
+                borderColor: colors.border,
+              },
+            ]}
+          >
             <Text
-              style={styles.errorText}
+              style={[
+                styles.errorText,
+                { color: colors.danger },
+              ]}
             >
               {statsError}
             </Text>
@@ -182,10 +221,19 @@ export default function HomeScreen() {
                 setIsLoadingStats(true);
                 void loadDashboardStats();
               }}
-              style={styles.retryButton}
+              style={[
+                styles.retryButton,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                },
+              ]}
             >
               <Text
-                style={styles.retryText}
+                style={[
+                  styles.retryText,
+                  { color: colors.danger },
+                ]}
               >
                 Retry
               </Text>
@@ -194,25 +242,45 @@ export default function HomeScreen() {
         ) : null}
 
         <View style={styles.cardsRow}>
-          <View style={styles.card}>
-            {renderStatValue(
-              stats.customers,
-            )}
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor:
+                  colors.cardSecondary,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            {renderStatValue(stats.customers)}
 
             <Text
-              style={styles.cardLabel}
+              style={[
+                styles.cardLabel,
+                { color: colors.secondaryText },
+              ]}
             >
               Customers
             </Text>
           </View>
 
-          <View style={styles.card}>
-            {renderStatValue(
-              stats.leads,
-            )}
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor:
+                  colors.cardSecondary,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            {renderStatValue(stats.leads)}
 
             <Text
-              style={styles.cardLabel}
+              style={[
+                styles.cardLabel,
+                { color: colors.secondaryText },
+              ]}
             >
               Leads
             </Text>
@@ -220,25 +288,47 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.cardsRow}>
-          <View style={styles.card}>
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor:
+                  colors.cardSecondary,
+                borderColor: colors.border,
+              },
+            ]}
+          >
             {renderStatValue(
               stats.opportunities,
             )}
 
             <Text
-              style={styles.cardLabel}
+              style={[
+                styles.cardLabel,
+                { color: colors.secondaryText },
+              ]}
             >
               Opportunities
             </Text>
           </View>
 
-          <View style={styles.card}>
-            {renderStatValue(
-              stats.projects,
-            )}
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor:
+                  colors.cardSecondary,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            {renderStatValue(stats.projects)}
 
             <Text
-              style={styles.cardLabel}
+              style={[
+                styles.cardLabel,
+                { color: colors.secondaryText },
+              ]}
             >
               Projects
             </Text>
@@ -246,46 +336,80 @@ export default function HomeScreen() {
         </View>
 
         {/* Quick Actions */}
-
-        <Text style={styles.sectionTitle}>
+        <Text
+          style={[
+            styles.sectionTitle,
+            { color: colors.text },
+          ]}
+        >
           Quick Actions
         </Text>
 
-        <View style={styles.actionCard}>
+        <View
+          style={[
+            styles.actionCard,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
           <Text
-            style={styles.actionTitle}
+            style={[
+              styles.actionTitle,
+              { color: colors.text },
+            ]}
           >
             Customer Management
           </Text>
 
           <Text
-            style={styles.actionText}
+            style={[
+              styles.actionText,
+              { color: colors.secondaryText },
+            ]}
           >
             View and manage your customers.
           </Text>
         </View>
 
-        <View style={styles.actionCard}>
+        <View
+          style={[
+            styles.actionCard,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
           <Text
-            style={styles.actionTitle}
+            style={[
+              styles.actionTitle,
+              { color: colors.text },
+            ]}
           >
             Lead Management
           </Text>
 
           <Text
-            style={styles.actionText}
+            style={[
+              styles.actionText,
+              { color: colors.secondaryText },
+            ]}
           >
             Track and manage your sales leads.
           </Text>
         </View>
 
         {/* Logout */}
-
         <Pressable
           onPress={handleLogout}
           disabled={isLoggingOut}
           style={({ pressed }) => [
             styles.logoutButton,
+            {
+              borderColor: colors.primary,
+            },
             pressed &&
               !isLoggingOut &&
               styles.logoutPressed,
@@ -295,18 +419,26 @@ export default function HomeScreen() {
         >
           {isLoggingOut ? (
             <ActivityIndicator
-              color="#1557E8"
+              color={colors.primary}
             />
           ) : (
             <Text
-              style={styles.logoutText}
+              style={[
+                styles.logoutText,
+                { color: colors.primary },
+              ]}
             >
               Log Out
             </Text>
           )}
         </Pressable>
 
-        <Text style={styles.footer}>
+        <Text
+          style={[
+            styles.footer,
+            { color: colors.mutedText },
+          ]}
+        >
           ELEVEN CRM • 2026
         </Text>
       </ScrollView>
@@ -317,7 +449,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
 
   container: {
@@ -338,26 +469,20 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  eleven: {
-    color: '#1557E8',
-  },
+  eleven: {},
 
-  crm: {
-    color: '#111827',
-  },
+  crm: {},
 
   welcome: {
     marginTop: 8,
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
   },
 
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#1557E8',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -369,7 +494,6 @@ const styles = StyleSheet.create({
   },
 
   welcomeCard: {
-    backgroundColor: '#1557E8',
     borderRadius: 18,
     padding: 22,
     marginBottom: 28,
@@ -389,7 +513,6 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: '#111827',
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 14,
@@ -404,37 +527,30 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     minHeight: 96,
-    backgroundColor: '#F7F8FA',
     borderRadius: 16,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
 
   cardNumber: {
-    color: '#1557E8',
     fontSize: 28,
     fontWeight: '800',
     marginBottom: 6,
   },
 
   cardLabel: {
-    color: '#6B7280',
     fontSize: 14,
     fontWeight: '600',
   },
 
   errorCard: {
-    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: '#FECACA',
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
   },
 
   errorText: {
-    color: '#991B1B',
     fontSize: 13,
     lineHeight: 18,
   },
@@ -445,35 +561,28 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#FCA5A5',
   },
 
   retryText: {
-    color: '#991B1B',
     fontSize: 13,
     fontWeight: '700',
   },
 
   actionCard: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E1E5EC',
     borderRadius: 16,
     padding: 18,
     marginBottom: 12,
   },
 
   actionTitle: {
-    color: '#111827',
     fontSize: 17,
     fontWeight: '700',
     marginBottom: 6,
   },
 
   actionText: {
-    color: '#6B7280',
     fontSize: 14,
   },
 
@@ -481,7 +590,6 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1557E8',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 18,
@@ -496,14 +604,12 @@ const styles = StyleSheet.create({
   },
 
   logoutText: {
-    color: '#1557E8',
     fontSize: 16,
     fontWeight: '700',
   },
 
   footer: {
     textAlign: 'center',
-    color: '#9CA3AF',
     fontSize: 12,
     marginTop: 24,
   },
