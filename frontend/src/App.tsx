@@ -1,23 +1,35 @@
-import { Navigate, Route, Routes } from 'react-router'
+import {
+  Navigate,
+  Route,
+  Routes,
+} from 'react-router'
 
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicOnlyRoute from './components/PublicOnlyRoute'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
 import AppShell from './layouts/AppShell'
+
+import ActivityPage from './pages/ActivityPage'
 import AdminPage from './pages/AdminPage'
 import CustomersPage from './pages/CustomersPage'
 import DashboardPage from './pages/DashboardPage'
 import FollowUpDetailPage from './pages/FollowUpDetailPage'
+import FollowUpsPage from './pages/FollowUpsPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import LeadWorkspacePage from './pages/LeadWorkspacePage'
 import LeadsPage from './pages/LeadsPage'
 import LoginPage from './pages/LoginPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 
+
 function App() {
   return (
     <Routes>
-      <Route element={<PublicOnlyRoute />}>
+      <Route
+        element={
+          <PublicOnlyRoute />
+        }
+      >
         <Route
           path="/"
           element={
@@ -30,57 +42,101 @@ function App() {
 
         <Route
           path="/login"
-          element={<LoginPage />}
+          element={
+            <LoginPage />
+          }
         />
 
         <Route
           path="/forgot-password"
-          element={<ForgotPasswordPage />}
+          element={
+            <ForgotPasswordPage />
+          }
         />
 
         <Route
           path="/reset-password"
-          element={<ResetPasswordPage />}
+          element={
+            <ResetPasswordPage />
+          }
         />
       </Route>
 
-      <Route element={<ProtectedRoute />}>
-        <Route element={<AppShell />}>
+
+      <Route
+        element={
+          <ProtectedRoute />
+        }
+      >
+        <Route
+          element={
+            <AppShell />
+          }
+        >
           <Route
             path="/dashboard"
-            element={<DashboardPage />}
+            element={
+              <DashboardPage />
+            }
           />
 
           <Route
             path="/leads"
-            element={<LeadsPage />}
+            element={
+              <LeadsPage />
+            }
           />
 
           <Route
             path="/leads/:leadId"
-            element={<LeadWorkspacePage />}
+            element={
+              <LeadWorkspacePage />
+            }
+          />
+
+          <Route
+            path="/follow-ups"
+            element={
+              <FollowUpsPage />
+            }
           />
 
           <Route
             path="/follow-ups/:followUpId"
-            element={<FollowUpDetailPage />}
+            element={
+              <FollowUpDetailPage />
+            }
+          />
+
+          <Route
+            path="/activity"
+            element={
+              <ActivityPage />
+            }
           />
 
           <Route
             path="/customers"
-            element={<CustomersPage />}
+            element={
+              <CustomersPage />
+            }
           />
+
 
           <Route
             element={
               <RoleProtectedRoute
-                allowedRoles={['ADMIN']}
+                allowedRoles={[
+                  'ADMIN',
+                ]}
               />
             }
           >
             <Route
               path="/admin"
-              element={<AdminPage />}
+              element={
+                <AdminPage />
+              }
             />
           </Route>
         </Route>
@@ -88,5 +144,6 @@ function App() {
     </Routes>
   )
 }
+
 
 export default App

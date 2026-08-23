@@ -47,7 +47,12 @@ import {
   type LeadStatus,
 } from '../services/crm'
 
-type LeadView = 'ACTIVE' | 'CLOSED' | 'ALL'
+
+type LeadView =
+  | 'ACTIVE'
+  | 'CLOSED'
+  | 'ALL'
+
 
 const activeStatuses: LeadStatus[] = [
   'NEW',
@@ -61,6 +66,12 @@ const closedStatuses: LeadStatus[] = [
   'LOST',
   'DISQUALIFIED',
 ]
+
+const allStatuses: LeadStatus[] = [
+  ...activeStatuses,
+  ...closedStatuses,
+]
+
 
 function getStatusColor(
   status: LeadStatus,
@@ -91,6 +102,38 @@ function getStatusColor(
   }
 }
 
+
+function getStatusLabel(
+  status: LeadStatus,
+) {
+  switch (status) {
+    case 'NEW':
+      return 'New'
+
+    case 'CONTACTED':
+      return 'Contacted'
+
+    case 'QUALIFIED':
+      return 'Qualified'
+
+    case 'PROPOSAL':
+      return 'Proposal'
+
+    case 'WON':
+      return 'Won'
+
+    case 'LOST':
+      return 'Lost'
+
+    case 'DISQUALIFIED':
+      return 'Disqualified'
+
+    default:
+      return status
+  }
+}
+
+
 const leadCreatorRoles: UserRole[] = [
   'ADMIN',
   'MARKETING',
@@ -98,93 +141,163 @@ const leadCreatorRoles: UserRole[] = [
   'PROJECT_MANAGER',
 ]
 
+
 function LeadsPage() {
   const navigate = useNavigate()
 
-  const [currentUser, setCurrentUser] =
-    useState<CurrentUser | null>(null)
+  const [
+    currentUser,
+    setCurrentUser,
+  ] =
+    useState<CurrentUser | null>(
+      null,
+    )
 
-  const [leads, setLeads] = useState<Lead[]>([])
+  const [
+    leads,
+    setLeads,
+  ] =
+    useState<Lead[]>([])
 
-  const [isLoading, setIsLoading] = useState(true)
-  const [isCreating, setIsCreating] = useState(false)
+  const [
+    isLoading,
+    setIsLoading,
+  ] =
+    useState(true)
 
-  const [error, setError] = useState('')
-  const [successMessage, setSuccessMessage] = useState('')
-
-  const [search, setSearch] = useState('')
-  const [leadView, setLeadView] =
-    useState<LeadView>('ACTIVE')
-
-  const [statusFilter, setStatusFilter] =
-    useState<LeadStatus | 'ALL'>('ALL')
-
-  const [addDialogOpen, setAddDialogOpen] =
+  const [
+    isCreating,
+    setIsCreating,
+  ] =
     useState(false)
 
-  const [form, setForm] = useState({
-    contactName: '',
-    companyName: '',
-    email: '',
-    phone: '',
-    source: '',
-  })
+  const [
+    error,
+    setError,
+  ] =
+    useState('')
 
-  const loadPageData = async () => {
-    setIsLoading(true)
-    setError('')
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] =
+    useState('')
 
-    try {
-      const [user, leadData] = await Promise.all([
-        getCurrentUser(),
-        getLeads(),
-      ])
+  const [
+    search,
+    setSearch,
+  ] =
+    useState('')
 
-      setCurrentUser(user)
-      setLeads(leadData)
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Unable to load leads.',
-      )
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const [
+    leadView,
+    setLeadView,
+  ] =
+    useState<LeadView>(
+      'ACTIVE',
+    )
 
-  useEffect(() => {
-    let isMounted = true
+  const [
+    statusFilter,
+    setStatusFilter,
+  ] =
+    useState<
+      LeadStatus | 'ALL'
+    >(
+      'ALL',
+    )
 
-    const loadInitialData = async () => {
+  const [
+    addDialogOpen,
+    setAddDialogOpen,
+  ] =
+    useState(false)
+
+  const [
+    form,
+    setForm,
+  ] =
+    useState({
+      contactName: '',
+      companyName: '',
+      email: '',
+      phone: '',
+      source: '',
+    })
+
+
+  const loadPageData =
+    async () => {
+      setIsLoading(true)
+      setError('')
+
       try {
-        const [user, leadData] = await Promise.all([
-          getCurrentUser(),
-          getLeads(),
-        ])
-
-        if (!isMounted) {
-          return
-        }
+        const [
+          user,
+          leadData,
+        ] =
+          await Promise.all([
+            getCurrentUser(),
+            getLeads(),
+          ])
 
         setCurrentUser(user)
         setLeads(leadData)
-      } catch (requestError) {
-        if (!isMounted) {
-          return
-        }
-
+      } catch (
+        requestError
+      ) {
         setError(
-          requestError instanceof Error
+          requestError
+            instanceof Error
             ? requestError.message
             : 'Unable to load leads.',
         )
       } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
+        setIsLoading(false)
       }
     }
+
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadInitialData =
+      async () => {
+        try {
+          const [
+            user,
+            leadData,
+          ] =
+            await Promise.all([
+              getCurrentUser(),
+              getLeads(),
+            ])
+
+          if (!isMounted) {
+            return
+          }
+
+          setCurrentUser(user)
+          setLeads(leadData)
+        } catch (
+          requestError
+        ) {
+          if (!isMounted) {
+            return
+          }
+
+          setError(
+            requestError
+              instanceof Error
+              ? requestError.message
+              : 'Unable to load leads.',
+          )
+        } finally {
+          if (isMounted) {
+            setIsLoading(false)
+          }
+        }
+      }
 
     void loadInitialData()
 
@@ -193,8 +306,11 @@ function LeadsPage() {
     }
   }, [])
 
+
   const isSalesRepresentative =
-    currentUser?.role === 'SALES_REP'
+    currentUser?.role ===
+    'SALES_REP'
+
 
   const canCreateLead =
     currentUser !== null &&
@@ -203,245 +319,395 @@ function LeadsPage() {
       leadCreatorRoles,
     )
 
-  const activeLeadCount = useMemo(
-    () =>
-      leads.filter((lead) =>
-        activeStatuses.includes(lead.status),
-      ).length,
-    [leads],
-  )
 
-  const closedLeadCount = useMemo(
-    () =>
-      leads.filter((lead) =>
-        closedStatuses.includes(lead.status),
-      ).length,
-    [leads],
-  )
+  const activeLeadCount =
+    useMemo(
+      () =>
+        leads.filter(
+          (lead) =>
+            activeStatuses.includes(
+              lead.status,
+            ),
+        ).length,
+      [leads],
+    )
 
-  const filteredLeads = useMemo(() => {
-    const query = search.toLowerCase().trim()
 
-    return leads.filter((lead) => {
-      const matchesSearch =
-        lead.contact_name
+  const closedLeadCount =
+    useMemo(
+      () =>
+        leads.filter(
+          (lead) =>
+            closedStatuses.includes(
+              lead.status,
+            ),
+        ).length,
+      [leads],
+    )
+
+
+  /*
+   * Status options are now tied to the selected lead view.
+   *
+   * Active:
+   * New / Contacted / Qualified / Proposal
+   *
+   * Closed:
+   * Won / Lost / Disqualified
+   *
+   * All:
+   * Entire approved lifecycle
+   */
+  const availableStatusOptions =
+    useMemo(
+      () => {
+        if (
+          leadView ===
+          'ACTIVE'
+        ) {
+          return activeStatuses
+        }
+
+        if (
+          leadView ===
+          'CLOSED'
+        ) {
+          return closedStatuses
+        }
+
+        return allStatuses
+      },
+      [leadView],
+    )
+
+
+  const filteredLeads =
+    useMemo(() => {
+      const query =
+        search
           .toLowerCase()
-          .includes(query) ||
-        lead.company_name
-          .toLowerCase()
-          .includes(query) ||
-        lead.email
-          .toLowerCase()
-          .includes(query) ||
-        lead.phone
-          .toLowerCase()
-          .includes(query)
+          .trim()
 
-      const matchesStatus =
-        statusFilter === 'ALL' ||
-        lead.status === statusFilter
+      return leads.filter(
+        (lead) => {
+          const matchesSearch =
+            lead.contact_name
+              .toLowerCase()
+              .includes(query) ||
+            lead.company_name
+              .toLowerCase()
+              .includes(query) ||
+            lead.email
+              .toLowerCase()
+              .includes(query) ||
+            lead.phone
+              .toLowerCase()
+              .includes(query)
 
-      const matchesLeadView =
-        leadView === 'ALL' ||
-        (leadView === 'ACTIVE' &&
-          activeStatuses.includes(lead.status)) ||
-        (leadView === 'CLOSED' &&
-          closedStatuses.includes(lead.status))
+          const matchesStatus =
+            statusFilter ===
+              'ALL' ||
+            lead.status ===
+              statusFilter
 
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesLeadView
+          const matchesLeadView =
+            leadView ===
+              'ALL' ||
+            (
+              leadView ===
+                'ACTIVE' &&
+              activeStatuses.includes(
+                lead.status,
+              )
+            ) ||
+            (
+              leadView ===
+                'CLOSED' &&
+              closedStatuses.includes(
+                lead.status,
+              )
+            )
+
+          return (
+            matchesSearch &&
+            matchesStatus &&
+            matchesLeadView
+          )
+        },
       )
-    })
-  }, [
-    leads,
-    search,
-    statusFilter,
-    leadView,
-  ])
+    }, [
+      leads,
+      search,
+      statusFilter,
+      leadView,
+    ])
 
-  const handleLeadViewChange = (
-    view: LeadView,
-  ) => {
-    setLeadView(view)
-    setStatusFilter('ALL')
-  }
 
-  const resetCreateForm = () => {
-    setForm({
-      contactName: '',
-      companyName: '',
-      email: '',
-      phone: '',
-      source: '',
-    })
-  }
+  const handleLeadViewChange =
+    (
+      view: LeadView,
+    ) => {
+      setLeadView(view)
 
-  const handleAddLead = async () => {
-    if (!canCreateLead) {
-      return
+      /*
+       * Reset the status whenever the user changes
+       * between Active / Closed / All.
+       *
+       * This prevents impossible combinations such
+       * as Closed + Contacted.
+       */
+      setStatusFilter(
+        'ALL',
+      )
     }
 
-    if (
-      !form.contactName.trim() ||
-      !form.companyName.trim() ||
-      !form.phone.trim()
-    ) {
-      return
-    }
 
-    setIsCreating(true)
-    setError('')
-    setSuccessMessage('')
-
-    try {
-      const createdLead = await createLead({
-        contact_name: form.contactName.trim(),
-        company_name: form.companyName.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        source: form.source.trim(),
+  const resetCreateForm =
+    () => {
+      setForm({
+        contactName: '',
+        companyName: '',
+        email: '',
+        phone: '',
+        source: '',
       })
-
-      setLeads((currentLeads) => [
-        createdLead,
-        ...currentLeads,
-      ])
-
-      resetCreateForm()
-      setLeadView('ACTIVE')
-      setStatusFilter('ALL')
-      setAddDialogOpen(false)
-
-      setSuccessMessage(
-        `${createdLead.contact_name} was added successfully.`,
-      )
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Unable to create the lead.',
-      )
-    } finally {
-      setIsCreating(false)
-    }
-  }
-
-  const getStatusLabel = (
-    status: LeadStatus,
-  ) =>
-    status
-      .split('_')
-      .map(
-        (word) =>
-          word.charAt(0).toUpperCase() +
-          word.slice(1).toLowerCase(),
-      )
-      .join(' ')
-
-  const formatDate = (
-    dateValue: string | null,
-  ) => {
-    if (!dateValue) {
-      return '—'
     }
 
-    return new Date(
-      dateValue,
-    ).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-  }
 
-  const getEmptyMessage = () => {
-    if (isSalesRepresentative) {
-      if (leadView === 'ACTIVE') {
-        return 'No active leads assigned to you'
+  const handleAddLead =
+    async () => {
+      if (!canCreateLead) {
+        return
       }
 
-      if (leadView === 'CLOSED') {
-        return 'No closed leads assigned to you'
+      if (
+        !form.contactName.trim() ||
+        !form.companyName.trim() ||
+        !form.phone.trim()
+      ) {
+        return
       }
 
-      return 'No leads assigned to you'
+      setIsCreating(true)
+      setError('')
+      setSuccessMessage('')
+
+      try {
+        const createdLead =
+          await createLead({
+            contact_name:
+              form.contactName.trim(),
+
+            company_name:
+              form.companyName.trim(),
+
+            email:
+              form.email.trim(),
+
+            phone:
+              form.phone.trim(),
+
+            source:
+              form.source.trim(),
+          })
+
+        setLeads(
+          (
+            currentLeads,
+          ) => [
+            createdLead,
+            ...currentLeads,
+          ],
+        )
+
+        resetCreateForm()
+
+        setLeadView(
+          'ACTIVE',
+        )
+
+        setStatusFilter(
+          'ALL',
+        )
+
+        setAddDialogOpen(
+          false,
+        )
+
+        setSuccessMessage(
+          `${createdLead.contact_name} was added successfully.`,
+        )
+      } catch (
+        requestError
+      ) {
+        setError(
+          requestError
+            instanceof Error
+            ? requestError.message
+            : 'Unable to create the lead.',
+        )
+      } finally {
+        setIsCreating(
+          false,
+        )
+      }
     }
 
-    if (leadView === 'ACTIVE') {
-      return 'No active leads found'
+
+  const formatDate =
+    (
+      dateValue:
+        string | null,
+    ) => {
+      if (!dateValue) {
+        return '—'
+      }
+
+      return new Date(
+        dateValue,
+      ).toLocaleDateString(
+        'en-GB',
+        {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        },
+      )
     }
 
-    if (leadView === 'CLOSED') {
-      return 'No closed leads found'
+
+  const getEmptyMessage =
+    () => {
+      if (
+        isSalesRepresentative
+      ) {
+        if (
+          leadView ===
+          'ACTIVE'
+        ) {
+          return 'No active leads assigned to you'
+        }
+
+        if (
+          leadView ===
+          'CLOSED'
+        ) {
+          return 'No closed leads assigned to you'
+        }
+
+        return 'No leads assigned to you'
+      }
+
+      if (
+        leadView ===
+        'ACTIVE'
+      ) {
+        return 'No active leads found'
+      }
+
+      if (
+        leadView ===
+        'CLOSED'
+      ) {
+        return 'No closed leads found'
+      }
+
+      return 'No leads found'
     }
 
-    return 'No leads found'
-  }
 
-  const pageTitle = isSalesRepresentative
-    ? 'My Leads'
-    : 'Leads'
+  const pageTitle =
+    isSalesRepresentative
+      ? 'My Leads'
+      : 'Leads'
+
 
   const pageDescription =
     isSalesRepresentative
       ? 'View and manage leads assigned to you.'
       : 'Manage and track Altrium’s potential customers.'
 
+
   return (
-    <Box sx={{ p: { xs: 3, md: 5 } }}>
+    <Box
+      sx={{
+        p: {
+          xs: 3,
+          md: 5,
+        },
+      }}
+    >
       <Stack
         direction={{
           xs: 'column',
           sm: 'row',
         }}
         sx={{
-          justifyContent: 'space-between',
+          justifyContent:
+            'space-between',
+
           alignItems: {
             xs: 'flex-start',
             sm: 'center',
           },
+
           gap: 2,
+
           mb: 4,
         }}
       >
         <Box>
           <Typography
             variant="h4"
-            sx={{ fontWeight: 800 }}
+            sx={{
+              fontWeight: 800,
+            }}
           >
             {pageTitle}
           </Typography>
 
           <Typography
             sx={{
-              color: 'text.secondary',
+              color:
+                'text.secondary',
             }}
           >
             {pageDescription}
           </Typography>
         </Box>
 
-        <Stack direction="row" spacing={1}>
+
+        <Stack
+          direction="row"
+          spacing={1}
+        >
           <Button
-            startIcon={<RefreshRounded />}
+            startIcon={
+              <RefreshRounded />
+            }
             onClick={() =>
               void loadPageData()
             }
-            disabled={isLoading}
+            disabled={
+              isLoading
+            }
           >
             Refresh
           </Button>
 
+
           {canCreateLead && (
             <Button
               variant="contained"
-              startIcon={<AddRounded />}
+              startIcon={
+                <AddRounded />
+              }
               onClick={() => {
                 setError('')
                 setSuccessMessage('')
-                setAddDialogOpen(true)
+                setAddDialogOpen(
+                  true,
+                )
               }}
             >
               Add Lead
@@ -450,26 +716,37 @@ function LeadsPage() {
         </Stack>
       </Stack>
 
+
       {error && (
         <Alert
           severity="error"
-          sx={{ mb: 3 }}
+          sx={{
+            mb: 3,
+          }}
         >
           {error}
         </Alert>
       )}
 
+
       {successMessage && (
         <Alert
           severity="success"
-          sx={{ mb: 3 }}
+          sx={{
+            mb: 3,
+          }}
           onClose={() =>
-            setSuccessMessage('')
+            setSuccessMessage(
+              '',
+            )
           }
         >
           {successMessage}
         </Alert>
       )}
+
+
+      {/* LEAD COUNTERS */}
 
       <Stack
         direction={{
@@ -477,11 +754,16 @@ function LeadsPage() {
           sm: 'row',
         }}
         spacing={2}
-        sx={{ mb: 3 }}
+        sx={{
+          mb: 3,
+        }}
       >
         <Card
           variant="outlined"
-          sx={{ flex: 1, p: 2 }}
+          sx={{
+            flex: 1,
+            p: 2,
+          }}
         >
           <Typography
             variant="body2"
@@ -494,15 +776,21 @@ function LeadsPage() {
 
           <Typography
             variant="h5"
-            sx={{ fontWeight: 800 }}
+            sx={{
+              fontWeight: 800,
+            }}
           >
             {activeLeadCount}
           </Typography>
         </Card>
 
+
         <Card
           variant="outlined"
-          sx={{ flex: 1, p: 2 }}
+          sx={{
+            flex: 1,
+            p: 2,
+          }}
         >
           <Typography
             variant="body2"
@@ -515,15 +803,21 @@ function LeadsPage() {
 
           <Typography
             variant="h5"
-            sx={{ fontWeight: 800 }}
+            sx={{
+              fontWeight: 800,
+            }}
           >
             {closedLeadCount}
           </Typography>
         </Card>
 
+
         <Card
           variant="outlined"
-          sx={{ flex: 1, p: 2 }}
+          sx={{
+            flex: 1,
+            p: 2,
+          }}
         >
           <Typography
             variant="body2"
@@ -536,16 +830,24 @@ function LeadsPage() {
 
           <Typography
             variant="h5"
-            sx={{ fontWeight: 800 }}
+            sx={{
+              fontWeight: 800,
+            }}
           >
             {leads.length}
           </Typography>
         </Card>
       </Stack>
 
+
+      {/* FILTERS */}
+
       <Card
         variant="outlined"
-        sx={{ mb: 3, p: 2 }}
+        sx={{
+          mb: 3,
+          p: 2,
+        }}
       >
         <Stack
           direction={{
@@ -558,108 +860,158 @@ function LeadsPage() {
             fullWidth
             size="small"
             placeholder="Search by name, company, email or phone"
-            value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
+            value={
+              search
+            }
+            onChange={(
+              event,
+            ) =>
+              setSearch(
+                event.target.value,
+              )
             }
             slotProps={{
               input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRounded />
-                  </InputAdornment>
-                ),
+                startAdornment:
+                  (
+                    <InputAdornment position="start">
+                      <SearchRounded />
+                    </InputAdornment>
+                  ),
               },
             }}
           />
 
+
           <FormControl
             size="small"
-            sx={{ minWidth: 180 }}
+            sx={{
+              minWidth: 180,
+            }}
           >
             <InputLabel>
               Lead view
             </InputLabel>
 
             <Select
-              value={leadView}
+              value={
+                leadView
+              }
               label="Lead view"
-              onChange={(event) =>
+              onChange={(
+                event,
+              ) =>
                 handleLeadViewChange(
-                  event.target.value as LeadView,
+                  event.target
+                    .value as LeadView,
                 )
               }
             >
-              <MenuItem value="ACTIVE">
+              <MenuItem
+                value="ACTIVE"
+              >
                 Active ({activeLeadCount})
               </MenuItem>
 
-              <MenuItem value="CLOSED">
+              <MenuItem
+                value="CLOSED"
+              >
                 Closed ({closedLeadCount})
               </MenuItem>
 
-              <MenuItem value="ALL">
+              <MenuItem
+                value="ALL"
+              >
                 All ({leads.length})
               </MenuItem>
             </Select>
           </FormControl>
 
+
           <FormControl
             size="small"
-            sx={{ minWidth: 220 }}
+            sx={{
+              minWidth: 220,
+            }}
           >
-            <InputLabel>Status</InputLabel>
+            <InputLabel>
+              Status
+            </InputLabel>
 
             <Select
-              value={statusFilter}
+              value={
+                statusFilter
+              }
               label="Status"
-              onChange={(event) =>
+              onChange={(
+                event,
+              ) =>
                 setStatusFilter(
-                  event.target.value as
+                  event.target
+                    .value as
                     | LeadStatus
                     | 'ALL',
                 )
               }
             >
-              <MenuItem value="ALL">
+              <MenuItem
+                value="ALL"
+              >
                 All statuses
               </MenuItem>
-              <MenuItem value="NEW">New</MenuItem>
-              <MenuItem value="CONTACTED">
-                Contacted
-              </MenuItem>
-              <MenuItem value="FOLLOW_UP_REQUIRED">
-                Follow-up Required
-              </MenuItem>
-              <MenuItem value="QUALIFIED">
-                Qualified
-              </MenuItem>
-              <MenuItem value="PROPOSAL_SENT">
-                Proposal Sent
-              </MenuItem>
-              <MenuItem value="NEGOTIATION">
-                Negotiation
-              </MenuItem>
-              <MenuItem value="CONVERTED">
-                Converted
-              </MenuItem>
-              <MenuItem value="LOST">Lost</MenuItem>
+
+              {availableStatusOptions.map(
+                (
+                  status,
+                ) => (
+                  <MenuItem
+                    key={
+                      status
+                    }
+                    value={
+                      status
+                    }
+                  >
+                    {
+                      getStatusLabel(
+                        status,
+                      )
+                    }
+                  </MenuItem>
+                ),
+              )}
             </Select>
           </FormControl>
         </Stack>
       </Card>
 
+
+      {/* LEADS TABLE */}
+
       <TableContainer
-        component={Card}
+        component={
+          Card
+        }
         variant="outlined"
       >
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Lead</TableCell>
-              <TableCell>Company</TableCell>
-              <TableCell>Phone</TableCell>
-              <TableCell>Source</TableCell>
+              <TableCell>
+                Lead
+              </TableCell>
+
+              <TableCell>
+                Company
+              </TableCell>
+
+              <TableCell>
+                Phone
+              </TableCell>
+
+              <TableCell>
+                Source
+              </TableCell>
 
               {!isSalesRepresentative && (
                 <TableCell>
@@ -667,10 +1019,16 @@ function LeadsPage() {
                 </TableCell>
               )}
 
-              <TableCell>Status</TableCell>
-              <TableCell>Created</TableCell>
+              <TableCell>
+                Status
+              </TableCell>
+
+              <TableCell>
+                Created
+              </TableCell>
             </TableRow>
           </TableHead>
+
 
           <TableBody>
             {isLoading && (
@@ -682,14 +1040,20 @@ function LeadsPage() {
                       : 7
                   }
                   align="center"
-                  sx={{ py: 7 }}
+                  sx={{
+                    py: 7,
+                  }}
                 >
-                  <CircularProgress size={32} />
+                  <CircularProgress
+                    size={32}
+                  />
 
                   <Typography
                     sx={{
                       mt: 2,
-                      color: 'text.secondary',
+
+                      color:
+                        'text.secondary',
                     }}
                   >
                     Loading leads...
@@ -698,79 +1062,108 @@ function LeadsPage() {
               </TableRow>
             )}
 
+
             {!isLoading &&
-              filteredLeads.map((lead) => (
-                <TableRow
-                  key={lead.id}
-                  hover
-                  onClick={() =>
-                    navigate(`/leads/${lead.id}`)
-                  }
-                  sx={{
-                    cursor: 'pointer',
-                  }}
-                >
-                  <TableCell>
-                    <Typography
-                      sx={{
-                        fontWeight: 700,
-                      }}
-                    >
-                      {lead.contact_name}
-                    </Typography>
-
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                    >
-                      {lead.email || 'No email'}
-                    </Typography>
-                  </TableCell>
-
-                  <TableCell>
-                    {lead.company_name}
-                  </TableCell>
-
-                  <TableCell>
-                    {lead.phone}
-                  </TableCell>
-
-                  <TableCell>
-                    {lead.source || '—'}
-                  </TableCell>
-
-                  {!isSalesRepresentative && (
+              filteredLeads.map(
+                (
+                  lead,
+                ) => (
+                  <TableRow
+                    key={
+                      lead.id
+                    }
+                    hover
+                    onClick={() =>
+                      navigate(
+                        `/leads/${lead.id}`,
+                      )
+                    }
+                    sx={{
+                      cursor:
+                        'pointer',
+                    }}
+                  >
                     <TableCell>
-                      {lead.assigned_to_name ||
-                        'Unassigned'}
+                      <Typography
+                        sx={{
+                          fontWeight:
+                            700,
+                        }}
+                      >
+                        {
+                          lead.contact_name
+                        }
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        {lead.email ||
+                          'No email'}
+                      </Typography>
                     </TableCell>
-                  )}
 
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      label={
-                        lead.status_display ||
-                        getStatusLabel(
-                          lead.status,
-                        )
+
+                    <TableCell>
+                      {
+                        lead.company_name
                       }
-                      color={getStatusColor(
-                        lead.status,
-                      )}
-                    />
-                  </TableCell>
+                    </TableCell>
 
-                  <TableCell>
-                    {formatDate(
-                      lead.created_at,
+
+                    <TableCell>
+                      {
+                        lead.phone
+                      }
+                    </TableCell>
+
+
+                    <TableCell>
+                      {lead.source ||
+                        '—'}
+                    </TableCell>
+
+
+                    {!isSalesRepresentative && (
+                      <TableCell>
+                        {lead.assigned_to_name ||
+                          'Unassigned'}
+                      </TableCell>
                     )}
-                  </TableCell>
-                </TableRow>
-              ))}
+
+
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        label={
+                          lead.status_display ||
+                          getStatusLabel(
+                            lead.status,
+                          )
+                        }
+                        color={
+                          getStatusColor(
+                            lead.status,
+                          )
+                        }
+                      />
+                    </TableCell>
+
+
+                    <TableCell>
+                      {formatDate(
+                        lead.created_at,
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ),
+              )}
+
 
             {!isLoading &&
-              filteredLeads.length === 0 && (
+              filteredLeads.length ===
+                0 && (
                 <TableRow>
                   <TableCell
                     colSpan={
@@ -779,21 +1172,27 @@ function LeadsPage() {
                         : 7
                     }
                     align="center"
-                    sx={{ py: 7 }}
+                    sx={{
+                      py: 7,
+                    }}
                   >
                     <Typography
                       sx={{
-                        fontWeight: 700,
+                        fontWeight:
+                          700,
                       }}
                     >
-                      {getEmptyMessage()}
+                      {
+                        getEmptyMessage()
+                      }
                     </Typography>
 
                     <Typography
                       variant="body2"
                       color="text.secondary"
                     >
-                      Try changing your search or filters.
+                      Try changing your
+                      search or filters.
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -802,12 +1201,21 @@ function LeadsPage() {
         </Table>
       </TableContainer>
 
+
+      {/* CREATE LEAD */}
+
       {canCreateLead && (
         <Dialog
-          open={addDialogOpen}
+          open={
+            addDialogOpen
+          }
           onClose={() => {
-            if (!isCreating) {
-              setAddDialogOpen(false)
+            if (
+              !isCreating
+            ) {
+              setAddDialogOpen(
+                false,
+              )
             }
           }}
           fullWidth
@@ -820,17 +1228,25 @@ function LeadsPage() {
           <DialogContent>
             <Stack
               spacing={2}
-              sx={{ mt: 1 }}
+              sx={{
+                mt: 1,
+              }}
             >
               <TextField
                 required
                 label="Contact name"
-                value={form.contactName}
-                onChange={(event) =>
+                value={
+                  form.contactName
+                }
+                onChange={(
+                  event,
+                ) =>
                   setForm({
                     ...form,
+
                     contactName:
-                      event.target.value,
+                      event.target
+                        .value,
                   })
                 }
               />
@@ -838,12 +1254,18 @@ function LeadsPage() {
               <TextField
                 required
                 label="Company"
-                value={form.companyName}
-                onChange={(event) =>
+                value={
+                  form.companyName
+                }
+                onChange={(
+                  event,
+                ) =>
                   setForm({
                     ...form,
+
                     companyName:
-                      event.target.value,
+                      event.target
+                        .value,
                   })
                 }
               />
@@ -851,12 +1273,18 @@ function LeadsPage() {
               <TextField
                 label="Email address"
                 type="email"
-                value={form.email}
-                onChange={(event) =>
+                value={
+                  form.email
+                }
+                onChange={(
+                  event,
+                ) =>
                   setForm({
                     ...form,
+
                     email:
-                      event.target.value,
+                      event.target
+                        .value,
                   })
                 }
               />
@@ -864,12 +1292,18 @@ function LeadsPage() {
               <TextField
                 required
                 label="Phone number"
-                value={form.phone}
-                onChange={(event) =>
+                value={
+                  form.phone
+                }
+                onChange={(
+                  event,
+                ) =>
                   setForm({
                     ...form,
+
                     phone:
-                      event.target.value,
+                      event.target
+                        .value,
                   })
                 }
               />
@@ -877,17 +1311,25 @@ function LeadsPage() {
               <TextField
                 label="Lead source"
                 placeholder="Website, Referral, Campaign..."
-                value={form.source}
-                onChange={(event) =>
+                value={
+                  form.source
+                }
+                onChange={(
+                  event,
+                ) =>
                   setForm({
                     ...form,
+
                     source:
-                      event.target.value,
+                      event.target
+                        .value,
                   })
                 }
               />
 
-              <Alert severity="info">
+              <Alert
+                severity="info"
+              >
                 New leads are created
                 unassigned. Sales Managers
                 or Project Managers can
@@ -897,6 +1339,7 @@ function LeadsPage() {
             </Stack>
           </DialogContent>
 
+
           <DialogActions
             sx={{
               px: 3,
@@ -905,9 +1348,13 @@ function LeadsPage() {
           >
             <Button
               onClick={() =>
-                setAddDialogOpen(false)
+                setAddDialogOpen(
+                  false,
+                )
               }
-              disabled={isCreating}
+              disabled={
+                isCreating
+              }
             >
               Cancel
             </Button>
@@ -939,5 +1386,6 @@ function LeadsPage() {
     </Box>
   )
 }
+
 
 export default LeadsPage

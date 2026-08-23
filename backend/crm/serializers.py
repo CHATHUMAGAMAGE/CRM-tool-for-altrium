@@ -1,13 +1,37 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils import timezone
+
 from rest_framework import serializers
 
 from accounts.models import UserProfile
 
-from .models import Communication, Customer, FollowUp, Lead
+from .models import (
+    Communication,
+    Customer,
+    FollowUp,
+    Lead,
+    LeadHistory,
+)
 
 
 User = get_user_model()
+
+
+def get_user_display_name(user):
+    if user is None:
+        return None
+
+    full_name = user.get_full_name().strip()
+
+    return full_name or user.username
+
+
+def get_status_display(status_value):
+    return dict(Lead.Status.choices).get(
+        status_value,
+        status_value,
+    )
 
 
 class LeadSerializer(serializers.ModelSerializer):
@@ -33,6 +57,7 @@ class LeadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Lead
+
         fields = [
             "id",
             "company_name",
@@ -64,12 +89,9 @@ class LeadSerializer(serializers.ModelSerializer):
         ]
 
     def get_assigned_to_name(self, obj):
-        if obj.assigned_to is None:
-            return None
-
-        full_name = obj.assigned_to.get_full_name().strip()
-
-        return full_name or obj.assigned_to.username
+        return get_user_display_name(
+            obj.assigned_to,
+        )
 
     def get_assigned_to_username(self, obj):
         if obj.assigned_to is None:
@@ -78,9 +100,9 @@ class LeadSerializer(serializers.ModelSerializer):
         return obj.assigned_to.username
 
     def get_created_by_name(self, obj):
-        full_name = obj.created_by.get_full_name().strip()
-
-        return full_name or obj.created_by.username
+        return get_user_display_name(
+            obj.created_by,
+        )
 
     def get_created_by_username(self, obj):
         return obj.created_by.username
@@ -109,6 +131,64 @@ class LeadSerializer(serializers.ModelSerializer):
                 else ""
             ),
         )
+
+        qualification_notes = attrs.get(
+            "qualification_notes",
+            (
+                self.instance.qualification_notes
+                if self.instance is not None
+                else ""
+            ),
+        )
+
+        if (
+            profile is not None
+            and profile.role == UserProfile.Role.SALES_REP
+        ):
+            if "qualification_notes" in attrs:
+                raise serializers.ValidationError(
+                    {
+                        "qualification_notes": (
+                            "Sales Representatives cannot modify "
+                            "lead qualification notes."
+                        )
+                    }
+                )
+
+            if (
+                requested_status
+                in {
+                    Lead.Status.QUALIFIED,
+                    Lead.Status.DISQUALIFIED,
+                }
+                and requested_status != current_status
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "status": (
+                            "Only management can qualify or "
+                            "disqualify a lead."
+                        )
+                    }
+                )
+
+        if (
+            requested_status
+            in {
+                Lead.Status.QUALIFIED,
+                Lead.Status.DISQUALIFIED,
+            }
+            and requested_status != current_status
+            and not (qualification_notes or "").strip()
+        ):
+            raise serializers.ValidationError(
+                {
+                    "qualification_notes": (
+                        "Qualification notes are required "
+                        "when qualifying or disqualifying a lead."
+                    )
+                }
+            )
 
         if (
             requested_status == Lead.Status.LOST
@@ -163,15 +243,99 @@ class LeadSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data):
         request = self.context["request"]
 
-        return Lead.objects.create(
+        lead = Lead.objects.create(
             created_by=request.user,
             **validated_data,
         )
 
+        LeadHistory.objects.create(
+            lead=lead,
+            event_type=LeadHistory.EventType.CREATED,
+            description="Lead created.",
+            performed_by=request.user,
+            metadata={
+                "status": lead.status,
+            },
+            created_at=lead.created_at,
+        )
+
+        if lead.assigned_to is not None:
+            LeadHistory.objects.create(
+                lead=lead,
+                event_type=LeadHistory.EventType.ASSIGNED,
+                description=(
+                    "Lead assigned to "
+                    f"{get_user_display_name(lead.assigned_to)}."
+                ),
+                performed_by=request.user,
+                metadata={
+                    "assigned_to_id": lead.assigned_to_id,
+                    "assigned_to_name": (
+                        get_user_display_name(
+                            lead.assigned_to,
+                        )
+                    ),
+                },
+            )
+
+        return lead
+
+    @transaction.atomic
     def update(self, instance, validated_data):
+        request = self.context.get("request")
+        performed_by = getattr(
+            request,
+            "user",
+            None,
+        )
+
+        previous_status = instance.status
+
+        previous_assigned_to_id = (
+            instance.assigned_to_id
+        )
+
+        previous_assigned_to_name = (
+            get_user_display_name(
+                instance.assigned_to,
+            )
+        )
+
+        previous_qualification_notes = (
+            instance.qualification_notes
+        )
+
+        previous_lost_reason = (
+            instance.lost_reason
+        )
+
+        detail_fields = {
+            "company_name": (
+                "Company name",
+                instance.company_name,
+            ),
+            "contact_name": (
+                "Contact name",
+                instance.contact_name,
+            ),
+            "email": (
+                "Email",
+                instance.email,
+            ),
+            "phone": (
+                "Phone",
+                instance.phone,
+            ),
+            "source": (
+                "Lead source",
+                instance.source,
+            ),
+        }
+
         requested_status = validated_data.get(
             "status",
             instance.status,
@@ -180,10 +344,275 @@ class LeadSerializer(serializers.ModelSerializer):
         if requested_status != Lead.Status.LOST:
             validated_data["lost_reason"] = ""
 
-        return super().update(
+        updated_lead = super().update(
             instance,
             validated_data,
         )
+
+        if (
+            "assigned_to" in validated_data
+            and previous_assigned_to_id
+            != updated_lead.assigned_to_id
+        ):
+            new_name = get_user_display_name(
+                updated_lead.assigned_to,
+            )
+
+            if updated_lead.assigned_to is None:
+                event_type = (
+                    LeadHistory.EventType.UNASSIGNED
+                )
+
+                description = (
+                    "Lead assignment removed"
+                )
+
+                if previous_assigned_to_name:
+                    description += (
+                        f" from {previous_assigned_to_name}"
+                    )
+
+                description += "."
+
+            elif previous_assigned_to_id is None:
+                event_type = (
+                    LeadHistory.EventType.ASSIGNED
+                )
+
+                description = (
+                    f"Lead assigned to {new_name}."
+                )
+
+            else:
+                event_type = (
+                    LeadHistory.EventType.ASSIGNED
+                )
+
+                description = (
+                    "Lead reassigned from "
+                    f"{previous_assigned_to_name} "
+                    f"to {new_name}."
+                )
+
+            LeadHistory.objects.create(
+                lead=updated_lead,
+                event_type=event_type,
+                description=description,
+                performed_by=performed_by,
+                metadata={
+                    "previous_assigned_to_id": (
+                        previous_assigned_to_id
+                    ),
+                    "previous_assigned_to_name": (
+                        previous_assigned_to_name
+                    ),
+                    "assigned_to_id": (
+                        updated_lead.assigned_to_id
+                    ),
+                    "assigned_to_name": new_name,
+                },
+            )
+
+        if (
+            "status" in validated_data
+            and previous_status
+            != updated_lead.status
+        ):
+            if (
+                updated_lead.status
+                == Lead.Status.QUALIFIED
+            ):
+                event_type = (
+                    LeadHistory.EventType.QUALIFIED
+                )
+                description = "Lead qualified."
+
+            elif (
+                updated_lead.status
+                == Lead.Status.DISQUALIFIED
+            ):
+                event_type = (
+                    LeadHistory.EventType.DISQUALIFIED
+                )
+                description = "Lead disqualified."
+
+            elif (
+                updated_lead.status
+                == Lead.Status.LOST
+            ):
+                event_type = (
+                    LeadHistory.EventType.LOST
+                )
+                description = "Lead marked as lost."
+
+            elif (
+                updated_lead.status
+                == Lead.Status.WON
+            ):
+                event_type = (
+                    LeadHistory.EventType.WON
+                )
+                description = "Lead marked as won."
+
+            else:
+                event_type = (
+                    LeadHistory.EventType.STATUS_CHANGED
+                )
+
+                description = (
+                    "Lead status changed from "
+                    f"{get_status_display(previous_status)} "
+                    "to "
+                    f"{get_status_display(updated_lead.status)}."
+                )
+
+            metadata = {
+                "previous_status": previous_status,
+                "previous_status_display": (
+                    get_status_display(
+                        previous_status,
+                    )
+                ),
+                "status": updated_lead.status,
+                "status_display": (
+                    get_status_display(
+                        updated_lead.status,
+                    )
+                ),
+            }
+
+            if (
+                updated_lead.status
+                in {
+                    Lead.Status.QUALIFIED,
+                    Lead.Status.DISQUALIFIED,
+                }
+            ):
+                metadata["qualification_notes"] = (
+                    updated_lead.qualification_notes
+                )
+
+            if (
+                updated_lead.status
+                == Lead.Status.LOST
+            ):
+                metadata["lost_reason"] = (
+                    updated_lead.lost_reason
+                )
+
+            LeadHistory.objects.create(
+                lead=updated_lead,
+                event_type=event_type,
+                description=description,
+                performed_by=performed_by,
+                metadata=metadata,
+            )
+
+        changed_detail_labels = []
+
+        for field_name, (
+            label,
+            previous_value,
+        ) in detail_fields.items():
+            if (
+                field_name in validated_data
+                and previous_value
+                != getattr(
+                    updated_lead,
+                    field_name,
+                )
+            ):
+                changed_detail_labels.append(
+                    label,
+                )
+
+        if changed_detail_labels:
+            LeadHistory.objects.create(
+                lead=updated_lead,
+                event_type=LeadHistory.EventType.UPDATED,
+                description=(
+                    "Lead details updated: "
+                    + ", ".join(
+                        changed_detail_labels,
+                    )
+                    + "."
+                ),
+                performed_by=performed_by,
+                metadata={
+                    "changed_fields": (
+                        changed_detail_labels
+                    )
+                },
+            )
+
+        if (
+            "qualification_notes" in validated_data
+            and previous_status == updated_lead.status
+            and previous_qualification_notes
+            != updated_lead.qualification_notes
+        ):
+            LeadHistory.objects.create(
+                lead=updated_lead,
+                event_type=LeadHistory.EventType.UPDATED,
+                description=(
+                    "Qualification notes updated."
+                ),
+                performed_by=performed_by,
+            )
+
+        if (
+            "lost_reason" in validated_data
+            and previous_status == updated_lead.status
+            and previous_lost_reason
+            != updated_lead.lost_reason
+        ):
+            LeadHistory.objects.create(
+                lead=updated_lead,
+                event_type=LeadHistory.EventType.UPDATED,
+                description="Lost reason updated.",
+                performed_by=performed_by,
+            )
+
+        return updated_lead
+
+
+class LeadHistorySerializer(serializers.ModelSerializer):
+    event_type_display = serializers.CharField(
+        source="get_event_type_display",
+        read_only=True,
+    )
+
+    performed_by_name = serializers.SerializerMethodField()
+    performed_by_username = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LeadHistory
+
+        fields = [
+            "id",
+            "lead",
+            "event_type",
+            "event_type_display",
+            "description",
+            "performed_by",
+            "performed_by_name",
+            "performed_by_username",
+            "metadata",
+            "created_at",
+        ]
+
+        read_only_fields = fields
+
+    def get_performed_by_name(self, obj):
+        return get_user_display_name(
+            obj.performed_by,
+        )
+
+    def get_performed_by_username(self, obj):
+        if obj.performed_by is None:
+            return None
+
+        return obj.performed_by.username
 
 
 class CommunicationSerializer(serializers.ModelSerializer):
@@ -197,6 +626,7 @@ class CommunicationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Communication
+
         fields = [
             "id",
             "lead",
@@ -219,9 +649,9 @@ class CommunicationSerializer(serializers.ModelSerializer):
         ]
 
     def get_created_by_name(self, obj):
-        full_name = obj.created_by.get_full_name().strip()
-
-        return full_name or obj.created_by.username
+        return get_user_display_name(
+            obj.created_by,
+        )
 
     def get_created_by_username(self, obj):
         return obj.created_by.username
@@ -278,6 +708,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FollowUp
+
         fields = [
             "id",
             "lead",
@@ -312,12 +743,9 @@ class FollowUpSerializer(serializers.ModelSerializer):
         ]
 
     def get_assigned_to_name(self, obj):
-        if obj.assigned_to is None:
-            return None
-
-        full_name = obj.assigned_to.get_full_name().strip()
-
-        return full_name or obj.assigned_to.username
+        return get_user_display_name(
+            obj.assigned_to,
+        )
 
     def get_assigned_to_username(self, obj):
         if obj.assigned_to is None:
@@ -326,20 +754,17 @@ class FollowUpSerializer(serializers.ModelSerializer):
         return obj.assigned_to.username
 
     def get_created_by_name(self, obj):
-        full_name = obj.created_by.get_full_name().strip()
-
-        return full_name or obj.created_by.username
+        return get_user_display_name(
+            obj.created_by,
+        )
 
     def get_created_by_username(self, obj):
         return obj.created_by.username
 
     def get_completed_by_name(self, obj):
-        if obj.completed_by is None:
-            return None
-
-        full_name = obj.completed_by.get_full_name().strip()
-
-        return full_name or obj.completed_by.username
+        return get_user_display_name(
+            obj.completed_by,
+        )
 
     def get_completed_by_username(self, obj):
         if obj.completed_by is None:
@@ -414,14 +839,13 @@ class FollowUpSerializer(serializers.ModelSerializer):
                     FollowUp.Status.COMPLETED,
                     FollowUp.Status.CANCELLED,
                 }
-                and requested_status
-                != self.instance.status
+                and attrs
             ):
                 raise serializers.ValidationError(
                     {
-                        "status": (
-                            "Completed or cancelled follow-ups cannot "
-                            "be reopened."
+                        "detail": (
+                            "Completed or cancelled follow-ups "
+                            "cannot be edited."
                         )
                     }
                 )
@@ -490,8 +914,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
         if (
             instance.status == FollowUp.Status.PENDING
-            and requested_status
-            == FollowUp.Status.COMPLETED
+            and requested_status == FollowUp.Status.COMPLETED
         ):
             request = self.context.get("request")
             user = getattr(request, "user", None)
@@ -525,6 +948,7 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
+
         fields = [
             "id",
             "company_name",
@@ -551,12 +975,9 @@ class CustomerSerializer(serializers.ModelSerializer):
         ]
 
     def get_assigned_to_name(self, obj):
-        if obj.assigned_to is None:
-            return None
-
-        full_name = obj.assigned_to.get_full_name().strip()
-
-        return full_name or obj.assigned_to.username
+        return get_user_display_name(
+            obj.assigned_to,
+        )
 
     def get_assigned_to_username(self, obj):
         if obj.assigned_to is None:
