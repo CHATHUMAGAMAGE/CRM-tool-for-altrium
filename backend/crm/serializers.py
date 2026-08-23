@@ -385,6 +385,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
             ),
         )
 
+        # New follow-up validation.
         if self.instance is None:
             if (
                 due_date is not None
@@ -407,25 +408,28 @@ class FollowUpSerializer(serializers.ModelSerializer):
                     }
                 )
 
+        # Existing follow-up validation.
         if self.instance is not None:
+            # Completed and cancelled follow-ups are locked.
             if (
                 self.instance.status
                 in {
                     FollowUp.Status.COMPLETED,
                     FollowUp.Status.CANCELLED,
                 }
-                and requested_status
-                != self.instance.status
+                and attrs
             ):
                 raise serializers.ValidationError(
                     {
-                        "status": (
-                            "Completed or cancelled follow-ups cannot "
-                            "be reopened."
+                        "detail": (
+                            "Completed or cancelled follow-ups "
+                            "cannot be edited."
                         )
                     }
                 )
 
+            # Pending follow-ups may only be rescheduled
+            # to a future date/time.
             if (
                 "due_date" in attrs
                 and requested_status == FollowUp.Status.PENDING
@@ -440,6 +444,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
                     }
                 )
 
+        # Assignment permissions.
         if "assigned_to" in attrs:
             if profile is None:
                 raise serializers.ValidationError(
@@ -490,8 +495,7 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
         if (
             instance.status == FollowUp.Status.PENDING
-            and requested_status
-            == FollowUp.Status.COMPLETED
+            and requested_status == FollowUp.Status.COMPLETED
         ):
             request = self.context.get("request")
             user = getattr(request, "user", None)

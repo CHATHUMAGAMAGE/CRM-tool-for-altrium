@@ -164,24 +164,34 @@ async function getErrorMessage(
   response: Response,
 ): Promise<string> {
   try {
-    const data = (await response.json()) as Record<
-      string,
-      unknown
-    >
+    const data =
+      (await response.json()) as Record<
+        string,
+        unknown
+      >
 
-    if (typeof data.detail === 'string') {
+    if (
+      typeof data.detail === 'string'
+    ) {
       return data.detail
     }
 
-    for (const [field, value] of Object.entries(data)) {
+    for (
+      const [field, value]
+      of Object.entries(data)
+    ) {
       if (
         Array.isArray(value) &&
         value.length > 0
       ) {
-        return `${field}: ${String(value[0])}`
+        return `${field}: ${String(
+          value[0],
+        )}`
       }
 
-      if (typeof value === 'string') {
+      if (
+        typeof value === 'string'
+      ) {
         return `${field}: ${value}`
       }
     }
@@ -206,7 +216,9 @@ async function authenticatedRequest(
   }
 
   let accessToken =
-    localStorage.getItem('accessToken')
+    localStorage.getItem(
+      'accessToken',
+    )
 
   if (!accessToken) {
     throw new Error(
@@ -215,7 +227,9 @@ async function authenticatedRequest(
   }
 
   const headers =
-    new Headers(options.headers)
+    new Headers(
+      options.headers,
+    )
 
   headers.set(
     'Authorization',
@@ -224,7 +238,9 @@ async function authenticatedRequest(
 
   if (
     options.body &&
-    !headers.has('Content-Type')
+    !headers.has(
+      'Content-Type',
+    )
   ) {
     headers.set(
       'Content-Type',
@@ -232,15 +248,18 @@ async function authenticatedRequest(
     )
   }
 
-  let response = await fetch(
-    `${API_BASE_URL}${path}`,
-    {
-      ...options,
-      headers,
-    },
-  )
+  let response =
+    await fetch(
+      `${API_BASE_URL}${path}`,
+      {
+        ...options,
+        headers,
+      },
+    )
 
-  if (response.status === 401) {
+  if (
+    response.status === 401
+  ) {
     accessToken =
       await refreshAccessToken()
 
@@ -249,19 +268,21 @@ async function authenticatedRequest(
       `Bearer ${accessToken}`,
     )
 
-    response = await fetch(
-      `${API_BASE_URL}${path}`,
-      {
-        ...options,
-        headers,
-      },
-    )
+    response =
+      await fetch(
+        `${API_BASE_URL}${path}`,
+        {
+          ...options,
+          headers,
+        },
+      )
   }
 
   return response
 }
 
-export async function getLeads(): Promise<Lead[]> {
+export async function getLeads():
+Promise<Lead[]> {
   const response =
     await authenticatedRequest(
       '/api/v1/crm/leads/',
@@ -269,7 +290,9 @@ export async function getLeads(): Promise<Lead[]> {
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response),
+      await getErrorMessage(
+        response,
+      ),
     )
   }
 
@@ -278,7 +301,11 @@ export async function getLeads(): Promise<Lead[]> {
       | Lead[]
       | PaginatedResponse<Lead>
 
-  if (isPaginatedResponse(data)) {
+  if (
+    isPaginatedResponse(
+      data,
+    )
+  ) {
     return data.results
   }
 
@@ -295,11 +322,15 @@ export async function getLead(
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response),
+      await getErrorMessage(
+        response,
+      ),
     )
   }
 
-  return (await response.json()) as Lead
+  return (
+    await response.json()
+  ) as Lead
 }
 
 export async function createLead(
@@ -310,17 +341,23 @@ export async function createLead(
       '/api/v1/crm/leads/',
       {
         method: 'POST',
-        body: JSON.stringify(lead),
+        body: JSON.stringify(
+          lead,
+        ),
       },
     )
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response),
+      await getErrorMessage(
+        response,
+      ),
     )
   }
 
-  return (await response.json()) as Lead
+  return (
+    await response.json()
+  ) as Lead
 }
 
 export async function updateLead(
@@ -332,17 +369,23 @@ export async function updateLead(
       `/api/v1/crm/leads/${leadId}/`,
       {
         method: 'PATCH',
-        body: JSON.stringify(updates),
+        body: JSON.stringify(
+          updates,
+        ),
       },
     )
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response),
+      await getErrorMessage(
+        response,
+      ),
     )
   }
 
-  return (await response.json()) as Lead
+  return (
+    await response.json()
+  ) as Lead
 }
 
 export async function getSalesRepresentatives():
@@ -354,7 +397,9 @@ Promise<SalesRepresentative[]> {
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response),
+      await getErrorMessage(
+        response,
+      ),
     )
   }
 
@@ -363,7 +408,11 @@ Promise<SalesRepresentative[]> {
       | SalesRepresentative[]
       | PaginatedResponse<SalesRepresentative>
 
-  if (isPaginatedResponse(data)) {
+  if (
+    isPaginatedResponse(
+      data,
+    )
+  ) {
     return data.results
   }
 
@@ -380,7 +429,9 @@ export async function getLeadCommunications(
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response),
+      await getErrorMessage(
+        response,
+      ),
     )
   }
 
@@ -389,7 +440,11 @@ export async function getLeadCommunications(
       | Communication[]
       | PaginatedResponse<Communication>
 
-  if (isPaginatedResponse(data)) {
+  if (
+    isPaginatedResponse(
+      data,
+    )
+  ) {
     return data.results
   }
 
@@ -398,24 +453,31 @@ export async function getLeadCommunications(
 
 export async function createLeadCommunication(
   leadId: number,
-  communication: CreateCommunicationInput,
+  communication:
+    CreateCommunicationInput,
 ): Promise<Communication> {
   const response =
     await authenticatedRequest(
       `/api/v1/crm/leads/${leadId}/communications/`,
       {
         method: 'POST',
-        body: JSON.stringify(communication),
+        body: JSON.stringify(
+          communication,
+        ),
       },
     )
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response),
+      await getErrorMessage(
+        response,
+      ),
     )
   }
 
-  return (await response.json()) as Communication
+  return (
+    await response.json()
+  ) as Communication
 }
 
 export async function getLeadFollowUps(
@@ -428,7 +490,9 @@ export async function getLeadFollowUps(
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response),
+      await getErrorMessage(
+        response,
+      ),
     )
   }
 
@@ -437,7 +501,42 @@ export async function getLeadFollowUps(
       | FollowUp[]
       | PaginatedResponse<FollowUp>
 
-  if (isPaginatedResponse(data)) {
+  if (
+    isPaginatedResponse(
+      data,
+    )
+  ) {
+    return data.results
+  }
+
+  return data
+}
+
+export async function getFollowUpReminders():
+Promise<FollowUp[]> {
+  const response =
+    await authenticatedRequest(
+      '/api/v1/crm/follow-up-reminders/',
+    )
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+      ),
+    )
+  }
+
+  const data =
+    (await response.json()) as
+      | FollowUp[]
+      | PaginatedResponse<FollowUp>
+
+  if (
+    isPaginatedResponse(
+      data,
+    )
+  ) {
     return data.results
   }
 
@@ -454,53 +553,71 @@ export async function getFollowUp(
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response),
+      await getErrorMessage(
+        response,
+      ),
     )
   }
 
-  return (await response.json()) as FollowUp
+  return (
+    await response.json()
+  ) as FollowUp
 }
 
 export async function createLeadFollowUp(
   leadId: number,
-  followUp: CreateFollowUpInput,
+  followUp:
+    CreateFollowUpInput,
 ): Promise<FollowUp> {
   const response =
     await authenticatedRequest(
       `/api/v1/crm/leads/${leadId}/follow-ups/`,
       {
         method: 'POST',
-        body: JSON.stringify(followUp),
+        body: JSON.stringify(
+          followUp,
+        ),
       },
     )
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response),
+      await getErrorMessage(
+        response,
+      ),
     )
   }
 
-  return (await response.json()) as FollowUp
+  return (
+    await response.json()
+  ) as FollowUp
 }
 
 export async function updateFollowUp(
   followUpId: number,
-  updates: UpdateFollowUpInput,
+  updates:
+    UpdateFollowUpInput,
 ): Promise<FollowUp> {
   const response =
     await authenticatedRequest(
       `/api/v1/crm/follow-ups/${followUpId}/`,
       {
         method: 'PATCH',
-        body: JSON.stringify(updates),
+        body: JSON.stringify(
+          updates,
+        ),
       },
     )
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response),
+      await getErrorMessage(
+        response,
+      ),
     )
   }
 
-  return (await response.json()) as FollowUp
+  return (
+    await response.json()
+  ) as FollowUp
 }
