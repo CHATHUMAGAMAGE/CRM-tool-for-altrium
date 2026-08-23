@@ -3,12 +3,11 @@ import { authenticatedRequest } from '@/services/auth';
 export type LeadStatus =
   | 'NEW'
   | 'CONTACTED'
-  | 'FOLLOW_UP_REQUIRED'
   | 'QUALIFIED'
-  | 'PROPOSAL_SENT'
-  | 'NEGOTIATION'
-  | 'CONVERTED'
-  | 'LOST';
+  | 'PROPOSAL'
+  | 'WON'
+  | 'LOST'
+  | 'DISQUALIFIED';
 
 export type Lead = {
   id: number;

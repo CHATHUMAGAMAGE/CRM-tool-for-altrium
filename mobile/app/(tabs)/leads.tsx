@@ -71,25 +71,24 @@ export default function LeadsScreen() {
   };
 
   const getStatusStyle = (status: Lead['status']) => {
-    switch (status) {
-      case 'QUALIFIED':
-      case 'CONVERTED':
-        return styles.statusSuccess;
+  switch (status) {
+    case 'QUALIFIED':
+    case 'WON':
+      return styles.statusSuccess;
 
-      case 'LOST':
-        return styles.statusLost;
+    case 'LOST':
+      return styles.statusLost;
 
-      case 'CONTACTED':
-      case 'FOLLOW_UP_REQUIRED':
-      case 'PROPOSAL_SENT':
-      case 'NEGOTIATION':
-        return styles.statusActive;
+    case 'CONTACTED':
+    case 'PROPOSAL':
+      return styles.statusActive;
 
-      case 'NEW':
-      default:
-        return styles.statusNew;
-    }
-  };
+    case 'NEW':
+    case 'DISQUALIFIED':
+    default:
+      return styles.statusNew;
+  }
+};
 
   return (
     <SafeAreaView style={styles.safeArea}>

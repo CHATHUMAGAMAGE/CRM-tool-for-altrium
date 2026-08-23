@@ -58,11 +58,10 @@ export default function LeadDetailsScreen() {
   const lifecycleStatuses: LeadStatus[] = [
     'NEW',
     'CONTACTED',
-    'FOLLOW_UP_REQUIRED',
     'QUALIFIED',
-    'PROPOSAL_SENT',
-    'NEGOTIATION',
+    'PROPOSAL',
     'LOST',
+    'DISQUALIFIED',
   ];
 
   const loadLead = useCallback(async () => {
@@ -111,23 +110,20 @@ export default function LeadDetailsScreen() {
       case 'CONTACTED':
         return 'Contacted';
 
-      case 'FOLLOW_UP_REQUIRED':
-        return 'Follow-up Required';
-
       case 'QUALIFIED':
         return 'Qualified';
 
-      case 'PROPOSAL_SENT':
+      case 'PROPOSAL':
         return 'Proposal Sent';
 
-      case 'NEGOTIATION':
-        return 'Negotiation';
+      case 'WON':
+        return 'Won';
 
       case 'LOST':
         return 'Lost';
 
-      case 'CONVERTED':
-        return 'Converted';
+      case 'DISQUALIFIED':
+        return 'Disqualified';
 
       default:
         return status;
@@ -268,19 +264,18 @@ export default function LeadDetailsScreen() {
   ) => {
     switch (status) {
       case 'QUALIFIED':
-      case 'CONVERTED':
+      case 'WON':
         return styles.statusSuccess;
 
       case 'LOST':
         return styles.statusLost;
 
       case 'CONTACTED':
-      case 'FOLLOW_UP_REQUIRED':
-      case 'PROPOSAL_SENT':
-      case 'NEGOTIATION':
+      case 'PROPOSAL':
         return styles.statusActive;
 
       case 'NEW':
+      case 'DISQUALIFIED':
       default:
         return styles.statusNew;
     }
@@ -356,6 +351,10 @@ export default function LeadDetailsScreen() {
     );
   }
 
+  const isClosedLead =
+    lead.status === 'WON' ||
+    lead.status === 'LOST';
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -398,8 +397,7 @@ export default function LeadDetailsScreen() {
         </View>
 
         {/* Lifecycle Action */}
-        {lead.status !== 'CONVERTED' &&
-        lead.status !== 'LOST' ? (
+        {!isClosedLead ? (
           <View style={styles.actionSection}>
             <Text style={styles.actionTitle}>
               Lead Status
@@ -434,7 +432,7 @@ export default function LeadDetailsScreen() {
         ) : null}
 
         {/* Conversion Action */}
-        {lead.status !== 'CONVERTED' &&
+        {lead.status !== 'WON' &&
         lead.status !== 'LOST' ? (
           <View style={styles.actionSection}>
             <Text style={styles.actionTitle}>
@@ -477,7 +475,7 @@ export default function LeadDetailsScreen() {
               </Text>
             ) : null}
           </View>
-        ) : lead.status === 'CONVERTED' ? (
+        ) : lead.status === 'WON' ? (
           <View style={styles.convertedCard}>
             <Text style={styles.convertedTitle}>
               ✓ Customer Converted
