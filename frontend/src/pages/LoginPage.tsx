@@ -37,6 +37,7 @@ function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -49,10 +50,11 @@ function LoginPage() {
     setIsLoading(true)
 
     try {
-      const tokens = await loginUser(username, password)
-
-      localStorage.setItem('accessToken', tokens.access)
-      localStorage.setItem('refreshToken', tokens.refresh)
+      await loginUser(
+        username,
+        password,
+        rememberMe,
+      )
 
       await getCurrentUser()
 
@@ -299,7 +301,16 @@ function LoginPage() {
                   }}
                 >
                   <FormControlLabel
-                    control={<Checkbox />}
+                    control={
+                      <Checkbox
+                        checked={rememberMe}
+                        onChange={(event) =>
+                          setRememberMe(
+                            event.target.checked,
+                          )
+                        }
+                      />
+                    }
                     label="Remember me"
                   />
 

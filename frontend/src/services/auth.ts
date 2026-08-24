@@ -1,9 +1,11 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL
+
 
 export type LoginResponse = {
   access: string
-  refresh: string
 }
+
 
 export type CurrentUser = {
   id: number
@@ -16,6 +18,7 @@ export type CurrentUser = {
   phone_number: string
 }
 
+
 export type ResetPasswordRequest = {
   uid: string
   token: string
@@ -23,86 +26,205 @@ export type ResetPasswordRequest = {
   confirmPassword: string
 }
 
+
 export type PasswordRecoveryResponse = {
   detail: string
 }
 
+
 type LoginErrorResponse = {
   detail?: string
 }
+
 
 type PasswordRecoveryErrorResponse = {
   detail?: string
   email?: string[]
 }
 
+
 type JwtPayload = {
   exp?: number
 }
 
+
 type RefreshResponse = {
   access: string
-  refresh?: string
 }
 
-function clearStoredTokens(): void {
-  localStorage.removeItem('accessToken')
-  localStorage.removeItem('refreshToken')
+
+let accessToken:
+  string | null =
+  null
+
+
+let refreshRequest:
+  Promise<string> | null =
+  null
+
+
+function clearLegacyBrowserTokens():
+void {
+  /*
+   * Migration cleanup:
+   * previous ELEVEN web builds stored JWTs in localStorage.
+   * Remove those copies so a successful migration does not leave
+   * old bearer credentials available to JavaScript.
+   */
+  try {
+    localStorage.removeItem(
+      'accessToken',
+    )
+
+    localStorage.removeItem(
+      'refreshToken',
+    )
+  } catch {
+    // Browser storage may be unavailable in restricted environments.
+  }
 }
+
+
+clearLegacyBrowserTokens()
+
+
+function setAccessToken(
+  token:
+    string | null,
+): void {
+  accessToken =
+    token
+}
+
+
+export function getAccessToken():
+string | null {
+  return accessToken
+}
+
+
+export function clearAccessToken():
+void {
+  setAccessToken(
+    null,
+  )
+
+  clearLegacyBrowserTokens()
+}
+
 
 export async function loginUser(
   username: string,
   password: string,
+  rememberMe:
+    boolean = false,
 ): Promise<LoginResponse> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/v1/auth/login/`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  const response =
+    await fetch(
+      `${API_BASE_URL}/api/v1/auth/login/`,
+      {
+        method:
+          'POST',
+
+        credentials:
+          'include',
+
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+
+        body:
+          JSON.stringify({
+            username,
+            password,
+
+            // Tells the shared backend that this is the browser flow.
+            // Mobile clients do not send this flag and retain the
+            // existing token-pair API contract.
+            web_session:
+              true,
+
+            remember_me:
+              rememberMe,
+          }),
       },
-      body: JSON.stringify({
-        username,
-        password,
-      }),
-    },
-  )
+    )
+
 
   if (!response.ok) {
-    let message = 'Login failed. Please check your credentials.'
+    clearAccessToken()
+
+    let message =
+      'Login failed. Please check your credentials.'
 
     try {
       const errorData =
-        (await response.json()) as LoginErrorResponse
+        (await response.json()) as
+          LoginErrorResponse
 
-      if (errorData.detail) {
-        message = errorData.detail
+      if (
+        errorData.detail
+      ) {
+        message =
+          errorData.detail
       }
     } catch {
       // Use the default error message.
     }
 
-    throw new Error(message)
+    throw new Error(
+      message,
+    )
   }
 
-  return (await response.json()) as LoginResponse
+
+  const result =
+    (await response.json()) as
+      LoginResponse
+
+
+  if (
+    !result.access
+  ) {
+    clearAccessToken()
+
+    throw new Error(
+      'The authentication service did not return an access token.',
+    )
+  }
+
+
+  setAccessToken(
+    result.access,
+  )
+
+  return result
 }
+
 
 export async function forgotPassword(
   email: string,
 ): Promise<PasswordRecoveryResponse> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/v1/auth/forgot-password/`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  const response =
+    await fetch(
+      `${API_BASE_URL}/api/v1/auth/forgot-password/`,
+      {
+        method:
+          'POST',
+
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+
+        body:
+          JSON.stringify({
+            email,
+          }),
       },
-      body: JSON.stringify({
-        email,
-      }),
-    },
-  )
+    )
+
 
   if (!response.ok) {
     let message =
@@ -110,262 +232,397 @@ export async function forgotPassword(
 
     try {
       const errorData =
-        (await response.json()) as PasswordRecoveryErrorResponse
+        (await response.json()) as
+          PasswordRecoveryErrorResponse
 
-      if (errorData.detail) {
-        message = errorData.detail
-      } else if (errorData.email?.[0]) {
-        message = errorData.email[0]
+      if (
+        errorData.detail
+      ) {
+        message =
+          errorData.detail
+      } else if (
+        errorData.email?.[0]
+      ) {
+        message =
+          errorData.email[0]
       }
     } catch {
       // Use the default error message.
     }
 
-    throw new Error(message)
+    throw new Error(
+      message,
+    )
   }
 
-  return (await response.json()) as PasswordRecoveryResponse
+
+  return (
+    await response.json()
+  ) as PasswordRecoveryResponse
 }
+
 
 export async function resetPassword({
   uid,
   token,
   newPassword,
   confirmPassword,
-}: ResetPasswordRequest): Promise<PasswordRecoveryResponse> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/v1/auth/reset-password/`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+}: ResetPasswordRequest):
+Promise<PasswordRecoveryResponse> {
+  const response =
+    await fetch(
+      `${API_BASE_URL}/api/v1/auth/reset-password/`,
+      {
+        method:
+          'POST',
+
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+
+        body:
+          JSON.stringify({
+            uid,
+            token,
+
+            new_password:
+              newPassword,
+
+            confirm_password:
+              confirmPassword,
+          }),
       },
-      body: JSON.stringify({
-        uid,
-        token,
-        new_password: newPassword,
-        confirm_password: confirmPassword,
-      }),
-    },
-  )
+    )
+
 
   if (!response.ok) {
     let message =
       'Unable to reset your password. The link may have expired.'
 
     try {
-      const errorData = (await response.json()) as {
-        detail?: string
-        new_password?: string[]
-        confirm_password?: string[]
-        non_field_errors?: string[]
-      }
+      const errorData =
+        (await response.json()) as {
+          detail?: string
+          new_password?: string[]
+          confirm_password?: string[]
+          non_field_errors?: string[]
+        }
 
-      if (errorData.detail) {
-        message = errorData.detail
-      } else if (errorData.new_password?.[0]) {
-        message = errorData.new_password[0]
-      } else if (errorData.confirm_password?.[0]) {
-        message = errorData.confirm_password[0]
-      } else if (errorData.non_field_errors?.[0]) {
-        message = errorData.non_field_errors[0]
+      if (
+        errorData.detail
+      ) {
+        message =
+          errorData.detail
+      } else if (
+        errorData.new_password?.[0]
+      ) {
+        message =
+          errorData.new_password[0]
+      } else if (
+        errorData.confirm_password?.[0]
+      ) {
+        message =
+          errorData.confirm_password[0]
+      } else if (
+        errorData.non_field_errors?.[0]
+      ) {
+        message =
+          errorData.non_field_errors[0]
       }
     } catch {
       // Use the default error message.
     }
 
-    throw new Error(message)
-  }
-
-  return (await response.json()) as PasswordRecoveryResponse
-}
-
-export async function getCurrentUser(): Promise<CurrentUser> {
-  const accessToken = localStorage.getItem('accessToken')
-
-  if (!accessToken) {
-    throw new Error('No access token found.')
-  }
-
-  const response = await fetch(
-    `${API_BASE_URL}/api/v1/auth/me/`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
-  )
-
-  if (!response.ok) {
-    throw new Error('Unable to retrieve the current user.')
-  }
-
-  return (await response.json()) as CurrentUser
-}
-
-export function hasValidAccessToken(): boolean {
-  const accessToken = localStorage.getItem('accessToken')
-
-  if (!accessToken) {
-    return false
-  }
-
-  try {
-    const payloadSegment = accessToken.split('.')[1]
-
-    if (!payloadSegment) {
-      return false
-    }
-
-    const base64 = payloadSegment
-      .replace(/-/g, '+')
-      .replace(/_/g, '/')
-
-    const paddedBase64 = base64.padEnd(
-      Math.ceil(base64.length / 4) * 4,
-      '=',
+    throw new Error(
+      message,
     )
+  }
 
-    const payload = JSON.parse(atob(paddedBase64)) as JwtPayload
 
-    if (typeof payload.exp !== 'number') {
+  clearAccessToken()
+
+  return (
+    await response.json()
+  ) as PasswordRecoveryResponse
+}
+
+
+export function hasValidAccessToken():
+boolean {
+  const token =
+    getAccessToken()
+
+  if (
+    !token
+  ) {
+    return false
+  }
+
+
+  try {
+    const payloadSegment =
+      token.split(
+        '.',
+      )[1]
+
+    if (
+      !payloadSegment
+    ) {
       return false
     }
 
-    return payload.exp > Math.floor(Date.now() / 1000)
-  } catch {
-    return false
-  }
-}
 
-export async function refreshAccessToken(): Promise<string> {
-  const refreshToken = localStorage.getItem('refreshToken')
+    const base64 =
+      payloadSegment
+        .replace(
+          /-/g,
+          '+',
+        )
+        .replace(
+          /_/g,
+          '/',
+        )
 
-  if (!refreshToken) {
-    throw new Error('No refresh token found.')
-  }
 
-  const response = await fetch(
-    `${API_BASE_URL}/api/v1/auth/refresh/`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        refresh: refreshToken,
-      }),
-    },
-  )
-
-  if (!response.ok) {
-    clearStoredTokens()
-    throw new Error('Session expired. Please log in again.')
-  }
-
-  const tokens = (await response.json()) as RefreshResponse
-
-  localStorage.setItem('accessToken', tokens.access)
-
-  if (tokens.refresh) {
-    localStorage.setItem('refreshToken', tokens.refresh)
-  }
-
-  return tokens.access
-}
-
-export async function logoutUser(): Promise<void> {
-  const refreshToken = localStorage.getItem('refreshToken')
-  let accessToken = localStorage.getItem('accessToken')
-  let refreshTokenToBlacklist = refreshToken
-
-  const accessTokenWasValid = hasValidAccessToken()
-
-  // Log out from the browser immediately.
-  clearStoredTokens()
-
-  if (!refreshToken) {
-    return
-  }
-
-  try {
-    if (!accessTokenWasValid) {
-      const refreshResponse = await fetch(
-        `${API_BASE_URL}/api/v1/auth/refresh/`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            refresh: refreshToken,
-          }),
-        },
+    const paddedBase64 =
+      base64.padEnd(
+        Math.ceil(
+          base64.length /
+            4,
+        ) *
+          4,
+        '=',
       )
 
-      if (!refreshResponse.ok) {
-        return
-      }
 
-      const refreshedTokens =
-        (await refreshResponse.json()) as RefreshResponse
+    const payload =
+      JSON.parse(
+        atob(
+          paddedBase64,
+        ),
+      ) as JwtPayload
 
-      accessToken = refreshedTokens.access
 
-      if (refreshedTokens.refresh) {
-        refreshTokenToBlacklist = refreshedTokens.refresh
-      }
+    if (
+      typeof payload.exp !==
+      'number'
+    ) {
+      return false
     }
 
-    if (!accessToken || !refreshTokenToBlacklist) {
-      return
-    }
 
-    await fetch(
-      `${API_BASE_URL}/api/v1/auth/logout/`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          refresh: refreshTokenToBlacklist,
-        }),
-      },
+    return (
+      payload.exp >
+      Math.floor(
+        Date.now() /
+          1000,
+      )
     )
   } catch {
-    // The local session has already been cleared.
+    return false
   }
 }
 
-let refreshRequest: Promise<string> | null = null
 
-export async function ensureValidSession(): Promise<boolean> {
-  if (hasValidAccessToken()) {
+export async function refreshAccessToken():
+Promise<string> {
+  const response =
+    await fetch(
+      `${API_BASE_URL}/api/v1/auth/refresh/`,
+      {
+        method:
+          'POST',
+
+        credentials:
+          'include',
+      },
+    )
+
+
+  if (!response.ok) {
+    clearAccessToken()
+
+    throw new Error(
+      'Session expired. Please log in again.',
+    )
+  }
+
+
+  const result =
+    (await response.json()) as
+      RefreshResponse
+
+
+  if (
+    !result.access
+  ) {
+    clearAccessToken()
+
+    throw new Error(
+      'The authentication service did not return an access token.',
+    )
+  }
+
+
+  setAccessToken(
+    result.access,
+  )
+
+  return result.access
+}
+
+
+export async function ensureValidSession():
+Promise<boolean> {
+  if (
+    hasValidAccessToken()
+  ) {
     return true
   }
 
-  const refreshToken = localStorage.getItem('refreshToken')
-
-  if (!refreshToken) {
-    clearStoredTokens()
-    return false
-  }
 
   try {
-    if (!refreshRequest) {
-      refreshRequest = refreshAccessToken().finally(() => {
-        refreshRequest = null
-      })
+    if (
+      !refreshRequest
+    ) {
+      refreshRequest =
+        refreshAccessToken()
+          .finally(
+            () => {
+              refreshRequest =
+                null
+            },
+          )
     }
+
 
     await refreshRequest
 
     return hasValidAccessToken()
   } catch {
-    clearStoredTokens()
+    clearAccessToken()
+
     return false
+  }
+}
+
+
+export async function getCurrentUser():
+Promise<CurrentUser> {
+  const sessionIsValid =
+    await ensureValidSession()
+
+  if (
+    !sessionIsValid
+  ) {
+    throw new Error(
+      'Your session has expired. Please log in again.',
+    )
+  }
+
+
+  const token =
+    getAccessToken()
+
+  if (
+    !token
+  ) {
+    throw new Error(
+      'No access token is available.',
+    )
+  }
+
+
+  const response =
+    await fetch(
+      `${API_BASE_URL}/api/v1/auth/me/`,
+      {
+        method:
+          'GET',
+
+        headers: {
+          Authorization:
+            `Bearer ${token}`,
+        },
+      },
+    )
+
+
+  if (
+    response.status ===
+    401
+  ) {
+    const refreshedToken =
+      await refreshAccessToken()
+
+    const retryResponse =
+      await fetch(
+        `${API_BASE_URL}/api/v1/auth/me/`,
+        {
+          method:
+            'GET',
+
+          headers: {
+            Authorization:
+              `Bearer ${refreshedToken}`,
+          },
+        },
+      )
+
+    if (
+      !retryResponse.ok
+    ) {
+      throw new Error(
+        'Unable to retrieve the current user.',
+      )
+    }
+
+    return (
+      await retryResponse.json()
+    ) as CurrentUser
+  }
+
+
+  if (
+    !response.ok
+  ) {
+    throw new Error(
+      'Unable to retrieve the current user.',
+    )
+  }
+
+
+  return (
+    await response.json()
+  ) as CurrentUser
+}
+
+
+export async function logoutUser():
+Promise<void> {
+  /*
+   * Remove the bearer token from JavaScript immediately. The server
+   * request then blacklists the HttpOnly refresh token and expires the
+   * cookie. If the network is unavailable, no access JWT remains in
+   * browser storage or module memory.
+   */
+  clearAccessToken()
+
+  try {
+    await fetch(
+      `${API_BASE_URL}/api/v1/auth/logout/`,
+      {
+        method:
+          'POST',
+
+        credentials:
+          'include',
+      },
+    )
+  } catch {
+    // The local in-memory access token is already gone.
+  } finally {
+    clearAccessToken()
   }
 }

@@ -1,8 +1,9 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenRefreshView
 
-from .authentication import ThrottledTokenObtainPairView
-
+from .authentication import (
+    CookieAwareTokenRefreshView,
+    ThrottledTokenObtainPairView,
+)
 from .views import (
     AdminDashboardSummaryView,
     AdminUserCreateView,
@@ -27,7 +28,7 @@ urlpatterns = [
     ),
     path(
         "refresh/",
-        TokenRefreshView.as_view(),
+        CookieAwareTokenRefreshView.as_view(),
         name="refresh",
     ),
     path(
@@ -41,10 +42,10 @@ urlpatterns = [
         name="current-user",
     ),
     path(
-    "sales-representatives/",
-    SalesRepLookupView.as_view(),
-    name="sales-representative-list",
-),
+        "sales-representatives/",
+        SalesRepLookupView.as_view(),
+        name="sales-representative-list",
+    ),
     path(
         "forgot-password/",
         ForgotPasswordView.as_view(),

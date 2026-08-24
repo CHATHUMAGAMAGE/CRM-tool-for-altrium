@@ -2,6 +2,7 @@
 Django settings for the ELEVEN CRM backend.
 """
 
+from datetime import timedelta
 from pathlib import Path
 
 # pyrefly: ignore [missing-import]
@@ -312,9 +313,25 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_THROTTLE_RATES": {
         "login": "10/minute",
+        "token_refresh": "30/minute",
         "password_reset": "5/hour",
         "rescue_radar": "10/hour",
     },
+}
+
+
+# Keep access tokens deliberately short-lived. Refresh-token rotation is
+# left disabled in this Sprint 1 hardening batch so the shared mobile
+# authentication flow remains backward compatible.
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=5,
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=1,
+    ),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": False,
 }
 
 
@@ -340,6 +357,67 @@ CSRF_TRUSTED_ORIGINS = environment_list(
         "http://localhost:3002",
         "http://127.0.0.1:3002",
     ],
+)
+
+# Required so the browser can send/receive the HttpOnly refresh cookie
+# between the React frontend and Django API when they use different
+# origins.
+CORS_ALLOW_CREDENTIALS = True
+
+
+# ---------------------------------------------------------------------
+# Web authentication cookie
+# ---------------------------------------------------------------------
+
+AUTH_REFRESH_COOKIE_NAME = env(
+    "AUTH_REFRESH_COOKIE_NAME",
+    default="eleven_refresh",
+)
+
+AUTH_REMEMBER_COOKIE_NAME = env(
+    "AUTH_REMEMBER_COOKIE_NAME",
+    default="eleven_remember",
+)
+
+AUTH_REFRESH_COOKIE_PATH = env(
+    "AUTH_REFRESH_COOKIE_PATH",
+    default="/api/v1/auth/",
+)
+
+AUTH_COOKIE_SECURE = env.bool(
+    "AUTH_COOKIE_SECURE",
+    default=not DEBUG,
+)
+
+AUTH_COOKIE_SAMESITE = env(
+    "AUTH_COOKIE_SAMESITE",
+    default="Lax",
+).strip().capitalize()
+
+if AUTH_COOKIE_SAMESITE not in {
+    "Lax",
+    "Strict",
+    "None",
+}:
+    raise ValueError(
+        "AUTH_COOKIE_SAMESITE must be Lax, Strict, or None."
+    )
+
+if (
+    AUTH_COOKIE_SAMESITE == "None"
+    and not AUTH_COOKIE_SECURE
+):
+    raise ValueError(
+        "AUTH_COOKIE_SECURE must be True when "
+        "AUTH_COOKIE_SAMESITE=None."
+    )
+
+AUTH_COOKIE_DOMAIN = (
+    env(
+        "AUTH_COOKIE_DOMAIN",
+        default="",
+    ).strip()
+    or None
 )
 
 

@@ -1,7 +1,8 @@
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 
 from .models import UserProfile
 from django.core import mail
@@ -30,13 +31,26 @@ class AuthenticationAPITests(APITestCase):
         self.user.profile.role = UserProfile.Role.ADMIN
         self.user.profile.save()
 
-    def login(self, username=None, password=None):
+    def login(
+        self,
+        username=None,
+        password=None,
+        *,
+        web_session=True,
+        remember_me=False,
+    ):
+        payload = {
+            "username": username or self.user.username,
+            "password": password or self.password,
+        }
+
+        if web_session:
+            payload["web_session"] = True
+            payload["remember_me"] = remember_me
+
         return self.client.post(
             reverse("login"),
-            {
-                "username": username or self.user.username,
-                "password": password or self.password,
-            },
+            payload,
         )
 
     def test_profile_is_created_automatically(self):
@@ -82,15 +96,84 @@ class AuthenticationAPITests(APITestCase):
             "Director",
         )
 
-    def test_login_returns_access_and_refresh_tokens(self):
+    def test_web_login_returns_access_and_sets_httponly_refresh_cookie(self):
         response = self.login()
 
         self.assertEqual(
             response.status_code,
             status.HTTP_200_OK,
         )
-        self.assertIn("access", response.data)
-        self.assertIn("refresh", response.data)
+        self.assertIn(
+            "access",
+            response.data,
+        )
+        self.assertNotIn(
+            "refresh",
+            response.data,
+        )
+
+        self.assertIn(
+            settings.AUTH_REFRESH_COOKIE_NAME,
+            response.cookies,
+        )
+
+        refresh_cookie = response.cookies[
+            settings.AUTH_REFRESH_COOKIE_NAME
+        ]
+
+        self.assertTrue(
+            bool(
+                refresh_cookie["httponly"]
+            )
+        )
+
+        self.assertEqual(
+            refresh_cookie["samesite"],
+            settings.AUTH_COOKIE_SAMESITE,
+        )
+
+    def test_web_login_session_cookie_is_not_persistent_by_default(self):
+        response = self.login()
+
+        refresh_cookie = response.cookies[
+            settings.AUTH_REFRESH_COOKIE_NAME
+        ]
+
+        self.assertEqual(
+            refresh_cookie["max-age"],
+            "",
+        )
+
+    def test_remember_me_makes_web_refresh_cookie_persistent(self):
+        response = self.login(
+            remember_me=True,
+        )
+
+        refresh_cookie = response.cookies[
+            settings.AUTH_REFRESH_COOKIE_NAME
+        ]
+
+        self.assertTrue(
+            refresh_cookie["max-age"],
+        )
+
+    def test_mobile_login_contract_still_returns_refresh_token_in_body(self):
+        response = self.login(
+            web_session=False,
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertIn(
+            "access",
+            response.data,
+        )
+        self.assertIn(
+            "refresh",
+            response.data,
+        )
 
     def test_invalid_credentials_are_rejected(self):
         response = self.login(password="IncorrectPassword@2026")
@@ -180,8 +263,33 @@ class AuthenticationAPITests(APITestCase):
                     role_label,
                 )
 
-    def test_refresh_token_returns_new_access_token(self):
-        login_response = self.login()
+    def test_web_refresh_uses_cookie_and_returns_access_only(self):
+        self.login()
+
+        response = self.client.post(
+            reverse("refresh"),
+            {},
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertIn(
+            "access",
+            response.data,
+        )
+        self.assertNotIn(
+            "refresh",
+            response.data,
+        )
+
+    def test_mobile_body_refresh_contract_remains_available(self):
+        login_response = self.login(
+            web_session=False,
+        )
+
+        self.client.cookies.clear()
 
         response = self.client.post(
             reverse("refresh"),
@@ -194,7 +302,26 @@ class AuthenticationAPITests(APITestCase):
             response.status_code,
             status.HTTP_200_OK,
         )
-        self.assertIn("access", response.data)
+        self.assertIn(
+            "access",
+            response.data,
+        )
+
+    def test_web_session_rejects_untrusted_browser_origin(self):
+        response = self.client.post(
+            reverse("login"),
+            {
+                "username": self.user.username,
+                "password": self.password,
+                "web_session": True,
+            },
+            HTTP_ORIGIN="https://evil.example",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
 
 
 
@@ -592,16 +719,21 @@ class ResetPasswordAPITests(APITestCase):
             status.HTTP_400_BAD_REQUEST,
         )
 
-    def test_existing_refresh_token_is_invalidated(self):
+    def test_existing_web_refresh_cookie_is_invalidated(self):
         login_response = self.client.post(
             reverse("login"),
             {
                 "username": self.user.username,
                 "password": self.old_password,
+                "web_session": True,
             },
         )
 
-        old_refresh_token = login_response.data["refresh"]
+        self.assertIn(
+            settings.AUTH_REFRESH_COOKIE_NAME,
+            login_response.cookies,
+        )
+
         credentials = self.get_reset_credentials()
 
         reset_response = self.client.post(
@@ -615,7 +747,7 @@ class ResetPasswordAPITests(APITestCase):
 
         refresh_response = self.client.post(
             reverse("refresh"),
-            {"refresh": old_refresh_token},
+            {},
         )
 
         self.assertEqual(
@@ -630,7 +762,11 @@ class ResetPasswordAPITests(APITestCase):
 
 class LogoutAPITests(APITestCase):
     def setUp(self):
-        self.password = "SecureLogoutPassword@2026"
+        cache.clear()
+
+        self.password = (
+            "SecureLogoutPassword@2026"
+        )
 
         self.user = User.objects.create_user(
             username="logout_user",
@@ -643,52 +779,30 @@ class LogoutAPITests(APITestCase):
             {
                 "username": self.user.username,
                 "password": self.password,
+                "web_session": True,
             },
         )
 
-        self.access_token = self.login_response.data["access"]
-        self.refresh_token = self.login_response.data["refresh"]
-        self.logout_url = reverse("logout")
-
-    def authenticate(self):
-        self.client.credentials(
-            HTTP_AUTHORIZATION=f"Bearer {self.access_token}",
+        self.access_token = (
+            self.login_response.data[
+                "access"
+            ]
         )
 
-    def test_logout_requires_authentication(self):
-        response = self.client.post(
-            self.logout_url,
-            {
-                "refresh": self.refresh_token,
-            },
+        self.refresh_token = (
+            self.login_response.cookies[
+                settings.AUTH_REFRESH_COOKIE_NAME
+            ].value
         )
 
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_401_UNAUTHORIZED,
+        self.logout_url = reverse(
+            "logout"
         )
 
-    def test_logout_requires_refresh_token(self):
-        self.authenticate()
-
+    def test_valid_web_logout_succeeds_and_deletes_cookie(self):
         response = self.client.post(
             self.logout_url,
             {},
-        )
-
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_400_BAD_REQUEST,
-        )
-
-    def test_valid_logout_succeeds(self):
-        self.authenticate()
-
-        response = self.client.post(
-            self.logout_url,
-            {
-                "refresh": self.refresh_token,
-            },
         )
 
         self.assertEqual(
@@ -701,26 +815,49 @@ class LogoutAPITests(APITestCase):
             "You have been logged out successfully.",
         )
 
-    def test_logged_out_refresh_token_cannot_be_reused(self):
-        self.authenticate()
-
-        logout_response = self.client.post(
-            self.logout_url,
-            {
-                "refresh": self.refresh_token,
-            },
+        self.assertIn(
+            settings.AUTH_REFRESH_COOKIE_NAME,
+            response.cookies,
         )
 
-        refresh_response = self.client.post(
-            reverse("refresh"),
-            {
-                "refresh": self.refresh_token,
-            },
+        self.assertEqual(
+            response.cookies[
+                settings.AUTH_REFRESH_COOKIE_NAME
+            ]["max-age"],
+            0,
+        )
+
+    def test_web_logout_is_idempotent_without_cookie(self):
+        self.client.cookies.clear()
+
+        response = self.client.post(
+            self.logout_url,
+            {},
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+    def test_logged_out_web_refresh_token_cannot_be_reused(self):
+        logout_response = self.client.post(
+            self.logout_url,
+            {},
         )
 
         self.assertEqual(
             logout_response.status_code,
             status.HTTP_200_OK,
+        )
+
+        self.client.cookies[
+            settings.AUTH_REFRESH_COOKIE_NAME
+        ] = self.refresh_token
+
+        refresh_response = self.client.post(
+            reverse("refresh"),
+            {},
         )
 
         self.assertEqual(
@@ -728,23 +865,10 @@ class LogoutAPITests(APITestCase):
             status.HTTP_401_UNAUTHORIZED,
         )
 
-    def test_invalid_refresh_token_is_rejected(self):
-        self.authenticate()
-
-        response = self.client.post(
-            self.logout_url,
-            {
-                "refresh": "invalid-refresh-token",
-            },
+    def test_web_logout_ignores_body_token_and_does_not_blacklist_other_user(self):
+        second_password = (
+            "SecondUserPassword@2026"
         )
-
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_400_BAD_REQUEST,
-        )
-
-    def test_user_cannot_blacklist_another_users_token(self):
-        second_password = "SecondUserPassword@2026"
 
         second_user = User.objects.create_user(
             username="second_logout_user",
@@ -752,7 +876,9 @@ class LogoutAPITests(APITestCase):
             password=second_password,
         )
 
-        second_login = self.client.post(
+        second_client = APIClient()
+
+        second_login = second_client.post(
             reverse("login"),
             {
                 "username": second_user.username,
@@ -760,11 +886,131 @@ class LogoutAPITests(APITestCase):
             },
         )
 
-        second_refresh_token = second_login.data["refresh"]
-
-        self.authenticate()
+        second_refresh_token = (
+            second_login.data["refresh"]
+        )
 
         logout_response = self.client.post(
+            self.logout_url,
+            {
+                "refresh": second_refresh_token,
+            },
+        )
+
+        self.assertEqual(
+            logout_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        second_refresh_response = (
+            second_client.post(
+                reverse("refresh"),
+                {
+                    "refresh": second_refresh_token,
+                },
+            )
+        )
+
+        self.assertEqual(
+            second_refresh_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+    def test_mobile_logout_body_flow_remains_supported(self):
+        mobile_client = APIClient()
+
+        mobile_login = mobile_client.post(
+            reverse("login"),
+            {
+                "username": self.user.username,
+                "password": self.password,
+            },
+        )
+
+        mobile_access = (
+            mobile_login.data["access"]
+        )
+        mobile_refresh = (
+            mobile_login.data["refresh"]
+        )
+
+        mobile_client.credentials(
+            HTTP_AUTHORIZATION=(
+                f"Bearer {mobile_access}"
+            ),
+        )
+
+        logout_response = mobile_client.post(
+            self.logout_url,
+            {
+                "refresh": mobile_refresh,
+            },
+        )
+
+        self.assertEqual(
+            logout_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        mobile_client.credentials()
+
+        refresh_response = mobile_client.post(
+            reverse("refresh"),
+            {
+                "refresh": mobile_refresh,
+            },
+        )
+
+        self.assertEqual(
+            refresh_response.status_code,
+            status.HTTP_401_UNAUTHORIZED,
+        )
+
+    def test_mobile_user_cannot_blacklist_another_users_token(self):
+        second_password = (
+            "SecondUserPassword@2026"
+        )
+
+        second_user = User.objects.create_user(
+            username="second_mobile_user",
+            email="second-mobile@altrium.lk",
+            password=second_password,
+        )
+
+        second_client = APIClient()
+
+        second_login = second_client.post(
+            reverse("login"),
+            {
+                "username": second_user.username,
+                "password": second_password,
+            },
+        )
+
+        second_refresh_token = (
+            second_login.data["refresh"]
+        )
+
+        mobile_login = APIClient().post(
+            reverse("login"),
+            {
+                "username": self.user.username,
+                "password": self.password,
+            },
+        )
+
+        mobile_access = (
+            mobile_login.data["access"]
+        )
+
+        first_client = APIClient()
+        first_client.credentials(
+            HTTP_AUTHORIZATION=(
+                f"Bearer {mobile_access}"
+            ),
+        )
+
+        logout_response = first_client.post(
             self.logout_url,
             {
                 "refresh": second_refresh_token,
@@ -776,43 +1022,29 @@ class LogoutAPITests(APITestCase):
             status.HTTP_400_BAD_REQUEST,
         )
 
-        self.client.credentials()
-
-        refresh_response = self.client.post(
-            reverse("refresh"),
-            {
-                "refresh": second_refresh_token,
-            },
+        second_refresh_response = (
+            second_client.post(
+                reverse("refresh"),
+                {
+                    "refresh": second_refresh_token,
+                },
+            )
         )
 
         self.assertEqual(
-            refresh_response.status_code,
+            second_refresh_response.status_code,
             status.HTTP_200_OK,
         )
 
-    def test_refresh_token_cannot_be_logged_out_twice(self):
-        self.authenticate()
-
-        first_response = self.client.post(
+    def test_untrusted_origin_cannot_logout_web_cookie_session(self):
+        response = self.client.post(
             self.logout_url,
-            {
-                "refresh": self.refresh_token,
-            },
-        )
-
-        second_response = self.client.post(
-            self.logout_url,
-            {
-                "refresh": self.refresh_token,
-            },
+            {},
+            HTTP_ORIGIN="https://evil.example",
         )
 
         self.assertEqual(
-            first_response.status_code,
-            status.HTTP_200_OK,
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
         )
 
-        self.assertEqual(
-            second_response.status_code,
-            status.HTTP_400_BAD_REQUEST,
-        )
