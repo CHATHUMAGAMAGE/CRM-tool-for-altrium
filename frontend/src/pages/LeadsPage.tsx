@@ -41,6 +41,7 @@ import {
 
 import {
   useNavigate,
+  useSearchParams,
 } from 'react-router'
 
 import {
@@ -212,6 +213,12 @@ function getLeadInitials(
 function LeadsPage() {
   const navigate =
     useNavigate()
+
+
+  const [
+    searchParams,
+  ] =
+    useSearchParams()
 
 
   const [
@@ -422,6 +429,101 @@ function LeadsPage() {
       }
     },
     [],
+  )
+
+
+  useEffect(
+    () => {
+      const requestedView =
+        searchParams.get(
+          'view',
+        )
+
+      const requestedStatus =
+        searchParams.get(
+          'status',
+        )
+
+      const requestedAssignee =
+        searchParams.get(
+          'assignee',
+        )
+
+      const requestedSearch =
+        searchParams.get(
+          'search',
+        )
+
+      const requestedSource =
+        searchParams.get(
+          'source',
+        )
+
+      if (
+        requestedView ===
+          'ACTIVE' ||
+        requestedView ===
+          'CLOSED' ||
+        requestedView ===
+          'ALL'
+      ) {
+        setLeadView(
+          requestedView,
+        )
+      } else {
+        setLeadView(
+          'ACTIVE',
+        )
+      }
+
+      if (
+        requestedStatus &&
+        allStatuses.includes(
+          requestedStatus as LeadStatus,
+        )
+      ) {
+        setStatusFilter(
+          requestedStatus as LeadStatus,
+        )
+      } else {
+        setStatusFilter(
+          'ALL',
+        )
+      }
+
+      if (
+        requestedAssignee ===
+          'UNASSIGNED' ||
+        (
+          requestedAssignee !==
+            null &&
+          /^\d+$/.test(
+            requestedAssignee,
+          )
+        )
+      ) {
+        setAssigneeFilter(
+          requestedAssignee,
+        )
+      } else {
+        setAssigneeFilter(
+          'ALL',
+        )
+      }
+
+      setSearch(
+        requestedSearch ??
+        '',
+      )
+
+      setSourceFilter(
+        requestedSource ??
+        'ALL',
+      )
+    },
+    [
+      searchParams,
+    ],
   )
 
 

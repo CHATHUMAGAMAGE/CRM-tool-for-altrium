@@ -2,7 +2,9 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
+  type KeyboardEvent,
   type MouseEvent,
 } from 'react'
 
@@ -14,11 +16,15 @@ import {
   Breadcrumbs,
   Chip,
   CircularProgress,
+  ClickAwayListener,
   Divider,
   IconButton,
+  ListItemButton,
   InputAdornment,
   Menu,
   MenuItem,
+  Paper,
+  Popper,
   Stack,
   TextField,
   Toolbar,
@@ -49,8 +55,17 @@ import {
 
 import {
   getFollowUpReminders,
+  getLeads,
+  getTechnicalAssessments,
   type FollowUp,
+  type Lead,
+  type TechnicalAssessment,
 } from '../../services/crm'
+
+import {
+  getFinancialAssessments,
+  type FinancialAssessment,
+} from '../../services/financialCrm'
 
 
 type AppTopBarProps = {
@@ -68,6 +83,90 @@ type ReminderType =
   | 'OVERDUE'
   | 'DUE_SOON'
   | 'UPCOMING'
+
+
+type GlobalSearchResultType =
+  | 'LEAD'
+  | 'TECHNICAL_ASSESSMENT'
+  | 'FINANCIAL_ASSESSMENT'
+
+
+type GlobalSearchResult = {
+  id: string
+  type: GlobalSearchResultType
+  title: string
+  subtitle: string
+  meta: string
+  path: string
+}
+
+
+function searchTextMatches(
+  query: string,
+  ...values:
+    Array<
+      string |
+      number |
+      null |
+      undefined
+    >
+) {
+  return values.some(
+    (
+      value,
+    ) =>
+      String(
+        value ?? '',
+      )
+        .toLowerCase()
+        .includes(
+          query,
+        ),
+  )
+}
+
+
+function getSearchResultTypeLabel(
+  type:
+    GlobalSearchResultType,
+) {
+  switch (
+    type
+  ) {
+    case 'TECHNICAL_ASSESSMENT':
+      return 'Technical'
+
+    case 'FINANCIAL_ASSESSMENT':
+      return 'Financial'
+
+    case 'LEAD':
+    default:
+      return 'Lead'
+  }
+}
+
+
+function getSearchResultTypeColor(
+  type:
+    GlobalSearchResultType,
+):
+  | 'primary'
+  | 'secondary'
+  | 'success' {
+  switch (
+    type
+  ) {
+    case 'TECHNICAL_ASSESSMENT':
+      return 'secondary'
+
+    case 'FINANCIAL_ASSESSMENT':
+      return 'success'
+
+    case 'LEAD':
+    default:
+      return 'primary'
+  }
+}
 
 
 function getReminderType(
@@ -312,6 +411,69 @@ function AppTopBar({
 
 
   const [
+    searchResults,
+    setSearchResults,
+  ] =
+    useState<
+      GlobalSearchResult[]
+    >(
+      [],
+    )
+
+
+  const [
+    isSearching,
+    setIsSearching,
+  ] =
+    useState(
+      false,
+    )
+
+
+  const [
+    searchError,
+    setSearchError,
+  ] =
+    useState(
+      '',
+    )
+
+
+  const [
+    searchOpen,
+    setSearchOpen,
+  ] =
+    useState(
+      false,
+    )
+
+
+  const [
+    selectedSearchIndex,
+    setSelectedSearchIndex,
+  ] =
+    useState(
+      0,
+    )
+
+
+  const searchAnchorRef =
+    useRef<
+      HTMLDivElement | null
+    >(
+      null,
+    )
+
+
+  const searchInputRef =
+    useRef<
+      HTMLInputElement | null
+    >(
+      null,
+    )
+
+
+  const [
     userMenuAnchor,
     setUserMenuAnchor,
   ] =
@@ -439,6 +601,491 @@ function AppTopBar({
     location.pathname,
     loadReminders,
   ])
+
+
+  useEffect(
+    () => {
+      const handleGlobalShortcut =
+        (
+          event:
+            globalThis.KeyboardEvent,
+        ) => {
+          if (
+            (
+              event.ctrlKey ||
+              event.metaKey
+            ) &&
+            event.key
+              .toLowerCase() ===
+              'k'
+          ) {
+            event.preventDefault()
+
+            searchInputRef
+              .current
+              ?.focus()
+
+            if (
+              searchValue
+                .trim()
+                .length >=
+              2
+            ) {
+              setSearchOpen(
+                true,
+              )
+            }
+          }
+        }
+
+      window.addEventListener(
+        'keydown',
+        handleGlobalShortcut,
+      )
+
+      return () => {
+        window.removeEventListener(
+          'keydown',
+          handleGlobalShortcut,
+        )
+      }
+    },
+    [
+      searchValue,
+    ],
+  )
+
+
+  useEffect(
+    () => {
+      const query =
+        searchValue
+          .trim()
+          .toLowerCase()
+
+      if (
+        query.length <
+        2
+      ) {
+        setSearchResults(
+          [],
+        )
+
+        setSearchError(
+          '',
+        )
+
+        setIsSearching(
+          false,
+        )
+
+        setSearchOpen(
+          false,
+        )
+
+        setSelectedSearchIndex(
+          0,
+        )
+
+        return
+      }
+
+      if (
+        !currentUser
+      ) {
+        return
+      }
+
+      let cancelled =
+        false
+
+      const timeoutId =
+        window.setTimeout(
+          () => {
+            const runSearch =
+              async () => {
+                setIsSearching(
+                  true,
+                )
+
+                setSearchError(
+                  '',
+                )
+
+                setSearchOpen(
+                  true,
+                )
+
+                setSelectedSearchIndex(
+                  0,
+                )
+
+
+                const role =
+                  currentUser.role
+
+                const canSearchLeads =
+                  [
+                    'ADMIN',
+                    'MARKETING',
+                    'SALES_REP',
+                    'SALES_MANAGER',
+                    'PROJECT_MANAGER',
+                    'DIRECTOR',
+                  ].includes(
+                    role,
+                  )
+
+                const canSearchTechnical =
+                  role ===
+                    'ADMIN' ||
+                  role ===
+                    'SALES_MANAGER' ||
+                  role ===
+                    'TECH_LEAD'
+
+                const canSearchFinancial =
+                  role ===
+                    'ADMIN' ||
+                  role ===
+                    'SALES_MANAGER' ||
+                  role ===
+                    'FINANCIAL_OFFICER'
+
+
+                const [
+                  leadResult,
+                  technicalResult,
+                  financialResult,
+                ] =
+                  await Promise.allSettled([
+                    canSearchLeads
+                      ? getLeads()
+                      : Promise.resolve(
+                          [] as Lead[],
+                        ),
+
+                    canSearchTechnical
+                      ? getTechnicalAssessments()
+                      : Promise.resolve(
+                          [] as TechnicalAssessment[],
+                        ),
+
+                    canSearchFinancial
+                      ? getFinancialAssessments()
+                      : Promise.resolve(
+                          [] as FinancialAssessment[],
+                        ),
+                  ])
+
+
+                if (
+                  cancelled
+                ) {
+                  return
+                }
+
+
+                const results:
+                GlobalSearchResult[] =
+                  []
+
+                let searchableSourceCount =
+                  0
+
+                let failedSourceCount =
+                  0
+
+
+                if (
+                  canSearchLeads
+                ) {
+                  searchableSourceCount +=
+                    1
+
+                  if (
+                    leadResult.status ===
+                    'fulfilled'
+                  ) {
+                    leadResult.value
+                      .filter(
+                        (
+                          lead,
+                        ) =>
+                          searchTextMatches(
+                            query,
+                            lead.id,
+                            lead.contact_name,
+                            lead.company_name,
+                            lead.email,
+                            lead.phone,
+                            lead.source,
+                            lead.status_display,
+                            lead.assigned_to_name,
+                          ),
+                      )
+                      .forEach(
+                        (
+                          lead,
+                        ) => {
+                          results.push({
+                            id:
+                              `lead-${lead.id}`,
+
+                            type:
+                              'LEAD',
+
+                            title:
+                              lead.contact_name,
+
+                            subtitle:
+                              [
+                                lead.company_name,
+                                lead.email,
+                              ]
+                                .filter(Boolean)
+                                .join(' • '),
+
+                            meta:
+                              [
+                                lead.status_display,
+                                lead.assigned_to_name
+                                  ? `Assigned to ${lead.assigned_to_name}`
+                                  : 'Unassigned',
+                              ].join(' • '),
+
+                            path:
+                              `/leads/${lead.id}`,
+                          })
+                        },
+                      )
+                  } else {
+                    failedSourceCount +=
+                      1
+                  }
+                }
+
+
+                if (
+                  canSearchTechnical
+                ) {
+                  searchableSourceCount +=
+                    1
+
+                  if (
+                    technicalResult.status ===
+                    'fulfilled'
+                  ) {
+                    technicalResult.value
+                      .filter(
+                        (
+                          assessment,
+                        ) =>
+                          searchTextMatches(
+                            query,
+                            assessment.id,
+                            assessment.lead,
+                            assessment.lead_contact_name,
+                            assessment.lead_company_name,
+                            assessment.status_display,
+                            assessment.assigned_to_name,
+                            assessment.requirements,
+                          ),
+                      )
+                      .forEach(
+                        (
+                          assessment,
+                        ) => {
+                          results.push({
+                            id:
+                              `technical-${assessment.id}`,
+
+                            type:
+                              'TECHNICAL_ASSESSMENT',
+
+                            title:
+                              `Technical Assessment #${assessment.id}`,
+
+                            subtitle:
+                              [
+                                assessment.lead_contact_name,
+                                assessment.lead_company_name,
+                              ]
+                                .filter(Boolean)
+                                .join(' • '),
+
+                            meta:
+                              [
+                                assessment.status_display,
+                                assessment.assigned_to_name
+                                  ? `Assigned to ${assessment.assigned_to_name}`
+                                  : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' • '),
+
+                            path:
+                              `/technical-assessments/${assessment.id}`,
+                          })
+                        },
+                      )
+                  } else {
+                    failedSourceCount +=
+                      1
+                  }
+                }
+
+
+                if (
+                  canSearchFinancial
+                ) {
+                  searchableSourceCount +=
+                    1
+
+                  if (
+                    financialResult.status ===
+                    'fulfilled'
+                  ) {
+                    financialResult.value
+                      .filter(
+                        (
+                          assessment,
+                        ) =>
+                          searchTextMatches(
+                            query,
+                            assessment.id,
+                            assessment.lead,
+                            assessment.lead_contact_name,
+                            assessment.lead_company_name,
+                            assessment.status_display,
+                            assessment.assigned_to_name,
+                            assessment.requirements,
+                          ),
+                      )
+                      .forEach(
+                        (
+                          assessment,
+                        ) => {
+                          results.push({
+                            id:
+                              `financial-${assessment.id}`,
+
+                            type:
+                              'FINANCIAL_ASSESSMENT',
+
+                            title:
+                              `Financial Assessment #${assessment.id}`,
+
+                            subtitle:
+                              [
+                                assessment.lead_contact_name,
+                                assessment.lead_company_name,
+                              ]
+                                .filter(Boolean)
+                                .join(' • '),
+
+                            meta:
+                              [
+                                assessment.status_display,
+                                assessment.assigned_to_name
+                                  ? `Assigned to ${assessment.assigned_to_name}`
+                                  : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' • '),
+
+                            path:
+                              `/financial-assessments/${assessment.id}`,
+                          })
+                        },
+                      )
+                  } else {
+                    failedSourceCount +=
+                      1
+                  }
+                }
+
+
+                const sortedResults =
+                  results
+                    .sort(
+                      (
+                        first,
+                        second,
+                      ) =>
+                        first.title.localeCompare(
+                          second.title,
+                        ),
+                    )
+                    .slice(
+                      0,
+                      8,
+                    )
+
+
+                setSearchResults(
+                  sortedResults,
+                )
+
+
+                if (
+                  searchableSourceCount >
+                    0 &&
+                  failedSourceCount ===
+                    searchableSourceCount
+                ) {
+                  setSearchError(
+                    'Search is temporarily unavailable.',
+                  )
+                } else {
+                  setSearchError(
+                    '',
+                  )
+                }
+
+
+                setIsSearching(
+                  false,
+                )
+              }
+
+
+            void runSearch()
+          },
+          250,
+        )
+
+
+      return () => {
+        cancelled =
+          true
+
+        window.clearTimeout(
+          timeoutId,
+        )
+      }
+    },
+    [
+      currentUser,
+      searchValue,
+    ],
+  )
+
+
+  useEffect(
+    () => {
+      setSearchOpen(
+        false,
+      )
+
+      setSelectedSearchIndex(
+        0,
+      )
+    },
+    [
+      location.pathname,
+    ],
+  )
 
 
   const displayName =
@@ -683,6 +1330,153 @@ function AppTopBar({
         `/follow-ups/${followUp.id}`,
       )
     }
+
+
+  const handleOpenSearchResult =
+    (
+      result:
+        GlobalSearchResult,
+    ) => {
+      setSearchValue(
+        '',
+      )
+
+      setSearchResults(
+        [],
+      )
+
+      setSearchOpen(
+        false,
+      )
+
+      setSelectedSearchIndex(
+        0,
+      )
+
+      navigate(
+        result.path,
+      )
+    }
+
+
+  const handleSearchKeyDown =
+    (
+      event:
+        KeyboardEvent<HTMLInputElement>,
+    ) => {
+      if (
+        event.key ===
+        'ArrowDown'
+      ) {
+        event.preventDefault()
+
+        if (
+          searchResults.length >
+          0
+        ) {
+          setSearchOpen(
+            true,
+          )
+
+          setSelectedSearchIndex(
+            (
+              current,
+            ) =>
+              (
+                current +
+                1
+              ) %
+              searchResults.length,
+          )
+        }
+
+        return
+      }
+
+
+      if (
+        event.key ===
+        'ArrowUp'
+      ) {
+        event.preventDefault()
+
+        if (
+          searchResults.length >
+          0
+        ) {
+          setSearchOpen(
+            true,
+          )
+
+          setSelectedSearchIndex(
+            (
+              current,
+            ) =>
+              (
+                current -
+                1 +
+                searchResults.length
+              ) %
+              searchResults.length,
+          )
+        }
+
+        return
+      }
+
+
+      if (
+        event.key ===
+        'Enter'
+      ) {
+        const selected =
+          searchResults[
+            selectedSearchIndex
+          ]
+
+        if (
+          selected
+        ) {
+          event.preventDefault()
+
+          handleOpenSearchResult(
+            selected,
+          )
+        }
+
+        return
+      }
+
+
+      if (
+        event.key ===
+        'Escape'
+      ) {
+        event.preventDefault()
+
+        setSearchOpen(
+          false,
+        )
+      }
+    }
+
+
+  const globalSearchPlaceholder =
+    currentUser?.role ===
+      'TECH_LEAD'
+      ? 'Search technical assessments...'
+      : currentUser?.role ===
+          'FINANCIAL_OFFICER'
+        ? 'Search financial assessments...'
+        : currentUser?.role ===
+            'ADMIN' ||
+          currentUser?.role ===
+            'SALES_MANAGER'
+          ? 'Search leads and assessments...'
+          : currentUser?.role ===
+              'SOFTWARE_ENGINEER'
+            ? 'No searchable Sprint 1 records'
+            : 'Search leads, contacts, companies...'
 
 
   const handleLogout =
@@ -957,123 +1751,177 @@ function AppTopBar({
 
           {/* Global search */}
 
-          <TextField
-            size="small"
-
-            placeholder="Search leads, contacts, deals..."
-
-            value={
-              searchValue
+          <Box
+            ref={
+              searchAnchorRef
             }
-
-            onChange={(
-              event,
-            ) =>
-              setSearchValue(
-                event.target
-                  .value,
-              )
-            }
-
             sx={{
               width: {
-                sm: 300,
-                lg: 390,
+                sm:
+                  300,
+
+                lg:
+                  390,
               },
 
               display: {
-                xs: 'none',
-                sm: 'block',
-              },
+                xs:
+                  'none',
 
-              '& .MuiOutlinedInput-root':
-                {
-                  height:
-                    44,
-
-                  borderRadius:
-                    '8px',
-
-                  backgroundColor:
-                    '#ffffff',
-
-                  '& fieldset':
-                    {
-                      borderColor:
-                        '#dfe4ec',
-                    },
-
-                  '&:hover fieldset':
-                    {
-                      borderColor:
-                        '#cbd3df',
-                    },
-
-                  '&.Mui-focused fieldset':
-                    {
-                      borderColor:
-                        '#0b5cff',
-
-                      borderWidth:
-                        1,
-                    },
-                },
-
-              '& input':
-                {
-                  fontSize:
-                    14,
-                },
-            }}
-
-            slotProps={{
-              input: {
-                startAdornment:
-                  (
-                    <InputAdornment position="start">
-                      <SearchRounded
-                        sx={{
-                          color:
-                            '#68758c',
-                        }}
-                      />
-                    </InputAdornment>
-                  ),
-
-                endAdornment:
-                  (
-                    <InputAdornment position="end">
-                      <Box
-                        sx={{
-                          px: 0.8,
-                          py: 0.25,
-
-                          borderRadius:
-                            '5px',
-
-                          backgroundColor:
-                            '#f2f4f7',
-
-                          color:
-                            '#7a8496',
-
-                          fontSize:
-                            11,
-
-                          fontWeight:
-                            700,
-
-                          lineHeight:
-                            1.5,
-                        }}
-                      >
-                        ⌘ K
-                      </Box>
-                    </InputAdornment>
-                  ),
+                sm:
+                  'block',
               },
             }}
-          />
+          >
+            <TextField
+              fullWidth
+              size="small"
+
+              placeholder={
+                globalSearchPlaceholder
+              }
+
+              value={
+                searchValue
+              }
+
+              disabled={
+                currentUser?.role ===
+                'SOFTWARE_ENGINEER'
+              }
+
+              inputRef={
+                searchInputRef
+              }
+
+              onFocus={() => {
+                if (
+                  searchValue
+                    .trim()
+                    .length >=
+                  2
+                ) {
+                  setSearchOpen(
+                    true,
+                  )
+                }
+              }}
+
+              onChange={(
+                event,
+              ) => {
+                setSearchValue(
+                  event.target.value,
+                )
+
+                setSelectedSearchIndex(
+                  0,
+                )
+              }}
+
+              onKeyDown={
+                handleSearchKeyDown
+              }
+
+              sx={{
+                '& .MuiOutlinedInput-root':
+                  {
+                    height:
+                      44,
+
+                    borderRadius:
+                      '8px',
+
+                    backgroundColor:
+                      '#ffffff',
+
+                    '& fieldset':
+                      {
+                        borderColor:
+                          '#dfe4ec',
+                      },
+
+                    '&:hover fieldset':
+                      {
+                        borderColor:
+                          '#cbd3df',
+                      },
+
+                    '&.Mui-focused fieldset':
+                      {
+                        borderColor:
+                          '#0b5cff',
+
+                        borderWidth:
+                          1,
+                      },
+                  },
+
+                '& input':
+                  {
+                    fontSize:
+                      14,
+                  },
+              }}
+
+              slotProps={{
+                input: {
+                  startAdornment:
+                    (
+                      <InputAdornment position="start">
+                        {isSearching ? (
+                          <CircularProgress
+                            size={18}
+                          />
+                        ) : (
+                          <SearchRounded
+                            sx={{
+                              color:
+                                '#68758c',
+                            }}
+                          />
+                        )}
+                      </InputAdornment>
+                    ),
+
+                  endAdornment:
+                    (
+                      <InputAdornment position="end">
+                        <Box
+                          sx={{
+                            px:
+                              0.8,
+
+                            py:
+                              0.25,
+
+                            borderRadius:
+                              '5px',
+
+                            backgroundColor:
+                              '#f2f4f7',
+
+                            color:
+                              '#7a8496',
+
+                            fontSize:
+                              11,
+
+                            fontWeight:
+                              700,
+
+                            lineHeight:
+                              1.5,
+                          }}
+                        >
+                          ⌘ K
+                        </Box>
+                      </InputAdornment>
+                    ),
+                },
+              }}
+            />
+          </Box>
 
 
           {/* Follow-up notifications */}
@@ -1183,6 +2031,421 @@ function AppTopBar({
           </Stack>
         </Toolbar>
       </AppBar>
+
+
+      {/* GLOBAL SEARCH RESULTS */}
+
+      <Popper
+        open={
+          searchOpen &&
+          Boolean(
+            searchAnchorRef.current,
+          )
+        }
+        anchorEl={
+          searchAnchorRef.current
+        }
+        placement="bottom-start"
+        sx={{
+          zIndex:
+            1500,
+        }}
+      >
+        <ClickAwayListener
+          onClickAway={() =>
+            setSearchOpen(
+              false,
+            )
+          }
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              mt:
+                1,
+
+              width:
+                searchAnchorRef.current
+                  ?.clientWidth ??
+                390,
+
+              maxWidth:
+                'calc(100vw - 24px)',
+
+              overflow:
+                'hidden',
+
+              border:
+                '1px solid',
+
+              borderColor:
+                '#e1e5ec',
+
+              borderRadius:
+                '10px',
+
+              boxShadow:
+                '0 14px 36px rgba(15, 23, 42, 0.14)',
+            }}
+          >
+            <Box
+              sx={{
+                px:
+                  2,
+
+                py:
+                  1.25,
+
+                borderBottom:
+                  '1px solid #edf0f4',
+              }}
+            >
+              <Typography
+                sx={{
+                  color:
+                    '#172033',
+
+                  fontSize:
+                    12.5,
+
+                  fontWeight:
+                    800,
+                }}
+              >
+                Global Search
+              </Typography>
+
+              <Typography
+                sx={{
+                  mt:
+                    0.2,
+
+                  color:
+                    '#7a8699',
+
+                  fontSize:
+                    10.5,
+                }}
+              >
+                Results are limited to records your role can access.
+              </Typography>
+            </Box>
+
+
+            {isSearching && (
+              <Box
+                sx={{
+                  py:
+                    4,
+
+                  display:
+                    'flex',
+
+                  justifyContent:
+                    'center',
+                }}
+              >
+                <CircularProgress
+                  size={26}
+                />
+              </Box>
+            )}
+
+
+            {!isSearching &&
+              searchError && (
+              <Box
+                sx={{
+                  px:
+                    2,
+
+                  py:
+                    3,
+
+                  textAlign:
+                    'center',
+                }}
+              >
+                <Typography
+                  sx={{
+                    color:
+                      'error.main',
+
+                    fontSize:
+                      12,
+                  }}
+                >
+                  {searchError}
+                </Typography>
+              </Box>
+            )}
+
+
+            {!isSearching &&
+              !searchError &&
+              searchResults.length ===
+                0 && (
+              <Box
+                sx={{
+                  px:
+                    2,
+
+                  py:
+                    4,
+
+                  textAlign:
+                    'center',
+                }}
+              >
+                <SearchRounded
+                  sx={{
+                    mb:
+                      0.75,
+
+                    color:
+                      '#98a2b3',
+
+                    fontSize:
+                      30,
+                  }}
+                />
+
+                <Typography
+                  sx={{
+                    color:
+                      '#344054',
+
+                    fontSize:
+                      12.5,
+
+                    fontWeight:
+                      700,
+                  }}
+                >
+                  No results found
+                </Typography>
+
+                <Typography
+                  sx={{
+                    mt:
+                      0.35,
+
+                    color:
+                      '#98a2b3',
+
+                    fontSize:
+                      10.5,
+                  }}
+                >
+                  Try a contact, company, email, status or assessment.
+                </Typography>
+              </Box>
+            )}
+
+
+            {!isSearching &&
+              !searchError &&
+              searchResults.length >
+                0 && (
+              <Box
+                sx={{
+                  maxHeight:
+                    430,
+
+                  overflowY:
+                    'auto',
+
+                  py:
+                    0.5,
+                }}
+              >
+                {searchResults.map(
+                  (
+                    result,
+                    index,
+                  ) => (
+                    <ListItemButton
+                      key={
+                        result.id
+                      }
+                      selected={
+                        index ===
+                        selectedSearchIndex
+                      }
+                      onMouseEnter={() =>
+                        setSelectedSearchIndex(
+                          index,
+                        )
+                      }
+                      onClick={() =>
+                        handleOpenSearchResult(
+                          result,
+                        )
+                      }
+                      sx={{
+                        px:
+                          1.75,
+
+                        py:
+                          1.25,
+
+                        alignItems:
+                          'flex-start',
+
+                        gap:
+                          1.25,
+
+                        '&.Mui-selected':
+                          {
+                            bgcolor:
+                              '#f2f6ff',
+                          },
+
+                        '&.Mui-selected:hover':
+                          {
+                            bgcolor:
+                              '#edf3ff',
+                          },
+                      }}
+                    >
+                      <Chip
+                        size="small"
+                        label={
+                          getSearchResultTypeLabel(
+                            result.type,
+                          )
+                        }
+                        color={
+                          getSearchResultTypeColor(
+                            result.type,
+                          )
+                        }
+                        variant="outlined"
+                        sx={{
+                          mt:
+                            0.15,
+
+                          minWidth:
+                            62,
+
+                          fontSize:
+                            9.5,
+
+                          fontWeight:
+                            800,
+                        }}
+                      />
+
+                      <Box
+                        sx={{
+                          minWidth:
+                            0,
+
+                          flex:
+                            1,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color:
+                              '#172033',
+
+                            fontSize:
+                              12.5,
+
+                            fontWeight:
+                              700,
+
+                            lineHeight:
+                              1.4,
+                          }}
+                        >
+                          {result.title}
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            mt:
+                              0.25,
+
+                            color:
+                              '#667085',
+
+                            fontSize:
+                              10.75,
+
+                            lineHeight:
+                              1.45,
+
+                            overflow:
+                              'hidden',
+
+                            textOverflow:
+                              'ellipsis',
+
+                            whiteSpace:
+                              'nowrap',
+                          }}
+                        >
+                          {result.subtitle ||
+                            'No additional details'}
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            mt:
+                              0.3,
+
+                            color:
+                              '#98a2b3',
+
+                            fontSize:
+                              9.75,
+
+                            lineHeight:
+                              1.4,
+                          }}
+                        >
+                          {result.meta}
+                        </Typography>
+                      </Box>
+                    </ListItemButton>
+                  ),
+                )}
+              </Box>
+            )}
+
+
+            <Box
+              sx={{
+                px:
+                  1.75,
+
+                py:
+                  1,
+
+                borderTop:
+                  '1px solid #edf0f4',
+
+                bgcolor:
+                  '#fafbfc',
+              }}
+            >
+              <Typography
+                sx={{
+                  color:
+                    '#98a2b3',
+
+                  fontSize:
+                    9.75,
+                }}
+              >
+                ↑ ↓ navigate • Enter open • Esc close
+              </Typography>
+            </Box>
+          </Paper>
+        </ClickAwayListener>
+      </Popper>
 
 
       {/* FOLLOW-UP REMINDER MENU */}
