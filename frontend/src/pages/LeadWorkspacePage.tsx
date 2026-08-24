@@ -20,6 +20,7 @@ import {
   FormControl,
   IconButton,
   InputLabel,
+  LinearProgress,
   MenuItem,
   Select,
   Snackbar,
@@ -71,6 +72,7 @@ import {
   getLeadCommunications,
   getLeadFollowUps,
   getLeadHistory,
+  getLeads,
   getSalesRepresentatives,
   getTechLeads,
   getTechnicalAssessments,
@@ -864,6 +866,81 @@ function getEditLeadForm(
 }
 
 
+const ACTIVE_WORKLOAD_STATUSES:
+LeadStatus[] = [
+  'NEW',
+  'CONTACTED',
+  'QUALIFIED',
+  'PROPOSAL',
+]
+
+
+function getSalesRepWorkload(
+  representativeId: number,
+  leads: Lead[],
+) {
+  const activeLeadCount =
+    leads.filter(
+      (
+        item,
+      ) =>
+        item.assigned_to ===
+          representativeId &&
+        ACTIVE_WORKLOAD_STATUSES.includes(
+          item.status,
+        ),
+    ).length
+
+  if (
+    activeLeadCount <=
+    2
+  ) {
+    return {
+      activeLeadCount,
+      label:
+        'Available',
+      color:
+        'success' as const,
+      progress:
+        Math.min(
+          100,
+          (activeLeadCount / 6) *
+            100,
+        ),
+    }
+  }
+
+  if (
+    activeLeadCount <=
+    5
+  ) {
+    return {
+      activeLeadCount,
+      label:
+        'Moderate',
+      color:
+        'warning' as const,
+      progress:
+        Math.min(
+          100,
+          (activeLeadCount / 6) *
+            100,
+        ),
+    }
+  }
+
+  return {
+    activeLeadCount,
+    label:
+      'Busy',
+    color:
+      'error' as const,
+    progress:
+      100,
+  }
+}
+
+
 function InformationItem({
   label,
   value,
@@ -973,6 +1050,35 @@ function LeadWorkspacePage() {
     >(
       [],
     )
+
+  const [
+    workloadLeads,
+    setWorkloadLeads,
+  ] =
+    useState<
+      Lead[]
+    >(
+      [],
+    )
+
+
+  const [
+    assignmentDialogOpen,
+    setAssignmentDialogOpen,
+  ] =
+    useState(
+      false,
+    )
+
+
+  const [
+    selectedSalesRepresentativeId,
+    setSelectedSalesRepresentativeId,
+  ] =
+    useState(
+      '',
+    )
+
 
   const [
     communications,
@@ -1685,14 +1791,24 @@ function LeadWorkspacePage() {
               user.role ===
                 'PROJECT_MANAGER'
             ) {
-              const representativeData =
-                await getSalesRepresentatives()
+              const [
+                representativeData,
+                workloadLeadData,
+              ] =
+                await Promise.all([
+                  getSalesRepresentatives(),
+                  getLeads(),
+                ])
 
               if (
                 isMounted
               ) {
                 setSalesRepresentatives(
                   representativeData,
+                )
+
+                setWorkloadLeads(
+                  workloadLeadData,
                 )
               }
             }
@@ -2049,7 +2165,25 @@ function LeadWorkspacePage() {
 
   const canReviewLead =
     canManageLead &&
-    !isClosedLead
+    !isClosedLead &&
+    lead.status !==
+      'PROPOSAL'
+
+
+  const hasPassedQualification =
+    lead.status ===
+      'QUALIFIED' ||
+    lead.status ===
+      'PROPOSAL' ||
+    lead.status ===
+      'WON' ||
+    (
+      lead.status ===
+        'LOST' &&
+      Boolean(
+        lead.qualification_notes,
+      )
+    )
 
 
   const canAddCommunication =
@@ -2265,7 +2399,49 @@ function LeadWorkspacePage() {
           updatedLead,
         )
 
+        setWorkloadLeads(
+          (
+            current,
+          ) => {
+            const exists =
+              current.some(
+                (
+                  item,
+                ) =>
+                  item.id ===
+                  updatedLead.id,
+              )
+
+            if (
+              exists
+            ) {
+              return current.map(
+                (
+                  item,
+                ) =>
+                  item.id ===
+                  updatedLead.id
+                    ? updatedLead
+                    : item,
+              )
+            }
+
+            return [
+              updatedLead,
+              ...current,
+            ]
+          },
+        )
+
         await refreshHistory()
+
+        setAssignmentDialogOpen(
+          false,
+        )
+
+        setSelectedSalesRepresentativeId(
+          '',
+        )
 
         if (
           salesRepresentativeId ===
@@ -2305,6 +2481,57 @@ function LeadWorkspacePage() {
         )
       }
     }
+
+
+  const openAssignmentDialog =
+    () => {
+      if (
+        !canAssignLead ||
+        isClosedLead
+      ) {
+        return
+      }
+
+      setAssignmentError(
+        '',
+      )
+
+      setSelectedSalesRepresentativeId(
+        lead.assigned_to ===
+          null
+          ? ''
+          : String(
+              lead.assigned_to,
+            ),
+      )
+
+      setAssignmentDialogOpen(
+        true,
+      )
+    }
+
+
+  const closeAssignmentDialog =
+    () => {
+      if (
+        isAssigningLead
+      ) {
+        return
+      }
+
+      setAssignmentDialogOpen(
+        false,
+      )
+
+      setAssignmentError(
+        '',
+      )
+
+      setSelectedSalesRepresentativeId(
+        '',
+      )
+    }
+
 
 
   const openEditLeadDialog =
@@ -3709,19 +3936,9 @@ function LeadWorkspacePage() {
                         startIcon={
                           <AssignmentIndRounded />
                         }
-                        onClick={() => {
-                          document
-                            .getElementById(
-                              'lead-ownership',
-                            )
-                            ?.scrollIntoView({
-                              behavior:
-                                'smooth',
-
-                              block:
-                                'center',
-                            })
-                        }}
+                        onClick={
+                          openAssignmentDialog
+                        }
                         sx={{
                           bgcolor:
                             '#ffffff',
@@ -4075,7 +4292,7 @@ function LeadWorkspacePage() {
 
                   {lead.converted_at && (
                     <InformationItem
-                      label="Won"
+                      label="Converted to Deal"
                       value={
                         formatDate(
                           lead.converted_at,
@@ -4179,22 +4396,20 @@ function LeadWorkspacePage() {
                       size="small"
                       label={
                         lead.status ===
-                          'QUALIFIED'
-                          ? 'Qualified'
-                          : lead.status ===
-                              'DISQUALIFIED'
-                            ? 'Disqualified'
+                          'DISQUALIFIED'
+                          ? 'Disqualified'
+                          : hasPassedQualification
+                            ? 'Qualified'
                             : isClosedLead
                               ? lead.status_display
                               : 'Qualification Pending'
                       }
                       color={
                         lead.status ===
-                          'QUALIFIED'
-                          ? 'success'
-                          : lead.status ===
-                              'DISQUALIFIED'
-                            ? 'error'
+                          'DISQUALIFIED'
+                          ? 'error'
+                          : hasPassedQualification
+                            ? 'success'
                             : 'warning'
                       }
                       variant="outlined"
@@ -4427,7 +4642,7 @@ function LeadWorkspacePage() {
                         11.5,
                     }}
                   >
-                    Manage and reassign lead ownership
+                    Current Sales Representative responsible for this lead
                   </Typography>
                 </Box>
 
@@ -4460,97 +4675,42 @@ function LeadWorkspacePage() {
                   </Typography>
 
 
-                  {canAssignLead &&
-                  !isClosedLead ? (
-                    <FormControl
-                      fullWidth
-                      size="small"
-                    >
-                      <Select<string>
-                        value={
-                          lead.assigned_to ===
-                          null
-                            ? ''
-                            : String(
-                                lead.assigned_to,
-                              )
-                        }
-                        disabled={
-                          isAssigningLead
-                        }
-                        onChange={(
-                          event,
-                        ) => {
-                          const selectedValue =
-                            event.target.value
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems:
+                        'center',
 
-                          void handleAssignLead(
-                            selectedValue ===
-                              ''
-                              ? null
-                              : Number(
-                                  selectedValue,
-                                ),
-                          )
-                        }}
-                      >
-                        <MenuItem
-                          value=""
-                        >
-                          Unassigned
-                        </MenuItem>
+                      p:
+                        1.25,
 
-                        {salesRepresentatives.map(
-                          (
-                            representative,
-                          ) => (
-                            <MenuItem
-                              key={
-                                representative.id
-                              }
-                              value={
-                                String(
-                                  representative.id,
-                                )
-                              }
-                            >
-                              {representative.full_name}
-                              {' ('}
-                              {representative.username}
-                              {')'}
-                            </MenuItem>
-                          ),
-                        )}
-                      </Select>
-                    </FormControl>
-                  ) : (
-                    <Stack
-                      direction="row"
-                      spacing={1}
+                      border:
+                        '1px solid #e4e8ef',
+
+                      borderRadius:
+                        '8px',
+
+                      bgcolor:
+                        '#fafbfc',
+                    }}
+                  >
+                    <PersonOutlineRounded
                       sx={{
-                        alignItems:
-                          'center',
+                        color:
+                          '#667085',
 
-                        p:
-                          1.25,
+                        fontSize:
+                          19,
+                      }}
+                    />
 
-                        border:
-                          '1px solid #e4e8ef',
-
-                        borderRadius:
-                          '8px',
+                    <Box
+                      sx={{
+                        minWidth:
+                          0,
                       }}
                     >
-                      <PersonOutlineRounded
-                        sx={{
-                          color:
-                            '#667085',
-
-                          fontSize:
-                            19,
-                        }}
-                      />
-
                       <Typography
                         sx={{
                           color:
@@ -4560,58 +4720,29 @@ function LeadWorkspacePage() {
                             13,
 
                           fontWeight:
-                            500,
+                            600,
                         }}
                       >
                         {lead.assigned_to_name ||
                           'Unassigned'}
                       </Typography>
-                    </Stack>
-                  )}
-
-
-                  {isAssigningLead && (
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      sx={{
-                        mt:
-                          1.25,
-
-                        alignItems:
-                          'center',
-                      }}
-                    >
-                      <CircularProgress
-                        size={15}
-                      />
 
                       <Typography
                         sx={{
+                          mt:
+                            0.15,
+
                           color:
-                            '#7a8699',
+                            '#98a2b3',
 
                           fontSize:
-                            11.5,
+                            10.5,
                         }}
                       >
-                        Updating assignment...
+                        Use Assign Rep above to change ownership.
                       </Typography>
-                    </Stack>
-                  )}
-
-
-                  {assignmentError && (
-                    <Alert
-                      severity="error"
-                      sx={{
-                        mt:
-                          1.5,
-                      }}
-                    >
-                      {assignmentError}
-                    </Alert>
-                  )}
+                    </Box>
+                  </Stack>
                 </Box>
               </Card>
 
@@ -7227,6 +7358,355 @@ function LeadWorkspacePage() {
             )}
           </Stack>
         )}
+
+
+        {/*
+          ASSIGN SALES REPRESENTATIVE DIALOG
+        */}
+
+        <Dialog
+          open={
+            assignmentDialogOpen
+          }
+          onClose={
+            closeAssignmentDialog
+          }
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>
+            Assign Sales Representative
+          </DialogTitle>
+
+          <DialogContent>
+            <Stack
+              spacing={2}
+              sx={{
+                mt:
+                  1,
+              }}
+            >
+              <Alert
+                severity="info"
+                variant="outlined"
+              >
+                Workload is based on each Sales Representative&apos;s active leads: New, Contacted, Qualified and Proposal.
+              </Alert>
+
+
+              {assignmentError && (
+                <Alert
+                  severity="error"
+                >
+                  {assignmentError}
+                </Alert>
+              )}
+
+
+              {salesRepresentatives.length ===
+              0 ? (
+                <Alert
+                  severity="warning"
+                  variant="outlined"
+                >
+                  No active Sales Representative accounts are available.
+                </Alert>
+              ) : (
+                <Stack
+                  spacing={1.25}
+                >
+                  {salesRepresentatives.map(
+                    (
+                      representative,
+                    ) => {
+                      const workload =
+                        getSalesRepWorkload(
+                          representative.id,
+                          workloadLeads,
+                        )
+
+                      const isSelected =
+                        selectedSalesRepresentativeId ===
+                        String(
+                          representative.id,
+                        )
+
+                      return (
+                        <Button
+                          key={
+                            representative.id
+                          }
+                          fullWidth
+                          variant="outlined"
+                          onClick={() =>
+                            setSelectedSalesRepresentativeId(
+                              String(
+                                representative.id,
+                              ),
+                            )
+                          }
+                          disabled={
+                            isAssigningLead
+                          }
+                          sx={{
+                            p:
+                              1.5,
+
+                            justifyContent:
+                              'stretch',
+
+                            color:
+                              '#344054',
+
+                            textTransform:
+                              'none',
+
+                            borderColor:
+                              isSelected
+                                ? '#1557d5'
+                                : '#e4e8ef',
+
+                            bgcolor:
+                              isSelected
+                                ? '#f5f8ff'
+                                : '#ffffff',
+
+                            '&:hover':
+                              {
+                                borderColor:
+                                  '#1557d5',
+
+                                bgcolor:
+                                  '#f8faff',
+                              },
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width:
+                                '100%',
+
+                              textAlign:
+                                'left',
+                            }}
+                          >
+                            <Stack
+                              direction="row"
+                              sx={{
+                                justifyContent:
+                                  'space-between',
+
+                                alignItems:
+                                  'center',
+
+                                gap:
+                                  1.5,
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  minWidth:
+                                    0,
+                                }}
+                              >
+                                <Typography
+                                  sx={{
+                                    color:
+                                      '#172033',
+
+                                    fontSize:
+                                      13.5,
+
+                                    fontWeight:
+                                      700,
+                                  }}
+                                >
+                                  {representative.full_name}
+                                </Typography>
+
+                                <Typography
+                                  sx={{
+                                    mt:
+                                      0.15,
+
+                                    color:
+                                      '#7a8699',
+
+                                    fontSize:
+                                      11.5,
+                                  }}
+                                >
+                                  @{representative.username}
+                                </Typography>
+                              </Box>
+
+
+                              <Stack
+                                direction="row"
+                                spacing={0.75}
+                                sx={{
+                                  alignItems:
+                                    'center',
+
+                                  flexShrink:
+                                    0,
+                                }}
+                              >
+                                {isSelected && (
+                                  <Chip
+                                    size="small"
+                                    label="Selected"
+                                    color="primary"
+                                    variant="outlined"
+                                  />
+                                )}
+
+                                <Chip
+                                  size="small"
+                                  label={
+                                    workload.label
+                                  }
+                                  color={
+                                    workload.color
+                                  }
+                                  variant="outlined"
+                                />
+                              </Stack>
+                            </Stack>
+
+
+                            <LinearProgress
+                              variant="determinate"
+                              value={
+                                workload.progress
+                              }
+                              color={
+                                workload.color
+                              }
+                              sx={{
+                                mt:
+                                  1.25,
+
+                                height:
+                                  7,
+
+                                borderRadius:
+                                  999,
+
+                                bgcolor:
+                                  '#edf0f4',
+                              }}
+                            />
+
+
+                            <Typography
+                              sx={{
+                                mt:
+                                  0.6,
+
+                                color:
+                                  '#667085',
+
+                                fontSize:
+                                  11.5,
+                              }}
+                            >
+                              {workload.activeLeadCount}{' '}
+                              active {workload.activeLeadCount ===
+                              1
+                                ? 'lead'
+                                : 'leads'}
+                            </Typography>
+                          </Box>
+                        </Button>
+                      )
+                    },
+                  )}
+                </Stack>
+              )}
+            </Stack>
+          </DialogContent>
+
+
+          <DialogActions
+            sx={{
+              px:
+                3,
+
+              pb:
+                3,
+            }}
+          >
+            {lead.assigned_to !==
+              null && (
+              <Button
+                color="error"
+                onClick={() =>
+                  void handleAssignLead(
+                    null,
+                  )
+                }
+                disabled={
+                  isAssigningLead
+                }
+              >
+                Remove Assignment
+              </Button>
+            )}
+
+
+            <Box
+              sx={{
+                flex:
+                  1,
+              }}
+            />
+
+
+            <Button
+              onClick={
+                closeAssignmentDialog
+              }
+              disabled={
+                isAssigningLead
+              }
+            >
+              Cancel
+            </Button>
+
+
+            <Button
+              variant="contained"
+              onClick={() =>
+                void handleAssignLead(
+                  Number(
+                    selectedSalesRepresentativeId,
+                  ),
+                )
+              }
+              disabled={
+                isAssigningLead ||
+                !selectedSalesRepresentativeId ||
+                Number(
+                  selectedSalesRepresentativeId,
+                ) ===
+                  lead.assigned_to
+              }
+            >
+              {isAssigningLead
+                ? (
+                    <CircularProgress
+                      size={22}
+                      color="inherit"
+                    />
+                  )
+                : lead.assigned_to ===
+                  null
+                  ? 'Assign Lead'
+                  : 'Reassign Lead'}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
 
         {/*

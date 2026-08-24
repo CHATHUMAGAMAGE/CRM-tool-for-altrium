@@ -19,11 +19,13 @@ import {
 } from '@mui/material'
 
 import {
-  AddRounded,
+  AccessTimeRounded,
   CheckCircleOutlineRounded,
+  EventRounded,
   GroupOutlined,
   PersonAddOutlined,
   RefreshRounded,
+  WarningAmberRounded,
 } from '@mui/icons-material'
 
 import {
@@ -36,7 +38,9 @@ import {
 } from '../services/auth'
 
 import {
+  getLeadFollowUps,
   getLeads,
+  type FollowUp,
   type Lead,
   type LeadStatus,
 } from '../services/crm'
@@ -49,6 +53,14 @@ LeadStatus[] = [
   'QUALIFIED',
   'PROPOSAL',
 ]
+
+
+type SalesRepDashboardFocus =
+  | 'DEFAULT'
+  | 'ACTIVE_LEADS'
+  | 'DUE_SOON'
+  | 'OVERDUE'
+  | 'QUALIFIED'
 
 
 function getStatusColor(
@@ -132,6 +144,27 @@ function formatDate(
 }
 
 
+function formatDateTime(
+  value: string | null,
+) {
+  if (!value) {
+    return '—'
+  }
+
+  return new Date(
+    value,
+  ).toLocaleString(
+    'en-GB',
+    {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    },
+  )
+}
+
+
 function getLeadInitials(
   name: string,
 ) {
@@ -180,6 +213,13 @@ function DashboardPage() {
 
 
   const [
+    followUps,
+    setFollowUps,
+  ] =
+    useState<FollowUp[]>([])
+
+
+  const [
     isLoading,
     setIsLoading,
   ] =
@@ -193,6 +233,15 @@ function DashboardPage() {
     useState('')
 
 
+  const [
+    dashboardFocus,
+    setDashboardFocus,
+  ] =
+    useState<SalesRepDashboardFocus>(
+      'DEFAULT',
+    )
+
+
   const loadDashboard =
     async () => {
       setIsLoading(
@@ -204,21 +253,102 @@ function DashboardPage() {
       )
 
       try {
-        const [
-          user,
-          leadData,
-        ] =
-          await Promise.all([
-            getCurrentUser(),
-            getLeads(),
-          ])
+        const user =
+          await getCurrentUser()
 
         setCurrentUser(
           user,
         )
 
+        if (
+          user.role ===
+          'TECH_LEAD'
+        ) {
+          navigate(
+            '/technical-assessments',
+            {
+              replace:
+                true,
+            },
+          )
+
+          return
+        }
+
+        if (
+          user.role ===
+          'FINANCIAL_OFFICER'
+        ) {
+          navigate(
+            '/financial-assessments',
+            {
+              replace:
+                true,
+            },
+          )
+
+          return
+        }
+
+        if (
+          user.role ===
+          'ADMIN'
+        ) {
+          navigate(
+            '/admin',
+            {
+              replace:
+                true,
+            },
+          )
+
+          return
+        }
+
+        const leadData =
+          await getLeads()
+
+        let followUpData:
+        FollowUp[] = []
+
+        if (
+          user.role ===
+          'SALES_REP'
+        ) {
+          const assignedActiveLeads =
+            leadData.filter(
+              (
+                leadItem,
+              ) =>
+                leadItem.assigned_to ===
+                  user.id &&
+                ACTIVE_LEAD_STATUSES.includes(
+                  leadItem.status,
+                ),
+            )
+
+          const followUpGroups =
+            await Promise.all(
+              assignedActiveLeads.map(
+                (
+                  leadItem,
+                ) =>
+                  getLeadFollowUps(
+                    leadItem.id,
+                  ),
+              ),
+            )
+
+          followUpData =
+            followUpGroups.flat()
+        }
+
         setLeads(
           leadData,
+        )
+
+        setFollowUps(
+          followUpData,
         )
       } catch (
         requestError
@@ -387,6 +517,154 @@ function DashboardPage() {
     )
 
 
+  const pendingFollowUps =
+    useMemo(
+      () =>
+        followUps
+          .filter(
+            (
+              followUp,
+            ) =>
+              followUp.status ===
+              'PENDING',
+          )
+          .sort(
+            (
+              first,
+              second,
+            ) =>
+              new Date(
+                first.due_date,
+              ).getTime() -
+              new Date(
+                second.due_date,
+              ).getTime(),
+          ),
+      [
+        followUps,
+      ],
+    )
+
+
+  const overdueFollowUps =
+    useMemo(
+      () =>
+        pendingFollowUps.filter(
+          (
+            followUp,
+          ) =>
+            followUp.is_overdue,
+        ),
+      [
+        pendingFollowUps,
+      ],
+    )
+
+
+  const overdueFollowUpCount =
+    overdueFollowUps.length
+
+
+  const dueSoonFollowUps =
+    useMemo(
+      () => {
+        const now =
+          Date.now()
+
+        const dueSoonLimit =
+          now +
+          48 *
+            60 *
+            60 *
+            1000
+
+        return pendingFollowUps.filter(
+          (
+            followUp,
+          ) => {
+            if (
+              followUp.is_overdue
+            ) {
+              return false
+            }
+
+            const dueTime =
+              new Date(
+                followUp.due_date,
+              ).getTime()
+
+            return (
+              dueTime >= now &&
+              dueTime <=
+                dueSoonLimit
+            )
+          },
+        )
+      },
+      [
+        pendingFollowUps,
+      ],
+    )
+
+
+  const dueSoonFollowUpCount =
+    dueSoonFollowUps.length
+
+
+  const incomingFollowUps =
+    useMemo(
+      () => {
+        if (
+          dashboardFocus ===
+          'OVERDUE'
+        ) {
+          return overdueFollowUps
+        }
+
+        if (
+          dashboardFocus ===
+          'DUE_SOON'
+        ) {
+          return dueSoonFollowUps
+        }
+
+        return pendingFollowUps.slice(
+          0,
+          5,
+        )
+      },
+      [
+        dashboardFocus,
+        overdueFollowUps,
+        dueSoonFollowUps,
+        pendingFollowUps,
+      ],
+    )
+
+
+  const workloadLevel =
+    activeLeadCount <=
+      2
+      ? 'Available'
+      : activeLeadCount <=
+          5
+        ? 'Moderate'
+        : 'Busy'
+
+
+  const workloadProgress =
+    Math.min(
+      100,
+      Math.round(
+        (
+          activeLeadCount /
+          6
+        ) *
+          100,
+      ),
+    )
+
+
   const recentLeads =
     useMemo(
       () =>
@@ -413,6 +691,138 @@ function DashboardPage() {
         leads,
       ],
     )
+
+
+  const focusedLeads =
+    useMemo(
+      () => {
+        if (
+          dashboardFocus ===
+          'QUALIFIED'
+        ) {
+          return leads
+            .filter(
+              (
+                lead,
+              ) =>
+                lead.status ===
+                'QUALIFIED',
+            )
+            .sort(
+              (
+                first,
+                second,
+              ) =>
+                new Date(
+                  second.updated_at,
+                ).getTime() -
+                new Date(
+                  first.updated_at,
+                ).getTime(),
+            )
+        }
+
+        if (
+          dashboardFocus ===
+          'ACTIVE_LEADS'
+        ) {
+          return leads
+            .filter(
+              (
+                lead,
+              ) =>
+                ACTIVE_LEAD_STATUSES.includes(
+                  lead.status,
+                ),
+            )
+            .sort(
+              (
+                first,
+                second,
+              ) =>
+                new Date(
+                  second.updated_at,
+                ).getTime() -
+                new Date(
+                  first.updated_at,
+                ).getTime(),
+            )
+        }
+
+        return recentLeads
+      },
+      [
+        dashboardFocus,
+        leads,
+        recentLeads,
+      ],
+    )
+
+
+  const scrollToDashboardSection =
+    (
+      sectionId:
+        string,
+    ) => {
+      window.setTimeout(
+        () => {
+          document
+            .getElementById(
+              sectionId,
+            )
+            ?.scrollIntoView({
+              behavior:
+                'smooth',
+
+              block:
+                'start',
+            })
+        },
+        0,
+      )
+    }
+
+
+  const handleSalesRepKpiClick =
+    (
+      focus:
+        SalesRepDashboardFocus,
+    ) => {
+      if (
+        !isSalesRepresentative
+      ) {
+        return
+      }
+
+      setDashboardFocus(
+        focus,
+      )
+
+      if (
+        focus ===
+          'DUE_SOON' ||
+        focus ===
+          'OVERDUE'
+      ) {
+        scrollToDashboardSection(
+          'incoming-work',
+        )
+
+        return
+      }
+
+      scrollToDashboardSection(
+        'my-leads',
+      )
+    }
+
+
+  const clearDashboardFocus =
+    () => {
+      setDashboardFocus(
+        'DEFAULT',
+      )
+    }
 
 
   const unassignedLeads =
@@ -451,52 +861,141 @@ function DashboardPage() {
     )
 
 
-  const salesRepresentativeSummaryCards = [
-    {
-      title:
-        'My Total Leads',
+  const salesRepresentativeSummaryCards =
+    isSalesRepresentative
+      ? [
+          {
+            title:
+              'Active Leads',
 
-      value:
-        leads.length,
+            value:
+              activeLeadCount,
 
-      icon:
-        (
-          <GroupOutlined
-            color="primary"
-          />
-        ),
-    },
+            focus:
+              'ACTIVE_LEADS' as const,
 
-    {
-      title:
-        'My Assigned Leads',
+            icon:
+              (
+                <GroupOutlined
+                  color="primary"
+                />
+              ),
+          },
 
-      value:
-        assignedLeadCount,
+          {
+            title:
+              'Due Soon',
 
-      icon:
-        (
-          <PersonAddOutlined
-            color="primary"
-          />
-        ),
-    },
+            value:
+              dueSoonFollowUpCount,
 
-    {
-      title:
-        'My Qualified Leads',
+            focus:
+              'DUE_SOON' as const,
 
-      value:
-        qualifiedLeadCount,
+            icon:
+              (
+                <AccessTimeRounded
+                  color="primary"
+                />
+              ),
+          },
 
-      icon:
-        (
-          <CheckCircleOutlineRounded
-            color="primary"
-          />
-        ),
-    },
-  ]
+          {
+            title:
+              'Overdue',
+
+            value:
+              overdueFollowUpCount,
+
+            focus:
+              'OVERDUE' as const,
+
+            icon:
+              (
+                <WarningAmberRounded
+                  color={
+                    overdueFollowUpCount >
+                    0
+                      ? 'warning'
+                      : 'primary'
+                  }
+                />
+              ),
+          },
+
+          {
+            title:
+              'Qualified',
+
+            value:
+              qualifiedLeadCount,
+
+            focus:
+              'QUALIFIED' as const,
+
+            icon:
+              (
+                <CheckCircleOutlineRounded
+                  color="primary"
+                />
+              ),
+          },
+        ]
+      : [
+          {
+            title:
+              'Total Leads',
+
+            focus:
+              null,
+
+            value:
+              leads.length,
+
+            icon:
+              (
+                <GroupOutlined
+                  color="primary"
+                />
+              ),
+          },
+
+          {
+            title:
+              'Assigned Leads',
+
+            focus:
+              null,
+
+            value:
+              assignedLeadCount,
+
+            icon:
+              (
+                <PersonAddOutlined
+                  color="primary"
+                />
+              ),
+          },
+
+          {
+            title:
+              'Qualified Leads',
+
+            focus:
+              null,
+
+            value:
+              qualifiedLeadCount,
+
+            icon:
+              (
+                <CheckCircleOutlineRounded
+                  color="primary"
+                />
+              ),
+          },
+        ]
 
 
   return (
@@ -634,21 +1133,6 @@ function DashboardPage() {
             </Button>
 
 
-            {isSalesManager && (
-              <Button
-                variant="contained"
-                startIcon={
-                  <AddRounded />
-                }
-                onClick={() =>
-                  navigate(
-                    '/leads',
-                  )
-                }
-              >
-                Create Lead
-              </Button>
-            )}
           </Stack>
         </Stack>
 
@@ -750,6 +1234,9 @@ function DashboardPage() {
 
                     value:
                       leads.length,
+
+                    path:
+                      '/leads?view=ALL',
                   },
 
                   {
@@ -758,6 +1245,9 @@ function DashboardPage() {
 
                     value:
                       activeLeadCount,
+
+                    path:
+                      '/leads?view=ACTIVE',
                   },
 
                   {
@@ -766,6 +1256,9 @@ function DashboardPage() {
 
                     value:
                       unassignedLeadCount,
+
+                    path:
+                      '/leads?view=ACTIVE&assignee=UNASSIGNED',
                   },
 
                   {
@@ -774,6 +1267,9 @@ function DashboardPage() {
 
                     value:
                       qualifiedLeadCount,
+
+                    path:
+                      '/leads?view=ACTIVE&status=QUALIFIED',
                   },
                 ].map(
                   (
@@ -784,9 +1280,32 @@ function DashboardPage() {
                       key={
                         item.label
                       }
+                      role="button"
+                      tabIndex={0}
+                      onClick={() =>
+                        navigate(
+                          item.path,
+                        )
+                      }
+                      onKeyDown={(
+                        event,
+                      ) => {
+                        if (
+                          event.key ===
+                            'Enter' ||
+                          event.key ===
+                            ' '
+                        ) {
+                          event.preventDefault()
+
+                          navigate(
+                            item.path,
+                          )
+                        }
+                      }}
                       sx={{
                         minHeight:
-                          88,
+                          96,
 
                         px: {
                           xs:
@@ -807,6 +1326,30 @@ function DashboardPage() {
 
                         justifyContent:
                           'center',
+
+                        cursor:
+                          'pointer',
+
+                        outline:
+                          'none',
+
+                        transition:
+                          'background-color 160ms ease, box-shadow 160ms ease',
+
+                        '&:hover':
+                          {
+                            bgcolor:
+                              '#fafcff',
+
+                            boxShadow:
+                              'inset 0 0 0 1px #d6e4ff',
+                          },
+
+                        '&:focus-visible':
+                          {
+                            boxShadow:
+                              'inset 0 0 0 2px #84adff',
+                          },
 
                         borderRight:
                           index <
@@ -863,6 +1406,24 @@ function DashboardPage() {
                         }}
                       >
                         {item.value}
+                      </Typography>
+
+                      <Typography
+                        sx={{
+                          mt:
+                            0.55,
+
+                          color:
+                            '#1557d5',
+
+                          fontSize:
+                            10.5,
+
+                          fontWeight:
+                            600,
+                        }}
+                      >
+                        Click to view
                       </Typography>
                     </Box>
                   ),
@@ -1694,7 +2255,9 @@ function DashboardPage() {
                     'repeat(2, 1fr)',
 
                   lg:
-                    'repeat(3, 1fr)',
+                    isSalesRepresentative
+                      ? 'repeat(4, 1fr)'
+                      : 'repeat(3, 1fr)',
                 },
 
                 gap:
@@ -1710,15 +2273,53 @@ function DashboardPage() {
                       card.title
                     }
                     variant="outlined"
+                    onClick={() => {
+                      if (
+                        isSalesRepresentative &&
+                        card.focus
+                      ) {
+                        handleSalesRepKpiClick(
+                          card.focus,
+                        )
+                      }
+                    }}
                     sx={{
                       borderColor:
-                        '#e4e8ef',
+                        isSalesRepresentative &&
+                        card.focus ===
+                          dashboardFocus
+                          ? '#84adff'
+                          : '#e4e8ef',
 
                       borderRadius:
                         '12px',
 
                       boxShadow:
                         '0 2px 8px rgba(15, 23, 42, 0.035)',
+
+                      cursor:
+                        isSalesRepresentative &&
+                        card.focus
+                          ? 'pointer'
+                          : 'default',
+
+                      transition:
+                        'border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
+
+                      '&:hover':
+                        isSalesRepresentative &&
+                        card.focus
+                          ? {
+                              borderColor:
+                                '#84adff',
+
+                              boxShadow:
+                                '0 6px 18px rgba(21, 87, 213, 0.10)',
+
+                              transform:
+                                'translateY(-1px)',
+                            }
+                          : undefined,
                     }}
                   >
                     <CardContent>
@@ -1762,6 +2363,27 @@ function DashboardPage() {
                           >
                             {card.value}
                           </Typography>
+
+                          {isSalesRepresentative &&
+                            card.focus && (
+                            <Typography
+                              sx={{
+                                mt:
+                                  0.55,
+
+                                color:
+                                  '#1557d5',
+
+                                fontSize:
+                                  10.5,
+
+                                fontWeight:
+                                  600,
+                              }}
+                            >
+                              Click to view
+                            </Typography>
+                          )}
                         </Box>
 
                         {card.icon}
@@ -1773,7 +2395,661 @@ function DashboardPage() {
             </Box>
 
 
+            {isSalesRepresentative && (
+              <Box
+                sx={{
+                  mt:
+                    2.5,
+
+                  display:
+                    'grid',
+
+                  gridTemplateColumns: {
+                    xs:
+                      '1fr',
+
+                    lg:
+                      'minmax(0, 1fr) minmax(0, 1fr)',
+                  },
+
+                  gap:
+                    2.5,
+
+                  alignItems:
+                    'start',
+                }}
+              >
+                <Card
+                  variant="outlined"
+                  sx={{
+                    borderColor:
+                      '#e4e8ef',
+
+                    borderRadius:
+                      '12px',
+
+                    boxShadow:
+                      '0 2px 8px rgba(15, 23, 42, 0.035)',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      px:
+                        2.5,
+
+                      py:
+                        2.25,
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        color:
+                          '#172033',
+
+                        fontSize:
+                          16,
+
+                        fontWeight:
+                          700,
+                      }}
+                    >
+                      My Workload
+                    </Typography>
+
+                    <Typography
+                      sx={{
+                        mt:
+                          0.25,
+
+                        color:
+                          'text.secondary',
+
+                        fontSize:
+                          12.5,
+                      }}
+                    >
+                      Your current active lead workload
+                    </Typography>
+                  </Box>
+
+
+                  <Divider />
+
+
+                  <Box
+                    sx={{
+                      p:
+                        2.5,
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      sx={{
+                        justifyContent:
+                          'space-between',
+
+                        alignItems:
+                          'center',
+
+                        gap:
+                          2,
+
+                        mb:
+                          1.25,
+                      }}
+                    >
+                      <Box>
+                        <Typography
+                          sx={{
+                            color:
+                              '#667085',
+
+                            fontSize:
+                              12,
+                          }}
+                        >
+                          Active leads
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            mt:
+                              0.2,
+
+                            color:
+                              '#172033',
+
+                            fontSize:
+                              24,
+
+                            fontWeight:
+                              700,
+                          }}
+                        >
+                          {activeLeadCount}
+                        </Typography>
+                      </Box>
+
+
+                      <Chip
+                        size="small"
+                        label={
+                          workloadLevel
+                        }
+                        color={
+                          workloadLevel ===
+                          'Busy'
+                            ? 'warning'
+                            : workloadLevel ===
+                                'Moderate'
+                              ? 'info'
+                              : 'success'
+                        }
+                        variant="outlined"
+                      />
+                    </Stack>
+
+
+                    <Box
+                      sx={{
+                        height:
+                          8,
+
+                        overflow:
+                          'hidden',
+
+                        borderRadius:
+                          999,
+
+                        bgcolor:
+                          '#edf0f4',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width:
+                            `${workloadProgress}%`,
+
+                          height:
+                            '100%',
+
+                          borderRadius:
+                            999,
+
+                          bgcolor:
+                            workloadLevel ===
+                            'Busy'
+                              ? '#f79009'
+                              : workloadLevel ===
+                                  'Moderate'
+                                ? '#2e90fa'
+                                : '#12b76a',
+
+                          transition:
+                            'width 220ms ease',
+                        }}
+                      />
+                    </Box>
+
+
+                    <Typography
+                      sx={{
+                        mt:
+                          0.8,
+
+                        color:
+                          '#98a2b3',
+
+                        fontSize:
+                          11,
+                      }}
+                    >
+                      Advisory indicator based on active assigned leads.
+                    </Typography>
+
+
+                    <Divider
+                      sx={{
+                        my:
+                          2,
+                      }}
+                    />
+
+
+                    <Stack
+                      divider={
+                        <Divider
+                          flexItem
+                        />
+                      }
+                    >
+                      {[
+                        {
+                          label:
+                            'New',
+
+                          value:
+                            newLeadCount,
+                        },
+
+                        {
+                          label:
+                            'Contacted',
+
+                          value:
+                            contactedLeadCount,
+                        },
+
+                        {
+                          label:
+                            'Qualified',
+
+                          value:
+                            qualifiedLeadCount,
+                        },
+
+                        {
+                          label:
+                            'Proposal',
+
+                          value:
+                            proposalLeadCount,
+                        },
+                      ].map(
+                        (
+                          item,
+                        ) => (
+                          <Stack
+                            key={
+                              item.label
+                            }
+                            direction="row"
+                            sx={{
+                              py:
+                                1.15,
+
+                              justifyContent:
+                                'space-between',
+
+                              alignItems:
+                                'center',
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                color:
+                                  '#475467',
+
+                                fontSize:
+                                  12.5,
+                              }}
+                            >
+                              {item.label}
+                            </Typography>
+
+                            <Typography
+                              sx={{
+                                color:
+                                  '#172033',
+
+                                fontSize:
+                                  12.5,
+
+                                fontWeight:
+                                  700,
+                              }}
+                            >
+                              {item.value}
+                            </Typography>
+                          </Stack>
+                        ),
+                      )}
+                    </Stack>
+                  </Box>
+                </Card>
+
+
+                <Card
+                  id="incoming-work"
+                  variant="outlined"
+                  sx={{
+                    borderColor:
+                      '#e4e8ef',
+
+                    borderRadius:
+                      '12px',
+
+                    boxShadow:
+                      '0 2px 8px rgba(15, 23, 42, 0.035)',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      px:
+                        2.5,
+
+                      py:
+                        2.25,
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      sx={{
+                        justifyContent:
+                          'space-between',
+
+                        alignItems:
+                          'center',
+
+                        gap:
+                          2,
+                      }}
+                    >
+                      <Box>
+                        <Typography
+                          sx={{
+                            color:
+                              '#172033',
+
+                            fontSize:
+                              16,
+
+                            fontWeight:
+                              700,
+                          }}
+                        >
+                          Incoming Work
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            mt:
+                              0.25,
+
+                            color:
+                              'text.secondary',
+
+                            fontSize:
+                              12.5,
+                          }}
+                        >
+                          {dashboardFocus ===
+                          'OVERDUE'
+                            ? 'Showing overdue follow-ups'
+                            : dashboardFocus ===
+                                'DUE_SOON'
+                              ? 'Showing follow-ups due within 48 hours'
+                              : 'Upcoming and overdue follow-ups'}
+                        </Typography>
+                      </Box>
+
+
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                          alignItems:
+                            'center',
+                        }}
+                      >
+                        {(dashboardFocus ===
+                          'OVERDUE' ||
+                          dashboardFocus ===
+                            'DUE_SOON') && (
+                          <Button
+                            size="small"
+                            onClick={
+                              clearDashboardFocus
+                            }
+                            sx={{
+                              minWidth:
+                                'auto',
+
+                              px:
+                                1,
+
+                              fontSize:
+                                11,
+                            }}
+                          >
+                            Show All
+                          </Button>
+                        )}
+
+                        <EventRounded
+                          sx={{
+                            color:
+                              '#667085',
+                          }}
+                        />
+                      </Stack>
+                    </Stack>
+                  </Box>
+
+
+                  <Divider />
+
+
+                  {incomingFollowUps.length ===
+                  0 ? (
+                    <Box
+                      sx={{
+                        px:
+                          2.5,
+
+                        py:
+                          4,
+
+                        textAlign:
+                          'center',
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          color:
+                            '#667085',
+
+                          fontSize:
+                            13,
+                        }}
+                      >
+                        {dashboardFocus ===
+                        'OVERDUE'
+                          ? 'No overdue follow-ups.'
+                          : dashboardFocus ===
+                              'DUE_SOON'
+                            ? 'No follow-ups are due within the next 48 hours.'
+                            : 'No pending follow-ups right now.'}
+                      </Typography>
+
+                      <Typography
+                        sx={{
+                          mt:
+                            0.4,
+
+                          color:
+                            '#98a2b3',
+
+                          fontSize:
+                            11.5,
+                        }}
+                      >
+                        {dashboardFocus ===
+                        'DEFAULT'
+                          ? 'New scheduled work will appear here.'
+                          : 'Use Show All to return to all incoming work.'}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Stack
+                      divider={
+                        <Divider
+                          flexItem
+                        />
+                      }
+                    >
+                      {incomingFollowUps.map(
+                        (
+                          followUp,
+                        ) => {
+                          const relatedLead =
+                            leads.find(
+                              (
+                                leadItem,
+                              ) =>
+                                leadItem.id ===
+                                followUp.lead,
+                            )
+
+                          return (
+                            <Box
+                              key={
+                                followUp.id
+                              }
+                              onClick={() =>
+                                navigate(
+                                  relatedLead
+                                    ? `/leads/${relatedLead.id}?tab=follow-ups`
+                                    : `/follow-ups/${followUp.id}`,
+                                )
+                              }
+                              sx={{
+                                px:
+                                  2.5,
+
+                                py:
+                                  1.5,
+
+                                cursor:
+                                  'pointer',
+
+                                '&:hover':
+                                  {
+                                    bgcolor:
+                                      '#fafcff',
+                                  },
+                              }}
+                            >
+                              <Stack
+                                direction="row"
+                                sx={{
+                                  justifyContent:
+                                    'space-between',
+
+                                  alignItems:
+                                    'flex-start',
+
+                                  gap:
+                                    2,
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    minWidth:
+                                      0,
+
+                                    flex:
+                                      1,
+                                  }}
+                                >
+                                  <Typography
+                                    sx={{
+                                      color:
+                                        '#172033',
+
+                                      fontSize:
+                                        13,
+
+                                      fontWeight:
+                                        600,
+
+                                      lineHeight:
+                                        1.4,
+                                    }}
+                                  >
+                                    {followUp.title}
+                                  </Typography>
+
+                                  <Typography
+                                    sx={{
+                                      mt:
+                                        0.25,
+
+                                      color:
+                                        '#7a8699',
+
+                                      fontSize:
+                                        11.5,
+
+                                      overflow:
+                                        'hidden',
+
+                                      textOverflow:
+                                        'ellipsis',
+
+                                      whiteSpace:
+                                        'nowrap',
+                                    }}
+                                  >
+                                    {relatedLead
+                                      ? `${relatedLead.contact_name} · ${relatedLead.company_name}`
+                                      : `Lead #${followUp.lead}`}
+                                  </Typography>
+
+                                  <Typography
+                                    sx={{
+                                      mt:
+                                        0.45,
+
+                                      color:
+                                        followUp.is_overdue
+                                          ? '#b42318'
+                                          : '#667085',
+
+                                      fontSize:
+                                        11.5,
+
+                                      fontWeight:
+                                        followUp.is_overdue
+                                          ? 600
+                                          : 500,
+                                    }}
+                                  >
+                                    {followUp.is_overdue
+                                      ? `Overdue · ${formatDateTime(followUp.due_date)}`
+                                      : `Due ${formatDateTime(followUp.due_date)}`}
+                                  </Typography>
+                                </Box>
+
+
+                                <Chip
+                                  size="small"
+                                  label={
+                                    followUp.is_overdue
+                                      ? 'Overdue'
+                                      : 'Upcoming'
+                                  }
+                                  color={
+                                    followUp.is_overdue
+                                      ? 'error'
+                                      : 'info'
+                                  }
+                                  variant="outlined"
+                                />
+                              </Stack>
+                            </Box>
+                          )
+                        },
+                      )}
+                    </Stack>
+                  )}
+                </Card>
+              </Box>
+            )}
+
+
             <Card
+              id="my-leads"
               variant="outlined"
               sx={{
                 mt:
@@ -1825,7 +3101,13 @@ function DashboardPage() {
                       }}
                     >
                       {isSalesRepresentative
-                        ? 'My Recent Leads'
+                        ? dashboardFocus ===
+                            'QUALIFIED'
+                          ? 'My Qualified Leads'
+                          : dashboardFocus ===
+                              'ACTIVE_LEADS'
+                            ? 'My Active Leads'
+                            : 'My Recent Leads'
                         : 'Recent Leads'}
                     </Typography>
 
@@ -1842,22 +3124,48 @@ function DashboardPage() {
                       }}
                     >
                       {isSalesRepresentative
-                        ? 'Recently assigned lead records'
+                        ? dashboardFocus ===
+                            'QUALIFIED'
+                          ? 'Leads currently at the qualified stage'
+                          : dashboardFocus ===
+                              'ACTIVE_LEADS'
+                            ? 'All active leads currently assigned to you'
+                            : 'Recently assigned lead records'
                         : 'Recently created lead records'}
                     </Typography>
                   </Box>
 
 
-                  <Button
-                    size="small"
-                    onClick={() =>
-                      navigate(
-                        '/leads',
-                      )
-                    }
+                  <Stack
+                    direction="row"
+                    spacing={0.75}
                   >
-                    View All
-                  </Button>
+                    {isSalesRepresentative &&
+                      (dashboardFocus ===
+                        'QUALIFIED' ||
+                        dashboardFocus ===
+                          'ACTIVE_LEADS') && (
+                        <Button
+                          size="small"
+                          onClick={
+                            clearDashboardFocus
+                          }
+                        >
+                          Show Recent
+                        </Button>
+                      )}
+
+                    <Button
+                      size="small"
+                      onClick={() =>
+                        navigate(
+                          '/leads',
+                        )
+                      }
+                    >
+                      View All
+                    </Button>
+                  </Stack>
                 </Stack>
               </Box>
 
@@ -1865,7 +3173,7 @@ function DashboardPage() {
               <Divider />
 
 
-              {recentLeads.length ===
+              {focusedLeads.length ===
               0 ? (
                 <Box
                   sx={{
@@ -1898,7 +3206,7 @@ function DashboardPage() {
                     />
                   }
                 >
-                  {recentLeads.map(
+                  {focusedLeads.map(
                     (
                       lead,
                     ) => (

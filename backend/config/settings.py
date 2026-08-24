@@ -311,6 +311,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_THROTTLE_RATES": {
         "password_reset": "5/hour",
+        "rescue_radar": "10/hour",
     },
 }
 
@@ -324,6 +325,8 @@ CORS_ALLOWED_ORIGINS = environment_list(
     default=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
     ],
 )
 
@@ -332,6 +335,8 @@ CSRF_TRUSTED_ORIGINS = environment_list(
     default=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
     ],
 )
 
@@ -342,7 +347,7 @@ CSRF_TRUSTED_ORIGINS = environment_list(
 
 FRONTEND_URL = env(
     "FRONTEND_URL",
-    default="http://localhost:5173",
+    default="http://127.0.0.1:3002",
 )
 
 PASSWORD_RESET_TIMEOUT = env.int(
@@ -421,6 +426,59 @@ BREVO_SENDER_EMAIL = env(
 BREVO_TIMEOUT_SECONDS = env.int(
     "BREVO_TIMEOUT_SECONDS",
     default=10,
+)
+
+
+# ---------------------------------------------------------------------
+# Lead Rescue Radar AI provider
+# ---------------------------------------------------------------------
+
+AI_PROVIDER = env(
+    "AI_PROVIDER",
+    default="nvidia",
+).strip().lower()
+
+AI_FALLBACK_PROVIDER = env(
+    "AI_FALLBACK_PROVIDER",
+    default="",
+).strip().lower()
+
+AI_REQUEST_TIMEOUT_SECONDS = env.float(
+    "AI_REQUEST_TIMEOUT_SECONDS",
+    default=75.0,
+)
+
+NVIDIA_API_KEY = env(
+    "NVIDIA_API_KEY",
+    default="",
+)
+
+NVIDIA_NIM_BASE_URL = env(
+    "NVIDIA_NIM_BASE_URL",
+    default="https://integrate.api.nvidia.com/v1",
+)
+
+NVIDIA_NIM_MODEL = env(
+    "NVIDIA_NIM_MODEL",
+    default="nvidia/nemotron-3-ultra-550b-a55b",
+)
+
+GEMINI_API_KEY = env(
+    "GEMINI_API_KEY",
+    default="",
+)
+
+GEMINI_BASE_URL = env(
+    "GEMINI_BASE_URL",
+    default=(
+        "https://generativelanguage.googleapis.com/"
+        "v1beta/openai/"
+    ),
+)
+
+GEMINI_MODEL = env(
+    "GEMINI_MODEL",
+    default="gemini-3.7-flash",
 )
 
 
