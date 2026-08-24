@@ -1,5 +1,6 @@
 import {
   ensureValidSession,
+  getAccessToken,
   refreshAccessToken,
 } from './auth'
 
@@ -229,9 +230,7 @@ async function authenticatedRequest(
   }
 
   let accessToken =
-    localStorage.getItem(
-      'accessToken',
-    )
+    getAccessToken()
 
   if (
     !accessToken

@@ -33,6 +33,10 @@ from .email_service import (
     PasswordResetEmailError,
     send_password_reset_email,
 )
+from .authentication import (
+    clear_web_auth_cookies,
+    is_trusted_frontend_origin,
+)
 from .models import UserProfile
 from .permissions import IsAdminRole
 from .serializers import (
@@ -60,23 +64,110 @@ class CurrentUserView(RetrieveAPIView):
 
 
 class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
+    """
+    Supports both authentication clients.
+
+    Web:
+      - reads the refresh token only from the HttpOnly cookie;
+      - blacklists it and clears the cookie.
+
+    Mobile / non-browser:
+      - preserves the existing authenticated body-token logout flow.
+    """
+
+    permission_classes = [AllowAny]
 
     invalid_token_message = (
         "The supplied refresh token is invalid."
     )
 
+    def _successful_response(self):
+        response = Response(
+            {
+                "detail": (
+                    "You have been logged out successfully."
+                )
+            },
+            status=status.HTTP_200_OK,
+        )
+
+        clear_web_auth_cookies(
+            response,
+        )
+
+        return response
+
     def post(self, request):
-        serializer = LogoutSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        cookie_refresh = (
+            request.COOKIES.get(
+                settings.AUTH_REFRESH_COOKIE_NAME,
+            )
+        )
+
+        if cookie_refresh:
+            if not is_trusted_frontend_origin(
+                request,
+            ):
+                return Response(
+                    {
+                        "detail": (
+                            "This browser origin is not "
+                            "allowed to end the session."
+                        )
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            try:
+                RefreshToken(
+                    cookie_refresh,
+                ).blacklist()
+            except TokenError:
+                # Logout is deliberately idempotent for browser sessions:
+                # an expired/invalid cookie is still removed locally.
+                pass
+
+            return self._successful_response()
+
+        body_refresh = request.data.get(
+            "refresh",
+            "",
+        )
+
+        if not body_refresh:
+            return self._successful_response()
+
+        if not request.user.is_authenticated:
+            return Response(
+                {
+                    "detail": (
+                        "Authentication credentials "
+                        "were not provided."
+                    )
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        serializer = LogoutSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(
+            raise_exception=True,
+        )
 
         try:
             refresh_token = RefreshToken(
-                serializer.validated_data["refresh"],
+                serializer.validated_data[
+                    "refresh"
+                ],
             )
         except TokenError:
             return Response(
-                {"detail": self.invalid_token_message},
+                {
+                    "detail": (
+                        self.invalid_token_message
+                    )
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -89,22 +180,22 @@ class LogoutView(APIView):
             api_settings.USER_ID_FIELD,
         )
 
-        if str(token_user_id) != str(authenticated_user_id):
+        if (
+            str(token_user_id)
+            != str(authenticated_user_id)
+        ):
             return Response(
-                {"detail": self.invalid_token_message},
+                {
+                    "detail": (
+                        self.invalid_token_message
+                    )
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         refresh_token.blacklist()
 
-        return Response(
-            {
-                "detail": (
-                    "You have been logged out successfully."
-                )
-            },
-            status=status.HTTP_200_OK,
-        )
+        return self._successful_response()
 
 
 class ForgotPasswordView(APIView):

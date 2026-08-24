@@ -1,6 +1,7 @@
 import type { UserRole } from '../auth/roles'
 import {
   ensureValidSession,
+  getAccessToken,
   refreshAccessToken,
 } from './auth'
 
@@ -110,7 +111,7 @@ async function authenticatedFetch(
     throw new Error('Session expired. Please log in again.')
   }
 
-  let accessToken = localStorage.getItem('accessToken')
+  let accessToken = getAccessToken()
 
   if (!accessToken) {
     throw new Error('Session expired. Please log in again.')
