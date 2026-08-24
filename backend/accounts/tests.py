@@ -14,6 +14,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.core.cache import cache
 
+
 class AuthenticationAPITests(APITestCase):
     def setUp(self):
         self.password = "TestPassword@2026"
@@ -55,6 +56,8 @@ class AuthenticationAPITests(APITestCase):
             "SALES_MANAGER",
             "PROJECT_MANAGER",
             "SOFTWARE_ENGINEER",
+            "TECH_LEAD",
+            "FINANCIAL_OFFICER",
             "DIRECTOR",
         }
 
@@ -192,7 +195,6 @@ class AuthenticationAPITests(APITestCase):
         self.assertIn("access", response.data)
 
 
-
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
     FRONTEND_URL="http://localhost:5173",
@@ -289,6 +291,7 @@ class ForgotPasswordAPITests(APITestCase):
             response.status_code,
             status.HTTP_400_BAD_REQUEST,
         )
+
 
 class ResetPasswordAPITests(APITestCase):
     def setUp(self):
@@ -531,6 +534,7 @@ class ResetPasswordAPITests(APITestCase):
             refresh_response.status_code,
             status.HTTP_401_UNAUTHORIZED,
         )
+
 
 class LogoutAPITests(APITestCase):
     def setUp(self):

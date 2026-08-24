@@ -304,11 +304,31 @@ class FollowUpApiTests(APITestCase):
     def test_cancelled_follow_up_cannot_be_reopened(self):
         self.follow_up.status = FollowUp.Status.CANCELLED
         self.follow_up.save(update_fields=["status"])
+
         self.client.force_authenticate(self.sales_rep)
+
         response = self.client.patch(
             self.detail_url(self.follow_up),
-            {"status": FollowUp.Status.PENDING},
+            {
+                "status": FollowUp.Status.PENDING,
+            },
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("status", response.data)
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.assertIn(
+            "detail",
+            response.data,
+        )
+
+        self.assertIn(
+            (
+                "Completed or cancelled follow-ups "
+                "cannot be edited."
+            ),
+            str(response.data["detail"][0]),
+        )

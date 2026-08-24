@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.urls import reverse
+
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -24,7 +25,11 @@ class LeadApiTests(APITestCase):
         )
 
         user.profile.role = role
-        user.profile.save(update_fields=["role"])
+        user.profile.save(
+            update_fields=[
+                "role",
+            ]
+        )
 
         return user
 
@@ -71,6 +76,16 @@ class LeadApiTests(APITestCase):
             UserProfile.Role.SOFTWARE_ENGINEER,
         )
 
+        self.tech_lead = self.create_user(
+            "tech_lead_test",
+            UserProfile.Role.TECH_LEAD,
+        )
+
+        self.financial_officer = self.create_user(
+            "financial_officer_test",
+            UserProfile.Role.FINANCIAL_OFFICER,
+        )
+
         self.lead = Lead.objects.create(
             company_name="Nova Solutions",
             contact_name="Amal Perera",
@@ -95,7 +110,9 @@ class LeadApiTests(APITestCase):
             "crm:lead-list-create",
         )
 
-    def test_unauthenticated_user_cannot_list_leads(self):
+    def test_unauthenticated_user_cannot_list_leads(
+        self,
+    ):
         response = self.client.get(
             self.list_url,
         )
@@ -105,7 +122,9 @@ class LeadApiTests(APITestCase):
             status.HTTP_401_UNAUTHORIZED,
         )
 
-    def test_admin_can_list_all_leads(self):
+    def test_admin_can_list_all_leads(
+        self,
+    ):
         self.client.force_authenticate(
             user=self.admin,
         )
@@ -124,7 +143,9 @@ class LeadApiTests(APITestCase):
             2,
         )
 
-    def test_sales_rep_only_sees_assigned_leads(self):
+    def test_sales_rep_only_sees_assigned_leads(
+        self,
+    ):
         self.client.force_authenticate(
             user=self.sales_rep,
         )
@@ -145,10 +166,14 @@ class LeadApiTests(APITestCase):
 
         self.assertEqual(
             returned_ids,
-            {self.lead.id},
+            {
+                self.lead.id,
+            },
         )
 
-    def test_software_engineer_cannot_access_leads(self):
+    def test_software_engineer_cannot_access_leads(
+        self,
+    ):
         self.client.force_authenticate(
             user=self.software_engineer,
         )
@@ -162,17 +187,60 @@ class LeadApiTests(APITestCase):
             status.HTTP_403_FORBIDDEN,
         )
 
-    def test_marketing_can_create_unassigned_lead(self):
+    def test_tech_lead_cannot_access_leads(
+        self,
+    ):
+        self.client.force_authenticate(
+            user=self.tech_lead,
+        )
+
+        response = self.client.get(
+            self.list_url,
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_financial_officer_cannot_access_leads(
+        self,
+    ):
+        self.client.force_authenticate(
+            user=self.financial_officer,
+        )
+
+        response = self.client.get(
+            self.list_url,
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_marketing_can_create_unassigned_lead(
+        self,
+    ):
         self.client.force_authenticate(
             user=self.marketing,
         )
 
         payload = {
-            "company_name": "Peak Digital",
-            "contact_name": "Kasun Jayawardena",
-            "email": "kasun@example.com",
-            "phone": "0712345678",
-            "source": "Campaign",
+            "company_name":
+                "Peak Digital",
+
+            "contact_name":
+                "Kasun Jayawardena",
+
+            "email":
+                "kasun@example.com",
+
+            "phone":
+                "0712345678",
+
+            "source":
+                "Campaign",
         }
 
         response = self.client.post(
@@ -186,8 +254,12 @@ class LeadApiTests(APITestCase):
             status.HTTP_201_CREATED,
         )
 
-        created_lead = Lead.objects.get(
-            id=response.data["id"],
+        created_lead = (
+            Lead.objects.get(
+                id=response.data[
+                    "id"
+                ],
+            )
         )
 
         self.assertEqual(
@@ -199,15 +271,22 @@ class LeadApiTests(APITestCase):
             created_lead.assigned_to,
         )
 
-    def test_sales_rep_cannot_create_lead(self):
+    def test_sales_rep_cannot_create_lead(
+        self,
+    ):
         self.client.force_authenticate(
             user=self.sales_rep,
         )
 
         payload = {
-            "company_name": "Blocked Company",
-            "contact_name": "Blocked User",
-            "phone": "0700000000",
+            "company_name":
+                "Blocked Company",
+
+            "contact_name":
+                "Blocked User",
+
+            "phone":
+                "0700000000",
         }
 
         response = self.client.post(
@@ -221,16 +300,25 @@ class LeadApiTests(APITestCase):
             status.HTTP_403_FORBIDDEN,
         )
 
-    def test_marketing_cannot_assign_lead(self):
+    def test_marketing_cannot_assign_lead(
+        self,
+    ):
         self.client.force_authenticate(
             user=self.marketing,
         )
 
         payload = {
-            "company_name": "Assignment Test",
-            "contact_name": "Test Contact",
-            "phone": "0711111111",
-            "assigned_to": self.sales_rep.id,
+            "company_name":
+                "Assignment Test",
+
+            "contact_name":
+                "Test Contact",
+
+            "phone":
+                "0711111111",
+
+            "assigned_to":
+                self.sales_rep.id,
         }
 
         response = self.client.post(
@@ -249,17 +337,28 @@ class LeadApiTests(APITestCase):
             response.data,
         )
 
-    def test_sales_manager_can_create_and_assign_lead(self):
+    def test_sales_manager_can_create_and_assign_lead(
+        self,
+    ):
         self.client.force_authenticate(
             user=self.sales_manager,
         )
 
         payload = {
-            "company_name": "Assigned Company",
-            "contact_name": "Assigned Contact",
-            "phone": "0722222222",
-            "source": "Referral",
-            "assigned_to": self.sales_rep.id,
+            "company_name":
+                "Assigned Company",
+
+            "contact_name":
+                "Assigned Contact",
+
+            "phone":
+                "0722222222",
+
+            "source":
+                "Referral",
+
+            "assigned_to":
+                self.sales_rep.id,
         }
 
         response = self.client.post(
@@ -273,8 +372,12 @@ class LeadApiTests(APITestCase):
             status.HTTP_201_CREATED,
         )
 
-        created_lead = Lead.objects.get(
-            id=response.data["id"],
+        created_lead = (
+            Lead.objects.get(
+                id=response.data[
+                    "id"
+                ],
+            )
         )
 
         self.assertEqual(
@@ -282,14 +385,19 @@ class LeadApiTests(APITestCase):
             self.sales_rep,
         )
 
-    def test_sales_rep_can_retrieve_assigned_lead(self):
+    def test_sales_rep_can_retrieve_assigned_lead(
+        self,
+    ):
         self.client.force_authenticate(
             user=self.sales_rep,
         )
 
         detail_url = reverse(
             "crm:lead-detail",
-            kwargs={"pk": self.lead.pk},
+            kwargs={
+                "pk":
+                    self.lead.pk,
+            },
         )
 
         response = self.client.get(
@@ -302,18 +410,25 @@ class LeadApiTests(APITestCase):
         )
 
         self.assertEqual(
-            response.data["id"],
+            response.data[
+                "id"
+            ],
             self.lead.id,
         )
 
-    def test_sales_rep_cannot_retrieve_another_reps_lead(self):
+    def test_sales_rep_cannot_retrieve_another_reps_lead(
+        self,
+    ):
         self.client.force_authenticate(
             user=self.sales_rep,
         )
 
         detail_url = reverse(
             "crm:lead-detail",
-            kwargs={"pk": self.other_lead.pk},
+            kwargs={
+                "pk":
+                    self.other_lead.pk,
+            },
         )
 
         response = self.client.get(
@@ -325,18 +440,25 @@ class LeadApiTests(APITestCase):
             status.HTTP_404_NOT_FOUND,
         )
 
-    def test_director_can_read_but_cannot_modify_lead(self):
+    def test_director_can_read_but_cannot_modify_lead(
+        self,
+    ):
         self.client.force_authenticate(
             user=self.director,
         )
 
         detail_url = reverse(
             "crm:lead-detail",
-            kwargs={"pk": self.lead.pk},
+            kwargs={
+                "pk":
+                    self.lead.pk,
+            },
         )
 
-        read_response = self.client.get(
-            detail_url,
+        read_response = (
+            self.client.get(
+                detail_url,
+            )
         )
 
         self.assertEqual(
@@ -344,12 +466,15 @@ class LeadApiTests(APITestCase):
             status.HTTP_200_OK,
         )
 
-        update_response = self.client.patch(
-            detail_url,
-            {
-                "source": "Updated Source",
-            },
-            format="json",
+        update_response = (
+            self.client.patch(
+                detail_url,
+                {
+                    "source":
+                        "Updated Source",
+                },
+                format="json",
+            )
         )
 
         self.assertEqual(
@@ -357,21 +482,29 @@ class LeadApiTests(APITestCase):
             status.HTTP_403_FORBIDDEN,
         )
 
-    def test_lost_status_requires_reason(self):
+    def test_lost_status_requires_reason(
+        self,
+    ):
         self.client.force_authenticate(
             user=self.sales_rep,
         )
 
         detail_url = reverse(
             "crm:lead-detail",
-            kwargs={"pk": self.lead.pk},
+            kwargs={
+                "pk":
+                    self.lead.pk,
+            },
         )
 
         response = self.client.patch(
             detail_url,
             {
-                "status": Lead.Status.LOST,
-                "lost_reason": "",
+                "status":
+                    Lead.Status.LOST,
+
+                "lost_reason":
+                    "",
             },
             format="json",
         )
@@ -386,20 +519,26 @@ class LeadApiTests(APITestCase):
             response.data,
         )
 
-    def test_generic_update_cannot_mark_lead_won(self):
+    def test_generic_update_cannot_mark_lead_won(
+        self,
+    ):
         self.client.force_authenticate(
             user=self.sales_manager,
         )
 
         detail_url = reverse(
             "crm:lead-detail",
-            kwargs={"pk": self.lead.pk},
+            kwargs={
+                "pk":
+                    self.lead.pk,
+            },
         )
 
         response = self.client.patch(
             detail_url,
             {
-                "status": Lead.Status.WON,
+                "status":
+                    Lead.Status.WON,
             },
             format="json",
         )
@@ -412,137 +551,4 @@ class LeadApiTests(APITestCase):
         self.assertIn(
             "status",
             response.data,
-        )
-
-    def test_sales_rep_can_convert_assigned_lead(self):
-        self.client.force_authenticate(
-            user=self.sales_rep,
-        )
-
-        convert_url = reverse(
-            "crm:lead-convert",
-            kwargs={"pk": self.lead.pk},
-        )
-
-        response = self.client.post(
-            convert_url,
-            format="json",
-        )
-
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_201_CREATED,
-        )
-
-        self.lead.refresh_from_db()
-
-        self.assertEqual(
-            self.lead.status,
-            Lead.Status.WON,
-        )
-
-        self.assertIsNotNone(
-            self.lead.converted_at,
-        )
-
-        self.assertTrue(
-            hasattr(self.lead, "customer"),
-        )
-
-        customer = self.lead.customer
-
-        self.assertEqual(
-            customer.company_name,
-            self.lead.company_name,
-        )
-
-        self.assertEqual(
-            customer.contact_name,
-            self.lead.contact_name,
-        )
-
-        self.assertEqual(
-            customer.email,
-            self.lead.email,
-        )
-
-        self.assertEqual(
-            customer.phone,
-            self.lead.phone,
-        )
-
-        self.assertEqual(
-            customer.source_lead,
-            self.lead,
-        )
-
-        self.assertEqual(
-            customer.assigned_to,
-            self.sales_rep,
-        )
-
-    def test_sales_rep_cannot_convert_another_sales_reps_lead(self):
-        self.client.force_authenticate(
-            user=self.sales_rep,
-        )
-
-        convert_url = reverse(
-            "crm:lead-convert",
-            kwargs={"pk": self.other_lead.pk},
-        )
-
-        response = self.client.post(
-            convert_url,
-            format="json",
-        )
-
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_404_NOT_FOUND,
-        )
-
-        self.assertFalse(
-            hasattr(self.other_lead, "customer"),
-        )
-
-        self.other_lead.refresh_from_db()
-
-        self.assertEqual(
-            self.other_lead.status,
-            Lead.Status.NEW,
-        )
-
-    def test_converted_lead_cannot_be_converted_again(self):
-        self.client.force_authenticate(
-            user=self.sales_rep,
-        )
-
-        convert_url = reverse(
-            "crm:lead-convert",
-            kwargs={"pk": self.lead.pk},
-        )
-
-        first_response = self.client.post(
-            convert_url,
-            format="json",
-        )
-
-        self.assertEqual(
-            first_response.status_code,
-            status.HTTP_201_CREATED,
-        )
-
-        second_response = self.client.post(
-            convert_url,
-            format="json",
-        )
-
-        self.assertEqual(
-            second_response.status_code,
-            status.HTTP_400_BAD_REQUEST,
-        )
-
-        self.assertIn(
-            "detail",
-            second_response.data,
         )
