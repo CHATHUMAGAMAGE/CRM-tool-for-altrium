@@ -3403,7 +3403,7 @@ function LeadWorkspacePage() {
             '100%',
 
           maxWidth:
-            1500,
+            'none',
 
           mx:
             'auto',
@@ -3882,7 +3882,7 @@ function LeadWorkspacePage() {
                   '1fr',
 
                 lg:
-                  'minmax(0, 1.45fr) minmax(285px, 0.72fr) minmax(280px, 0.7fr)',
+                  'repeat(12, minmax(0, 1fr))',
               },
 
               gap:
@@ -3898,10 +3898,31 @@ function LeadWorkspacePage() {
 
             <Stack
               spacing={2.25}
+              sx={{
+                gridColumn: {
+                  lg:
+                    '1 / span 6',
+                },
+
+                gridRow: {
+                  lg:
+                    '1',
+                },
+              }}
             >
               <Card
                 variant="outlined"
                 sx={{
+                  gridColumn: {
+                    lg:
+                      'span 6',
+                  },
+
+                  gridRow: {
+                    lg:
+                      '1',
+                  },
+
                   borderRadius:
                     '12px',
 
@@ -4073,6 +4094,11 @@ function LeadWorkspacePage() {
               <Card
                 variant="outlined"
                 sx={{
+                  gridColumn: {
+                    lg:
+                      '1 / -1',
+                  },
+
                   borderRadius:
                     '12px',
 
@@ -4086,10 +4112,10 @@ function LeadWorkspacePage() {
                 <Box
                   sx={{
                     px:
-                      2.5,
+                      2.25,
 
                     py:
-                      2,
+                      1.5,
                   }}
                 >
                   <Stack
@@ -4183,7 +4209,7 @@ function LeadWorkspacePage() {
                 <Box
                   sx={{
                     p:
-                      2.5,
+                      1.75,
                   }}
                 >
                   {lead.qualification_notes ? (
@@ -4191,7 +4217,7 @@ function LeadWorkspacePage() {
                       sx={{
                         mb:
                           canReviewLead
-                            ? 2
+                            ? 1.25
                             : 0,
                       }}
                     >
@@ -4226,7 +4252,7 @@ function LeadWorkspacePage() {
                             0.8,
 
                           p:
-                            1.5,
+                            1.25,
 
                           border:
                             '1px solid #e4e8ef',
@@ -4262,7 +4288,7 @@ function LeadWorkspacePage() {
                       sx={{
                         mb:
                           canReviewLead
-                            ? 2
+                            ? 1.25
                             : 0,
 
                         color:
@@ -4330,7 +4356,659 @@ function LeadWorkspacePage() {
               </Card>
 
 
-              {/*
+              </Stack>
+
+
+            {/*
+              MIDDLE COLUMN
+            */}
+
+            <Stack
+              spacing={2.25}
+              sx={{
+                gridColumn: {
+                  lg:
+                    '7 / span 3',
+                },
+
+                gridRow: {
+                  lg:
+                    '1',
+                },
+              }}
+            >
+              <Card
+                id="lead-ownership"
+                variant="outlined"
+                sx={{
+                  borderRadius:
+                    '12px',
+
+                  borderColor:
+                    '#e4e8ef',
+
+                  boxShadow:
+                    '0 2px 8px rgba(15, 23, 42, 0.035)',
+                }}
+              >
+                <Box
+                  sx={{
+                    px:
+                      2.25,
+
+                    py:
+                      1.9,
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color:
+                        '#172033',
+
+                      fontSize:
+                        15,
+
+                      fontWeight:
+                        700,
+                    }}
+                  >
+                    Ownership
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      mt:
+                        0.2,
+
+                      color:
+                        '#7a8699',
+
+                      fontSize:
+                        11.5,
+                    }}
+                  >
+                    Manage and reassign lead ownership
+                  </Typography>
+                </Box>
+
+
+                <Divider />
+
+
+                <Box
+                  sx={{
+                    p:
+                      2.25,
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      mb:
+                        0.75,
+
+                      color:
+                        '#667085',
+
+                      fontSize:
+                        11.5,
+
+                      fontWeight:
+                        600,
+                    }}
+                  >
+                    Assigned to
+                  </Typography>
+
+
+                  {canAssignLead &&
+                  !isClosedLead ? (
+                    <FormControl
+                      fullWidth
+                      size="small"
+                    >
+                      <Select<string>
+                        value={
+                          lead.assigned_to ===
+                          null
+                            ? ''
+                            : String(
+                                lead.assigned_to,
+                              )
+                        }
+                        disabled={
+                          isAssigningLead
+                        }
+                        onChange={(
+                          event,
+                        ) => {
+                          const selectedValue =
+                            event.target.value
+
+                          void handleAssignLead(
+                            selectedValue ===
+                              ''
+                              ? null
+                              : Number(
+                                  selectedValue,
+                                ),
+                          )
+                        }}
+                      >
+                        <MenuItem
+                          value=""
+                        >
+                          Unassigned
+                        </MenuItem>
+
+                        {salesRepresentatives.map(
+                          (
+                            representative,
+                          ) => (
+                            <MenuItem
+                              key={
+                                representative.id
+                              }
+                              value={
+                                String(
+                                  representative.id,
+                                )
+                              }
+                            >
+                              {representative.full_name}
+                              {' ('}
+                              {representative.username}
+                              {')'}
+                            </MenuItem>
+                          ),
+                        )}
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems:
+                          'center',
+
+                        p:
+                          1.25,
+
+                        border:
+                          '1px solid #e4e8ef',
+
+                        borderRadius:
+                          '8px',
+                      }}
+                    >
+                      <PersonOutlineRounded
+                        sx={{
+                          color:
+                            '#667085',
+
+                          fontSize:
+                            19,
+                        }}
+                      />
+
+                      <Typography
+                        sx={{
+                          color:
+                            '#344054',
+
+                          fontSize:
+                            13,
+
+                          fontWeight:
+                            500,
+                        }}
+                      >
+                        {lead.assigned_to_name ||
+                          'Unassigned'}
+                      </Typography>
+                    </Stack>
+                  )}
+
+
+                  {isAssigningLead && (
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        mt:
+                          1.25,
+
+                        alignItems:
+                          'center',
+                      }}
+                    >
+                      <CircularProgress
+                        size={15}
+                      />
+
+                      <Typography
+                        sx={{
+                          color:
+                            '#7a8699',
+
+                          fontSize:
+                            11.5,
+                        }}
+                      >
+                        Updating assignment...
+                      </Typography>
+                    </Stack>
+                  )}
+
+
+                  {assignmentError && (
+                    <Alert
+                      severity="error"
+                      sx={{
+                        mt:
+                          1.5,
+                      }}
+                    >
+                      {assignmentError}
+                    </Alert>
+                  )}
+                </Box>
+              </Card>
+
+
+              <LeadRescueRadarCard
+                leadId={
+                  lead.id
+                }
+                isClosed={
+                  isClosedLead
+                }
+              />
+            </Stack>
+
+
+            {/*
+              RIGHT COLUMN
+            */}
+
+            <Card
+              variant="outlined"
+              sx={{
+                gridColumn: {
+                  lg:
+                    '10 / span 3',
+                },
+
+                gridRow: {
+                  lg:
+                    '1',
+                },
+
+                borderRadius:
+                  '12px',
+
+                borderColor:
+                  '#e4e8ef',
+
+                boxShadow:
+                  '0 2px 8px rgba(15, 23, 42, 0.035)',
+
+                overflow:
+                  'hidden',
+              }}
+            >
+              <Box
+                sx={{
+                  px:
+                    2.25,
+
+                  py:
+                    1.9,
+                }}
+              >
+                <Typography
+                  sx={{
+                    color:
+                      '#172033',
+
+                    fontSize:
+                      15,
+
+                    fontWeight:
+                      700,
+                  }}
+                >
+                  Recent Activity
+                </Typography>
+
+                <Typography
+                  sx={{
+                    mt:
+                      0.2,
+
+                    color:
+                      '#7a8699',
+
+                    fontSize:
+                      11.5,
+                  }}
+                >
+                  Latest activity and engagement history
+                </Typography>
+              </Box>
+
+
+              <Divider />
+
+
+              {overviewActivityItems.length ===
+              0 ? (
+                <Box
+                  sx={{
+                    px:
+                      2.25,
+
+                    py:
+                      4,
+
+                    textAlign:
+                      'center',
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color:
+                        '#7a8699',
+
+                      fontSize:
+                        12.5,
+                    }}
+                  >
+                    No activity has been recorded yet.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    px:
+                      2.25,
+
+                    py:
+                      2.25,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      position:
+                        'relative',
+
+                      '&::before':
+                        {
+                          content:
+                            '""',
+
+                          position:
+                            'absolute',
+
+                          left:
+                            18,
+
+                          top:
+                            19,
+
+                          bottom:
+                            19,
+
+                          width:
+                            '1px',
+
+                          bgcolor:
+                            '#e4e8ef',
+                        },
+                    }}
+                  >
+                    <Stack
+                      spacing={2.4}
+                    >
+                      {overviewActivityItems.map(
+                        (
+                          item,
+                        ) => (
+                          <Stack
+                            key={
+                              item.id
+                            }
+                            direction="row"
+                            spacing={1.4}
+                            sx={{
+                              position:
+                                'relative',
+
+                              alignItems:
+                                'flex-start',
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                zIndex:
+                                  1,
+
+                                width:
+                                  36,
+
+                                height:
+                                  36,
+
+                                flexShrink:
+                                  0,
+
+                                display:
+                                  'flex',
+
+                                alignItems:
+                                  'center',
+
+                                justifyContent:
+                                  'center',
+
+                                borderRadius:
+                                  '50%',
+
+                                border:
+                                  '1px solid #e4e8ef',
+
+                                bgcolor:
+                                  item.type ===
+                                  'COMMUNICATION'
+                                    ? '#eef4ff'
+                                    : item.type ===
+                                        'FOLLOW_UP'
+                                      ? '#ecfdf3'
+                                      : '#fff7ed',
+
+                                color:
+                                  item.type ===
+                                  'COMMUNICATION'
+                                    ? '#1557d5'
+                                    : item.type ===
+                                        'FOLLOW_UP'
+                                      ? '#039855'
+                                      : '#dc6803',
+                              }}
+                            >
+                              {item.type ===
+                              'COMMUNICATION'
+                                ? getCommunicationIcon(
+                                    item.communicationType ??
+                                      'CALL',
+                                  )
+                                : item.type ===
+                                    'FOLLOW_UP'
+                                  ? (
+                                      <EventRounded
+                                        sx={{
+                                          fontSize:
+                                            18,
+                                        }}
+                                      />
+                                    )
+                                  : getHistoryIcon(
+                                      item.historyEventType ??
+                                        'UPDATED',
+                                    )}
+                            </Box>
+
+
+                            <Box
+                              sx={{
+                                minWidth:
+                                  0,
+
+                                flex:
+                                  1,
+
+                                pt:
+                                  0.1,
+                              }}
+                            >
+                              <Typography
+                                sx={{
+                                  color:
+                                    '#172033',
+
+                                  fontSize:
+                                    12.5,
+
+                                  fontWeight:
+                                    600,
+
+                                  lineHeight:
+                                    1.4,
+                                }}
+                              >
+                                {item.title}
+                              </Typography>
+
+
+                              <Typography
+                                sx={{
+                                  mt:
+                                    0.25,
+
+                                  color:
+                                    '#98a2b3',
+
+                                  fontSize:
+                                    10.5,
+                                }}
+                              >
+                                {formatDate(
+                                  item.date,
+                                )}
+                              </Typography>
+
+
+                              {item.description && (
+                                <Typography
+                                  sx={{
+                                    mt:
+                                      0.65,
+
+                                    color:
+                                      '#667085',
+
+                                    fontSize:
+                                      11.5,
+
+                                    lineHeight:
+                                      1.55,
+                                  }}
+                                >
+                                  {item.description}
+                                </Typography>
+                              )}
+
+
+                              <Typography
+                                sx={{
+                                  mt:
+                                    0.45,
+
+                                  color:
+                                    '#98a2b3',
+
+                                  fontSize:
+                                    10.5,
+                                }}
+                              >
+                                {item.performedBy}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        ),
+                      )}
+                    </Stack>
+                  </Box>
+                </Box>
+              )}
+
+
+              <Divider />
+
+
+              <Box
+                sx={{
+                  p:
+                    1.75,
+                }}
+              >
+                <Button
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  onClick={() =>
+                    selectWorkspaceTab(
+                      'history',
+                    )
+                  }
+                >
+                  View Full History
+                </Button>
+              </Box>
+            </Card>
+
+
+
+            {/*
+              ASSESSMENTS
+            */}
+
+            <Box
+              sx={{
+                gridColumn: {
+                  lg:
+                    '1 / -1',
+                },
+
+                display:
+                  'grid',
+
+                gridTemplateColumns: {
+                  xs:
+                    '1fr',
+
+                  lg:
+                    'repeat(12, minmax(0, 1fr))',
+                },
+
+                gap:
+                  2.25,
+
+                alignItems:
+                  'start',
+              }}
+            >
+            {/*
                 TECHNICAL ASSESSMENT
               */}
 
@@ -4338,6 +5016,11 @@ function LeadWorkspacePage() {
                 <Card
                   variant="outlined"
                   sx={{
+                    gridColumn: {
+                      lg:
+                        'span 6',
+                    },
+
                     borderRadius:
                       '12px',
 
@@ -4852,6 +5535,11 @@ function LeadWorkspacePage() {
                 <Card
                   variant="outlined"
                   sx={{
+                    gridColumn: {
+                      lg:
+                        'span 6',
+                    },
+
                     borderRadius:
                       '12px',
 
@@ -5352,6 +6040,11 @@ function LeadWorkspacePage() {
                 <Card
                   variant="outlined"
                   sx={{
+                    gridColumn: {
+                      lg:
+                        '1 / -1',
+                    },
+
                     borderRadius:
                       '12px',
 
@@ -5391,607 +6084,10 @@ function LeadWorkspacePage() {
                   </Box>
                 </Card>
               )}
-            </Stack>
-
-
-            {/*
-              MIDDLE COLUMN
-            */}
-
-            <Stack
-              spacing={2.25}
-            >
-              <Card
-                id="lead-ownership"
-                variant="outlined"
-                sx={{
-                  borderRadius:
-                    '12px',
-
-                  borderColor:
-                    '#e4e8ef',
-
-                  boxShadow:
-                    '0 2px 8px rgba(15, 23, 42, 0.035)',
-                }}
-              >
-                <Box
-                  sx={{
-                    px:
-                      2.25,
-
-                    py:
-                      1.9,
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      color:
-                        '#172033',
-
-                      fontSize:
-                        15,
-
-                      fontWeight:
-                        700,
-                    }}
-                  >
-                    Ownership
-                  </Typography>
-
-                  <Typography
-                    sx={{
-                      mt:
-                        0.2,
-
-                      color:
-                        '#7a8699',
-
-                      fontSize:
-                        11.5,
-                    }}
-                  >
-                    Manage and reassign lead ownership
-                  </Typography>
-                </Box>
-
-
-                <Divider />
-
-
-                <Box
-                  sx={{
-                    p:
-                      2.25,
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      mb:
-                        0.75,
-
-                      color:
-                        '#667085',
-
-                      fontSize:
-                        11.5,
-
-                      fontWeight:
-                        600,
-                    }}
-                  >
-                    Assigned to
-                  </Typography>
-
-
-                  {canAssignLead &&
-                  !isClosedLead ? (
-                    <FormControl
-                      fullWidth
-                      size="small"
-                    >
-                      <Select<string>
-                        value={
-                          lead.assigned_to ===
-                          null
-                            ? ''
-                            : String(
-                                lead.assigned_to,
-                              )
-                        }
-                        disabled={
-                          isAssigningLead
-                        }
-                        onChange={(
-                          event,
-                        ) => {
-                          const selectedValue =
-                            event.target.value
-
-                          void handleAssignLead(
-                            selectedValue ===
-                              ''
-                              ? null
-                              : Number(
-                                  selectedValue,
-                                ),
-                          )
-                        }}
-                      >
-                        <MenuItem
-                          value=""
-                        >
-                          Unassigned
-                        </MenuItem>
-
-                        {salesRepresentatives.map(
-                          (
-                            representative,
-                          ) => (
-                            <MenuItem
-                              key={
-                                representative.id
-                              }
-                              value={
-                                String(
-                                  representative.id,
-                                )
-                              }
-                            >
-                              {representative.full_name}
-                              {' ('}
-                              {representative.username}
-                              {')'}
-                            </MenuItem>
-                          ),
-                        )}
-                      </Select>
-                    </FormControl>
-                  ) : (
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      sx={{
-                        alignItems:
-                          'center',
-
-                        p:
-                          1.25,
-
-                        border:
-                          '1px solid #e4e8ef',
-
-                        borderRadius:
-                          '8px',
-                      }}
-                    >
-                      <PersonOutlineRounded
-                        sx={{
-                          color:
-                            '#667085',
-
-                          fontSize:
-                            19,
-                        }}
-                      />
-
-                      <Typography
-                        sx={{
-                          color:
-                            '#344054',
-
-                          fontSize:
-                            13,
-
-                          fontWeight:
-                            500,
-                        }}
-                      >
-                        {lead.assigned_to_name ||
-                          'Unassigned'}
-                      </Typography>
-                    </Stack>
-                  )}
-
-
-                  {isAssigningLead && (
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      sx={{
-                        mt:
-                          1.25,
-
-                        alignItems:
-                          'center',
-                      }}
-                    >
-                      <CircularProgress
-                        size={15}
-                      />
-
-                      <Typography
-                        sx={{
-                          color:
-                            '#7a8699',
-
-                          fontSize:
-                            11.5,
-                        }}
-                      >
-                        Updating assignment...
-                      </Typography>
-                    </Stack>
-                  )}
-
-
-                  {assignmentError && (
-                    <Alert
-                      severity="error"
-                      sx={{
-                        mt:
-                          1.5,
-                      }}
-                    >
-                      {assignmentError}
-                    </Alert>
-                  )}
-                </Box>
-              </Card>
-
-
-              <LeadRescueRadarCard
-                leadId={
-                  lead.id
-                }
-                isClosed={
-                  isClosedLead
-                }
-              />
-            </Stack>
-
-
-            {/*
-              RIGHT COLUMN
-            */}
-
-            <Card
-              variant="outlined"
-              sx={{
-                borderRadius:
-                  '12px',
-
-                borderColor:
-                  '#e4e8ef',
-
-                boxShadow:
-                  '0 2px 8px rgba(15, 23, 42, 0.035)',
-
-                overflow:
-                  'hidden',
-              }}
-            >
-              <Box
-                sx={{
-                  px:
-                    2.25,
-
-                  py:
-                    1.9,
-                }}
-              >
-                <Typography
-                  sx={{
-                    color:
-                      '#172033',
-
-                    fontSize:
-                      15,
-
-                    fontWeight:
-                      700,
-                  }}
-                >
-                  Recent Activity
-                </Typography>
-
-                <Typography
-                  sx={{
-                    mt:
-                      0.2,
-
-                    color:
-                      '#7a8699',
-
-                    fontSize:
-                      11.5,
-                  }}
-                >
-                  Latest activity and engagement history
-                </Typography>
-              </Box>
-
-
-              <Divider />
-
-
-              {overviewActivityItems.length ===
-              0 ? (
-                <Box
-                  sx={{
-                    px:
-                      2.25,
-
-                    py:
-                      4,
-
-                    textAlign:
-                      'center',
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      color:
-                        '#7a8699',
-
-                      fontSize:
-                        12.5,
-                    }}
-                  >
-                    No activity has been recorded yet.
-                  </Typography>
-                </Box>
-              ) : (
-                <Box
-                  sx={{
-                    px:
-                      2.25,
-
-                    py:
-                      2.25,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      position:
-                        'relative',
-
-                      '&::before':
-                        {
-                          content:
-                            '""',
-
-                          position:
-                            'absolute',
-
-                          left:
-                            18,
-
-                          top:
-                            19,
-
-                          bottom:
-                            19,
-
-                          width:
-                            '1px',
-
-                          bgcolor:
-                            '#e4e8ef',
-                        },
-                    }}
-                  >
-                    <Stack
-                      spacing={2.4}
-                    >
-                      {overviewActivityItems.map(
-                        (
-                          item,
-                        ) => (
-                          <Stack
-                            key={
-                              item.id
-                            }
-                            direction="row"
-                            spacing={1.4}
-                            sx={{
-                              position:
-                                'relative',
-
-                              alignItems:
-                                'flex-start',
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                zIndex:
-                                  1,
-
-                                width:
-                                  36,
-
-                                height:
-                                  36,
-
-                                flexShrink:
-                                  0,
-
-                                display:
-                                  'flex',
-
-                                alignItems:
-                                  'center',
-
-                                justifyContent:
-                                  'center',
-
-                                borderRadius:
-                                  '50%',
-
-                                border:
-                                  '1px solid #e4e8ef',
-
-                                bgcolor:
-                                  item.type ===
-                                  'COMMUNICATION'
-                                    ? '#eef4ff'
-                                    : item.type ===
-                                        'FOLLOW_UP'
-                                      ? '#ecfdf3'
-                                      : '#fff7ed',
-
-                                color:
-                                  item.type ===
-                                  'COMMUNICATION'
-                                    ? '#1557d5'
-                                    : item.type ===
-                                        'FOLLOW_UP'
-                                      ? '#039855'
-                                      : '#dc6803',
-                              }}
-                            >
-                              {item.type ===
-                              'COMMUNICATION'
-                                ? getCommunicationIcon(
-                                    item.communicationType ??
-                                      'CALL',
-                                  )
-                                : item.type ===
-                                    'FOLLOW_UP'
-                                  ? (
-                                      <EventRounded
-                                        sx={{
-                                          fontSize:
-                                            18,
-                                        }}
-                                      />
-                                    )
-                                  : getHistoryIcon(
-                                      item.historyEventType ??
-                                        'UPDATED',
-                                    )}
-                            </Box>
-
-
-                            <Box
-                              sx={{
-                                minWidth:
-                                  0,
-
-                                flex:
-                                  1,
-
-                                pt:
-                                  0.1,
-                              }}
-                            >
-                              <Typography
-                                sx={{
-                                  color:
-                                    '#172033',
-
-                                  fontSize:
-                                    12.5,
-
-                                  fontWeight:
-                                    600,
-
-                                  lineHeight:
-                                    1.4,
-                                }}
-                              >
-                                {item.title}
-                              </Typography>
-
-
-                              <Typography
-                                sx={{
-                                  mt:
-                                    0.25,
-
-                                  color:
-                                    '#98a2b3',
-
-                                  fontSize:
-                                    10.5,
-                                }}
-                              >
-                                {formatDate(
-                                  item.date,
-                                )}
-                              </Typography>
-
-
-                              {item.description && (
-                                <Typography
-                                  sx={{
-                                    mt:
-                                      0.65,
-
-                                    color:
-                                      '#667085',
-
-                                    fontSize:
-                                      11.5,
-
-                                    lineHeight:
-                                      1.55,
-                                  }}
-                                >
-                                  {item.description}
-                                </Typography>
-                              )}
-
-
-                              <Typography
-                                sx={{
-                                  mt:
-                                    0.45,
-
-                                  color:
-                                    '#98a2b3',
-
-                                  fontSize:
-                                    10.5,
-                                }}
-                              >
-                                {item.performedBy}
-                              </Typography>
-                            </Box>
-                          </Stack>
-                        ),
-                      )}
-                    </Stack>
-                  </Box>
-                </Box>
-              )}
-
-
-              <Divider />
-
-
-              <Box
-                sx={{
-                  p:
-                    1.75,
-                }}
-              >
-                <Button
-                  fullWidth
-                  size="small"
-                  variant="outlined"
-                  onClick={() =>
-                    selectWorkspaceTab(
-                      'history',
-                    )
-                  }
-                >
-                  View Full History
-                </Button>
-              </Box>
-            </Card>
+            </Box>
           </Box>
         )}
+
 
 
         {/*

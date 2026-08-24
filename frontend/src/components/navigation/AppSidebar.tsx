@@ -28,6 +28,7 @@ import {
   DashboardOutlined,
   ExpandLessRounded,
   ExpandMoreRounded,
+  GavelRounded,
   GroupsOutlined,
   HistoryRounded,
   KeyboardArrowDownRounded,
@@ -441,6 +442,14 @@ function AppSidebar({
     '/activity'
 
 
+  const isOpportunityReviewActive =
+    location.pathname ===
+      '/opportunity-review' ||
+    location.pathname.startsWith(
+      '/opportunity-review/',
+    )
+
+
   const assessmentStatusParam =
     new URLSearchParams(
       location.search,
@@ -461,6 +470,18 @@ function AppSidebar({
       specialistBasePath &&
     assessmentStatusParam ===
       'REVIEWED'
+
+
+  const canSeeOpportunityReview =
+    currentUser !==
+      null &&
+    hasRequiredRole(
+      currentUser.role,
+      [
+        'ADMIN',
+        'SALES_MANAGER',
+      ],
+    )
 
 
   const canSeeAdministration =
@@ -1006,6 +1027,27 @@ function AppSidebar({
                 </Button>
               </Stack>
             </Collapse>
+
+
+            {canSeeOpportunityReview && (
+              <Button
+                startIcon={
+                  <GavelRounded />
+                }
+                onClick={() =>
+                  handleNavigate(
+                    '/opportunity-review',
+                  )
+                }
+                sx={
+                  navigationButtonSx(
+                    isOpportunityReviewActive,
+                  )
+                }
+              >
+                Opportunity Review
+              </Button>
+            )}
 
 
             {futureNavigationItems

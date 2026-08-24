@@ -1256,3 +1256,342 @@ class FinancialAssessmentHistory(
             f"{self.get_event_type_display()} - "
             f"{self.assessment}"
         )
+
+
+class LeadOpportunityDecision(
+    models.Model,
+):
+    class Decision(models.TextChoices):
+        APPROVED = (
+            "APPROVED",
+            "Approved",
+        )
+
+        REJECTED = (
+            "REJECTED",
+            "Rejected",
+        )
+
+    lead = models.OneToOneField(
+        Lead,
+        on_delete=models.PROTECT,
+        related_name="opportunity_decision",
+    )
+
+    technical_assessment = models.ForeignKey(
+        TechnicalAssessment,
+        on_delete=models.PROTECT,
+        related_name="opportunity_decisions",
+    )
+
+    financial_assessment = models.ForeignKey(
+        FinancialAssessment,
+        on_delete=models.PROTECT,
+        related_name="opportunity_decisions",
+    )
+
+    decision = models.CharField(
+        max_length=20,
+        choices=Decision.choices,
+    )
+
+    decision_notes = models.TextField()
+
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="lead_opportunity_decisions",
+    )
+
+    decided_at = models.DateTimeField(
+        default=timezone.now,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-decided_at",
+            "-id",
+        ]
+
+    def clean(self):
+        super().clean()
+
+        if not (
+            self.decision_notes
+            or ""
+        ).strip():
+            raise ValidationError(
+                {
+                    "decision_notes":
+                        "Decision notes are required."
+                }
+            )
+
+        if (
+            self.lead_id
+            and self.technical_assessment_id
+        ):
+            if (
+                self.technical_assessment
+                .lead_id
+                != self.lead_id
+            ):
+                raise ValidationError(
+                    {
+                        "technical_assessment": (
+                            "The technical assessment "
+                            "must belong to the same lead."
+                        )
+                    }
+                )
+
+            if (
+                self.technical_assessment
+                .status
+                != TechnicalAssessment
+                .Status
+                .REVIEWED
+            ):
+                raise ValidationError(
+                    {
+                        "technical_assessment": (
+                            "The technical assessment "
+                            "must be reviewed before "
+                            "the opportunity decision."
+                        )
+                    }
+                )
+
+        if (
+            self.lead_id
+            and self.financial_assessment_id
+        ):
+            if (
+                self.financial_assessment
+                .lead_id
+                != self.lead_id
+            ):
+                raise ValidationError(
+                    {
+                        "financial_assessment": (
+                            "The financial assessment "
+                            "must belong to the same lead."
+                        )
+                    }
+                )
+
+            if (
+                self.financial_assessment
+                .status
+                != FinancialAssessment
+                .Status
+                .REVIEWED
+            ):
+                raise ValidationError(
+                    {
+                        "financial_assessment": (
+                            "The financial assessment "
+                            "must be reviewed before "
+                            "the opportunity decision."
+                        )
+                    }
+                )
+
+        if (
+            self.technical_assessment_id
+            and self.financial_assessment_id
+            and self.financial_assessment
+            .technical_assessment_id
+            != self.technical_assessment_id
+        ):
+            raise ValidationError(
+                {
+                    "financial_assessment": (
+                        "The financial assessment must "
+                        "reference the same technical "
+                        "assessment used for the "
+                        "opportunity decision."
+                    )
+                }
+            )
+
+    def __str__(self):
+        return (
+            f"{self.get_decision_display()} - "
+            f"{self.lead}"
+        )
+
+
+class Deal(models.Model):
+    class Status(models.TextChoices):
+        OPEN = (
+            "OPEN",
+            "Open",
+        )
+
+        WON = (
+            "WON",
+            "Won",
+        )
+
+        LOST = (
+            "LOST",
+            "Lost",
+        )
+
+    source_lead = models.OneToOneField(
+        Lead,
+        on_delete=models.PROTECT,
+        related_name="deal",
+    )
+
+    opportunity_decision = models.OneToOneField(
+        LeadOpportunityDecision,
+        on_delete=models.PROTECT,
+        related_name="deal",
+    )
+
+    name = models.CharField(
+        max_length=255,
+    )
+
+    company_name = models.CharField(
+        max_length=255,
+    )
+
+    contact_name = models.CharField(
+        max_length=255,
+    )
+
+    email = models.EmailField(
+        blank=True,
+    )
+
+    phone = models.CharField(
+        max_length=30,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.OPEN,
+    )
+
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_deals",
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="created_deals",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-created_at",
+        ]
+
+    def clean(self):
+        super().clean()
+
+        if not (
+            self.name
+            or ""
+        ).strip():
+            raise ValidationError(
+                {
+                    "name":
+                        "Deal name is required."
+                }
+            )
+
+        if not (
+            self.company_name
+            or ""
+        ).strip():
+            raise ValidationError(
+                {
+                    "company_name":
+                        "Company name is required."
+                }
+            )
+
+        if not (
+            self.contact_name
+            or ""
+        ).strip():
+            raise ValidationError(
+                {
+                    "contact_name":
+                        "Contact name is required."
+                }
+            )
+
+        if not (
+            self.phone
+            or ""
+        ).strip():
+            raise ValidationError(
+                {
+                    "phone":
+                        "Phone number is required."
+                }
+            )
+
+        if (
+            self.opportunity_decision_id
+            and self.source_lead_id
+        ):
+            if (
+                self.opportunity_decision
+                .lead_id
+                != self.source_lead_id
+            ):
+                raise ValidationError(
+                    {
+                        "opportunity_decision": (
+                            "The opportunity decision "
+                            "must belong to the source lead."
+                        )
+                    }
+                )
+
+            if (
+                self.opportunity_decision
+                .decision
+                != LeadOpportunityDecision
+                .Decision
+                .APPROVED
+            ):
+                raise ValidationError(
+                    {
+                        "opportunity_decision": (
+                            "Only an approved opportunity "
+                            "can be converted to a deal."
+                        )
+                    }
+                )
+
+    def __str__(self):
+        return self.name

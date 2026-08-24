@@ -31,6 +31,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import LeadWorkspacePage from './pages/LeadWorkspacePage'
 import LeadsPage from './pages/LeadsPage'
 import LoginPage from './pages/LoginPage'
+import OpportunityReviewPage from './pages/OpportunityReviewPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import TechnicalAssessmentsPage from './pages/TechnicalAssessmentsPage'
 import TechnicalAssessmentWorkspacePage from './pages/TechnicalAssessmentWorkspacePage'
@@ -294,6 +295,25 @@ function App() {
               <FinancialAssessmentWorkspacePage />
             }
           />
+
+
+          <Route
+            element={
+              <RoleProtectedRoute
+                allowedRoles={[
+                  'ADMIN',
+                  'SALES_MANAGER',
+                ]}
+              />
+            }
+          >
+            <Route
+              path="/opportunity-review"
+              element={
+                <OpportunityReviewPage />
+              }
+            />
+          </Route>
 
 
           <Route

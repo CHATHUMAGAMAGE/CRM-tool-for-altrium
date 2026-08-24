@@ -13,6 +13,11 @@ from .financial_assessments import (
     FinancialOfficerLookupView,
 )
 
+from .opportunities import (
+    LeadConvertToDealView,
+    LeadOpportunityDecisionView,
+)
+
 from .reminders import (
     FollowUpReminderListView,
 )
@@ -38,7 +43,6 @@ from .views import (
     DashboardStatsView,
     FollowUpDetailView,
     FollowUpListCreateView,
-    LeadConvertView,
     LeadDetailView,
     LeadHistoryListView,
     LeadListCreateView,
@@ -81,8 +85,14 @@ urlpatterns = [
     ),
 
     path(
+        "leads/<int:pk>/opportunity-decision/",
+        LeadOpportunityDecisionView.as_view(),
+        name="lead-opportunity-decision",
+    ),
+
+    path(
         "leads/<int:pk>/convert/",
-        LeadConvertView.as_view(),
+        LeadConvertToDealView.as_view(),
         name="lead-convert",
     ),
 
