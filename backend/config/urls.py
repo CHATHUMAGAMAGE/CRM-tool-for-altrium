@@ -6,10 +6,6 @@ from django.urls import include, path
 
 urlpatterns = [
     path(
-        "admin/",
-        admin.site.urls,
-    ),
-    path(
         "api/",
         include("core.urls"),
     ),
@@ -22,6 +18,16 @@ urlpatterns = [
         include("crm.urls"),
     ),
 ]
+
+
+if settings.ENABLE_DJANGO_ADMIN:
+    urlpatterns.insert(
+        0,
+        path(
+            "admin/",
+            admin.site.urls,
+        ),
+    )
 
 
 if settings.DEBUG:

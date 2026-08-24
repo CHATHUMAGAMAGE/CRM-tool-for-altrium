@@ -1,8 +1,7 @@
 from django.urls import path
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+from rest_framework_simplejwt.views import TokenRefreshView
+
+from .authentication import ThrottledTokenObtainPairView
 
 from .views import (
     AdminDashboardSummaryView,
@@ -23,7 +22,7 @@ from .views import (
 urlpatterns = [
     path(
         "login/",
-        TokenObtainPairView.as_view(),
+        ThrottledTokenObtainPairView.as_view(),
         name="login",
     ),
     path(

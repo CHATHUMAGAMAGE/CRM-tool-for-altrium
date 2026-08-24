@@ -17,6 +17,8 @@ from django.core.cache import cache
 
 class AuthenticationAPITests(APITestCase):
     def setUp(self):
+        cache.clear()
+
         self.password = "TestPassword@2026"
 
         self.user = User.objects.create_user(
@@ -193,6 +195,96 @@ class AuthenticationAPITests(APITestCase):
             status.HTTP_200_OK,
         )
         self.assertIn("access", response.data)
+
+
+
+    def test_login_is_rate_limited_after_ten_rapid_attempts(self):
+        for _ in range(10):
+            response = self.login(
+                password="IncorrectPassword@2026",
+            )
+
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_401_UNAUTHORIZED,
+            )
+
+        blocked_response = self.login(
+            password="IncorrectPassword@2026",
+        )
+
+        self.assertEqual(
+            blocked_response.status_code,
+            status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
+    def test_login_response_disables_http_caching(self):
+        response = self.login()
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertIn(
+            "no-store",
+            response.headers.get(
+                "Cache-Control",
+                "",
+            ),
+        )
+
+        self.assertEqual(
+            response.headers.get("Pragma"),
+            "no-cache",
+        )
+
+        self.assertEqual(
+            response.headers.get("Expires"),
+            "0",
+        )
+
+    def test_authenticated_api_response_disables_http_caching(self):
+        login_response = self.login()
+        access_token = login_response.data["access"]
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        )
+
+        response = self.client.get(
+            reverse("current-user"),
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        cache_control = response.headers.get(
+            "Cache-Control",
+            "",
+        )
+
+        self.assertIn(
+            "no-store",
+            cache_control,
+        )
+
+        self.assertIn(
+            "private",
+            cache_control,
+        )
+
+        self.assertEqual(
+            response.headers.get("Pragma"),
+            "no-cache",
+        )
+
+        self.assertEqual(
+            response.headers.get("Expires"),
+            "0",
+        )
 
 
 @override_settings(

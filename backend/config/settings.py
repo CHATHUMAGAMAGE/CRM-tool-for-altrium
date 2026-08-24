@@ -104,6 +104,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "config.middleware.NoStoreSensitiveResponsesMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -310,6 +311,7 @@ REST_FRAMEWORK = {
         ),
     ),
     "DEFAULT_THROTTLE_RATES": {
+        "login": "10/minute",
         "password_reset": "5/hour",
         "rescue_radar": "10/hour",
     },
@@ -515,6 +517,16 @@ SECURE_REFERRER_POLICY = (
 )
 
 X_FRAME_OPTIONS = "DENY"
+
+
+# Django's built-in administration site is disabled by default in
+# production. Local development keeps it available automatically when
+# DEBUG=True. Set ENABLE_DJANGO_ADMIN=True explicitly only when the
+# production administration site is intentionally required.
+ENABLE_DJANGO_ADMIN = env.bool(
+    "ENABLE_DJANGO_ADMIN",
+    default=DEBUG,
+)
 
 
 # Keep HSTS disabled during the first deployment.
