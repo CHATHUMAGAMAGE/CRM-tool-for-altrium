@@ -2,7 +2,6 @@ import json
 import re
 
 from django.conf import settings
-from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -29,12 +28,12 @@ from .models import (
 from .permissions import (
     CommunicationPermission,
     FollowUpPermission,
+    LeadInsightPermission,
     LeadPermission,
 )
 
 from .serializers import (
     CommunicationSerializer,
-    CustomerSerializer,
     FollowUpSerializer,
     LeadHistorySerializer,
     LeadSerializer,
@@ -1013,6 +1012,7 @@ class LeadQuerysetMixin:
         if role in {
             UserProfile.Role.SOFTWARE_ENGINEER,
             UserProfile.Role.TECH_LEAD,
+            UserProfile.Role.FINANCIAL_OFFICER,
         }:
             return queryset.none()
 
@@ -1219,6 +1219,7 @@ class LeadHistoryListView(
 
     permission_classes = [
         IsAuthenticated,
+        LeadInsightPermission,
     ]
 
     def get_accessible_leads(
@@ -1246,6 +1247,7 @@ class LeadHistoryListView(
         if profile.role in {
             UserProfile.Role.SOFTWARE_ENGINEER,
             UserProfile.Role.TECH_LEAD,
+            UserProfile.Role.FINANCIAL_OFFICER,
         }:
             return queryset.none()
 
@@ -1296,6 +1298,7 @@ class LeadRescueRadarView(
 ):
     permission_classes = [
         IsAuthenticated,
+        LeadInsightPermission,
     ]
 
     throttle_classes = [
@@ -1440,6 +1443,7 @@ class CommunicationListCreateView(
         if role in {
             UserProfile.Role.SOFTWARE_ENGINEER,
             UserProfile.Role.TECH_LEAD,
+            UserProfile.Role.FINANCIAL_OFFICER,
         }:
             return queryset.none()
 
@@ -1560,6 +1564,7 @@ class FollowUpListCreateView(
         if role in {
             UserProfile.Role.SOFTWARE_ENGINEER,
             UserProfile.Role.TECH_LEAD,
+            UserProfile.Role.FINANCIAL_OFFICER,
         }:
             return queryset.none()
 
@@ -1750,6 +1755,7 @@ class FollowUpDetailView(
         if profile.role in {
             UserProfile.Role.SOFTWARE_ENGINEER,
             UserProfile.Role.TECH_LEAD,
+            UserProfile.Role.FINANCIAL_OFFICER,
         }:
             return queryset.none()
 
@@ -1807,6 +1813,7 @@ class DashboardStatsView(
         if role in {
             UserProfile.Role.SOFTWARE_ENGINEER,
             UserProfile.Role.TECH_LEAD,
+            UserProfile.Role.FINANCIAL_OFFICER,
         }:
             return Response(
                 {
@@ -1882,179 +1889,4 @@ class DashboardStatsView(
                 "projects":
                     0,
             }
-        )
-
-
-class LeadConvertView(
-    LeadQuerysetMixin,
-    generics.GenericAPIView,
-):
-    serializer_class = (
-        CustomerSerializer
-    )
-
-    permission_classes = [
-        IsAuthenticated,
-        LeadPermission,
-    ]
-
-    is_lead_conversion = True
-
-    @transaction.atomic
-    def post(
-        self,
-        request,
-        pk,
-    ):
-        try:
-            lead = (
-                self.get_queryset()
-                .select_related(
-                    None
-                )
-                .select_for_update()
-                .get(
-                    pk=pk
-                )
-            )
-
-        except Lead.DoesNotExist:
-            from rest_framework.exceptions import (
-                NotFound,
-            )
-
-            raise NotFound(
-                "Lead not found."
-            )
-
-        self.check_object_permissions(
-            request,
-            lead,
-        )
-
-        if (
-            lead.status
-            == Lead.Status.WON
-        ):
-            return Response(
-                {
-                    "detail": (
-                        "This lead has "
-                        "already been "
-                        "converted."
-                    )
-                },
-                status=(
-                    status
-                    .HTTP_400_BAD_REQUEST
-                ),
-            )
-
-        if hasattr(
-            lead,
-            "customer",
-        ):
-            return Response(
-                {
-                    "detail": (
-                        "A customer "
-                        "already exists "
-                        "for this lead."
-                    )
-                },
-                status=(
-                    status
-                    .HTTP_400_BAD_REQUEST
-                ),
-            )
-
-        previous_status = (
-            lead.status
-        )
-
-        customer = (
-            Customer.objects.create(
-                company_name=
-                    lead.company_name,
-
-                contact_name=
-                    lead.contact_name,
-
-                email=
-                    lead.email,
-
-                phone=
-                    lead.phone,
-
-                source_lead=
-                    lead,
-
-                assigned_to=
-                    lead.assigned_to,
-            )
-        )
-
-        lead.status = (
-            Lead.Status.WON
-        )
-
-        lead.converted_at = (
-            timezone.now()
-        )
-
-        lead.save(
-            update_fields=[
-                "status",
-                "converted_at",
-                "updated_at",
-            ]
-        )
-
-        LeadHistory.objects.create(
-            lead=lead,
-
-            event_type=
-                LeadHistory
-                .EventType
-                .WON,
-
-            description=
-                "Lead marked as won.",
-
-            performed_by=
-                request.user,
-
-            metadata={
-                "previous_status":
-                    previous_status,
-
-                "status":
-                    Lead.Status.WON,
-            },
-        )
-
-        return Response(
-            {
-                "lead":
-                    LeadSerializer(
-                        lead,
-                        context={
-                            "request":
-                                request,
-                        },
-                    ).data,
-
-                "customer":
-                    CustomerSerializer(
-                        customer,
-                        context={
-                            "request":
-                                request,
-                        },
-                    ).data,
-            },
-            status=(
-                status
-                .HTTP_201_CREATED
-            ),
         )

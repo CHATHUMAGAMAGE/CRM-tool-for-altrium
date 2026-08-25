@@ -552,3 +552,138 @@ class LeadApiTests(APITestCase):
             "status",
             response.data,
         )
+
+    def test_financial_officer_cannot_access_lead_history(
+        self,
+    ):
+        self.client.force_authenticate(
+            user=self.financial_officer,
+        )
+
+        history_url = reverse(
+            "crm:lead-history",
+            kwargs={
+                "lead_id":
+                    self.lead.pk,
+            },
+        )
+
+        response = self.client.get(
+            history_url,
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_financial_officer_cannot_use_rescue_radar(
+        self,
+    ):
+        self.client.force_authenticate(
+            user=self.financial_officer,
+        )
+
+        radar_url = reverse(
+            "crm:lead-rescue-radar",
+            kwargs={
+                "pk":
+                    self.lead.pk,
+            },
+        )
+
+        response = self.client.post(
+            radar_url,
+            {},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_sales_rep_cannot_use_rescue_radar_on_another_reps_lead(
+        self,
+    ):
+        self.client.force_authenticate(
+            user=self.sales_rep,
+        )
+
+        radar_url = reverse(
+            "crm:lead-rescue-radar",
+            kwargs={
+                "pk":
+                    self.other_lead.pk,
+            },
+        )
+
+        response = self.client.post(
+            radar_url,
+            {},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+
+    def test_sales_rep_cannot_record_opportunity_decision(
+        self,
+    ):
+        self.client.force_authenticate(
+            user=self.sales_rep,
+        )
+
+        decision_url = reverse(
+            "crm:lead-opportunity-decision",
+            kwargs={
+                "pk":
+                    self.lead.pk,
+            },
+        )
+
+        response = self.client.post(
+            decision_url,
+            {
+                "decision":
+                    "APPROVED",
+
+                "decision_notes":
+                    "Attempted authorization bypass.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_sales_rep_cannot_use_deal_conversion_endpoint(
+        self,
+    ):
+        self.client.force_authenticate(
+            user=self.sales_rep,
+        )
+
+        conversion_url = reverse(
+            "crm:lead-convert",
+            kwargs={
+                "pk":
+                    self.lead.pk,
+            },
+        )
+
+        response = self.client.post(
+            conversion_url,
+            {},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+

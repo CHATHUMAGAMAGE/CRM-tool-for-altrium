@@ -287,3 +287,91 @@ class FollowUpPermission(
             }
 
         return False
+
+
+class LeadInsightPermission(
+    BasePermission,
+):
+    """
+    Read/analysis permission for lead-adjacent endpoints whose HTTP
+    method does not map neatly to LeadPermission's CRUD rules.
+
+    Lead history is a read operation and Rescue Radar is an advisory
+    analysis operation even though it uses POST. Both must obey the same
+    lead visibility boundary and must never become an alternate route
+    around LeadPermission.
+    """
+
+    message = (
+        "You do not have permission "
+        "to access this lead insight."
+    )
+
+    allowed_roles = {
+        UserProfile.Role.ADMIN,
+        UserProfile.Role.MARKETING,
+        UserProfile.Role.SALES_REP,
+        UserProfile.Role.SALES_MANAGER,
+        UserProfile.Role.PROJECT_MANAGER,
+        UserProfile.Role.DIRECTOR,
+    }
+
+    def has_permission(
+        self,
+        request,
+        view,
+    ):
+        user = request.user
+
+        if (
+            not user
+            or not user.is_authenticated
+        ):
+            return False
+
+        profile = getattr(
+            user,
+            "profile",
+            None,
+        )
+
+        if profile is None:
+            return False
+
+        return (
+            profile.role
+            in self.allowed_roles
+        )
+
+    def has_object_permission(
+        self,
+        request,
+        view,
+        obj,
+    ):
+        profile = getattr(
+            request.user,
+            "profile",
+            None,
+        )
+
+        if profile is None:
+            return False
+
+        if (
+            profile.role
+            not in self.allowed_roles
+        ):
+            return False
+
+        if (
+            profile.role
+            == UserProfile.Role.SALES_REP
+        ):
+            return (
+                obj.assigned_to_id
+                == request.user.id
+            )
+
+        return True
+
