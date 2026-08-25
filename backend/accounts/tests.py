@@ -1672,6 +1672,33 @@ class MFAAuthenticationAPITests(APITestCase):
             status.HTTP_400_BAD_REQUEST,
         )
 
+    def test_remember_me_survives_mfa_and_sets_persistent_cookie(self):
+        _, setup_response = self.enroll_mfa()
+        recovery_code = setup_response.data["recovery_codes"][0]
+
+        self.client.cookies.clear()
+        login_response = self.password_login(remember_me=True)
+
+        verify_response = self.client.post(
+            reverse("mfa-verify"),
+            {
+                "challenge_token": login_response.data["challenge_token"],
+                "code": recovery_code,
+            },
+        )
+
+        self.assertEqual(
+            verify_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        refresh_cookie = verify_response.cookies[
+            settings.AUTH_REFRESH_COOKIE_NAME
+        ]
+
+        self.assertTrue(refresh_cookie["max-age"])
+        self.assertTrue(refresh_cookie["expires"])
+
     def test_new_password_login_invalidates_older_mfa_challenge(self):
         first_login = (
             self.password_login()
