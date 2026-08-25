@@ -2,6 +2,9 @@ from django.urls import path
 
 from .authentication import (
     CookieAwareTokenRefreshView,
+    MFASetupConfirmView,
+    MFASetupStartView,
+    MFAVerifyView,
     ThrottledTokenObtainPairView,
 )
 from .views import (
@@ -25,6 +28,21 @@ urlpatterns = [
         "login/",
         ThrottledTokenObtainPairView.as_view(),
         name="login",
+    ),
+    path(
+        "mfa/setup/",
+        MFASetupStartView.as_view(),
+        name="mfa-setup-start",
+    ),
+    path(
+        "mfa/setup/confirm/",
+        MFASetupConfirmView.as_view(),
+        name="mfa-setup-confirm",
+    ),
+    path(
+        "mfa/verify/",
+        MFAVerifyView.as_view(),
+        name="mfa-verify",
     ),
     path(
         "refresh/",

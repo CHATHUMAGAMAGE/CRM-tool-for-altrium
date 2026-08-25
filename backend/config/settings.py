@@ -314,6 +314,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "login": "10/minute",
         "token_refresh": "30/minute",
+        "mfa_setup": "5/minute",
+        "mfa_verify": "5/minute",
         "password_reset": "5/hour",
         "rescue_radar": "10/hour",
     },
@@ -418,6 +420,86 @@ AUTH_COOKIE_DOMAIN = (
         default="",
     ).strip()
     or None
+)
+
+
+# ---------------------------------------------------------------------
+# Multi-factor authentication
+# ---------------------------------------------------------------------
+
+# Privileged CRM roles must complete TOTP MFA before a full JWT session
+# is issued. Existing Sales Representative mobile authentication remains
+# compatible because SALES_REP is not required by default.
+MFA_REQUIRED_ROLES = environment_list(
+    "MFA_REQUIRED_ROLES",
+    default=[
+        "ADMIN",
+        "SALES_MANAGER",
+        "DIRECTOR",
+    ],
+)
+
+SUPPORTED_MFA_ROLES = {
+    "ADMIN",
+    "MARKETING",
+    "SALES_REP",
+    "SALES_MANAGER",
+    "TECH_LEAD",
+    "FINANCIAL_OFFICER",
+    "PROJECT_MANAGER",
+    "SOFTWARE_ENGINEER",
+    "DIRECTOR",
+}
+
+unknown_mfa_roles = (
+    set(MFA_REQUIRED_ROLES)
+    - SUPPORTED_MFA_ROLES
+)
+
+if unknown_mfa_roles:
+    raise ValueError(
+        "MFA_REQUIRED_ROLES contains unsupported roles: "
+        + ", ".join(
+            sorted(
+                unknown_mfa_roles
+            )
+        )
+    )
+
+MFA_CHALLENGE_MAX_AGE_SECONDS = env.int(
+    "MFA_CHALLENGE_MAX_AGE_SECONDS",
+    default=300,
+)
+
+MFA_CHALLENGE_SIGNING_SALT = env(
+    "MFA_CHALLENGE_SIGNING_SALT",
+    default="eleven-crm-mfa-login-v1",
+)
+
+MFA_ISSUER_NAME = env(
+    "MFA_ISSUER_NAME",
+    default="ELEVEN CRM",
+)
+
+# Use a separate high-entropy production value when possible.
+# If omitted, the Django SECRET_KEY is used as the encryption-key
+# material. Once MFA has been enrolled, changing this value without a
+# migration will make existing encrypted TOTP secrets unreadable.
+MFA_ENCRYPTION_KEY = env(
+    "MFA_ENCRYPTION_KEY",
+    default="",
+).strip()
+
+# Accept one 30-second step on either side to tolerate normal device
+# clock skew. Replay protection still rejects any already-used counter.
+MFA_TOTP_VALID_WINDOW = env.int(
+    "MFA_TOTP_VALID_WINDOW",
+    default=1,
+)
+
+MFA_RECOVERY_CODE_COUNT = env.int(
+    "MFA_RECOVERY_CODE_COUNT",
+    default=8,
 )
 
 

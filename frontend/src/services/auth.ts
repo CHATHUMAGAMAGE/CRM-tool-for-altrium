@@ -2,8 +2,51 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL
 
 
-export type LoginResponse = {
+export type LoginSuccessResponse = {
   access: string
+}
+
+
+export type MFASetupRequiredResponse = {
+  mfa_setup_required: true
+  challenge_token: string
+  detail: string
+}
+
+
+export type MFAVerificationRequiredResponse = {
+  mfa_required: true
+  challenge_token: string
+  detail: string
+}
+
+
+export type LoginResponse =
+  | LoginSuccessResponse
+  | MFASetupRequiredResponse
+  | MFAVerificationRequiredResponse
+
+
+export type MFASetupDetails = {
+  secret: string
+  provisioning_uri: string
+  qr_code_data_url: string
+  detail: string
+}
+
+
+export type MFASetupCompleteResponse = {
+  access: string
+  mfa_setup_complete: true
+  recovery_codes: string[]
+  detail: string
+}
+
+
+export type MFAVerifiedResponse = {
+  access: string
+  mfa_verified: true
+  used_recovery_code: boolean
 }
 
 
@@ -32,7 +75,7 @@ export type PasswordRecoveryResponse = {
 }
 
 
-type LoginErrorResponse = {
+type ApiErrorResponse = {
   detail?: string
 }
 
@@ -66,10 +109,9 @@ let refreshRequest:
 function clearLegacyBrowserTokens():
 void {
   /*
-   * Migration cleanup:
-   * previous ELEVEN web builds stored JWTs in localStorage.
-   * Remove those copies so a successful migration does not leave
-   * old bearer credentials available to JavaScript.
+   * Previous ELEVEN web builds stored JWTs in localStorage.
+   * Keep removing those legacy copies so bearer credentials never
+   * become persistent JavaScript-readable browser storage again.
    */
   try {
     localStorage.removeItem(
@@ -97,6 +139,17 @@ function setAccessToken(
 }
 
 
+function setAuthenticatedAccess(
+  token: string,
+): void {
+  clearLegacyBrowserTokens()
+
+  setAccessToken(
+    token,
+  )
+}
+
+
 export function getAccessToken():
 string | null {
   return accessToken
@@ -110,6 +163,28 @@ void {
   )
 
   clearLegacyBrowserTokens()
+}
+
+
+async function getApiErrorMessage(
+  response: Response,
+  fallbackMessage: string,
+): Promise<string> {
+  try {
+    const errorData =
+      (await response.json()) as
+        ApiErrorResponse
+
+    if (
+      errorData.detail
+    ) {
+      return errorData.detail
+    }
+  } catch {
+    // Use fallback below.
+  }
+
+  return fallbackMessage
 }
 
 
@@ -138,13 +213,8 @@ export async function loginUser(
           JSON.stringify({
             username,
             password,
-
-            // Tells the shared backend that this is the browser flow.
-            // Mobile clients do not send this flag and retain the
-            // existing token-pair API contract.
             web_session:
               true,
-
             remember_me:
               rememberMe,
           }),
@@ -155,26 +225,11 @@ export async function loginUser(
   if (!response.ok) {
     clearAccessToken()
 
-    let message =
-      'Login failed. Please check your credentials.'
-
-    try {
-      const errorData =
-        (await response.json()) as
-          LoginErrorResponse
-
-      if (
-        errorData.detail
-      ) {
-        message =
-          errorData.detail
-      }
-    } catch {
-      // Use the default error message.
-    }
-
     throw new Error(
-      message,
+      await getApiErrorMessage(
+        response,
+        'Login failed. Please check your credentials.',
+      ),
     )
   }
 
@@ -185,17 +240,196 @@ export async function loginUser(
 
 
   if (
+    'mfa_setup_required'
+    in result
+    || 'mfa_required'
+    in result
+  ) {
+    clearAccessToken()
+
+    return result
+  }
+
+
+  if (
     !result.access
   ) {
     clearAccessToken()
 
+    throw new Error(
+      'The authentication service did not return a valid login result.',
+    )
+  }
+
+
+  setAuthenticatedAccess(
+    result.access,
+  )
+
+  return result
+}
+
+
+export async function startMFASetup(
+  challengeToken: string,
+): Promise<MFASetupDetails> {
+  const response =
+    await fetch(
+      `${API_BASE_URL}/api/v1/auth/mfa/setup/`,
+      {
+        method:
+          'POST',
+
+        credentials:
+          'include',
+
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+
+        body:
+          JSON.stringify({
+            challenge_token:
+              challengeToken,
+          }),
+      },
+    )
+
+
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(
+        response,
+        'Unable to start multi-factor authentication setup.',
+      ),
+    )
+  }
+
+
+  return (
+    await response.json()
+  ) as MFASetupDetails
+}
+
+
+export async function confirmMFASetup(
+  challengeToken: string,
+  code: string,
+): Promise<MFASetupCompleteResponse> {
+  const response =
+    await fetch(
+      `${API_BASE_URL}/api/v1/auth/mfa/setup/confirm/`,
+      {
+        method:
+          'POST',
+
+        credentials:
+          'include',
+
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+
+        body:
+          JSON.stringify({
+            challenge_token:
+              challengeToken,
+
+            code,
+          }),
+      },
+    )
+
+
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(
+        response,
+        'Unable to verify the authenticator code.',
+      ),
+    )
+  }
+
+
+  const result =
+    (await response.json()) as
+      MFASetupCompleteResponse
+
+
+  if (
+    !result.access
+  ) {
     throw new Error(
       'The authentication service did not return an access token.',
     )
   }
 
 
-  setAccessToken(
+  setAuthenticatedAccess(
+    result.access,
+  )
+
+  return result
+}
+
+
+export async function verifyMFAChallenge(
+  challengeToken: string,
+  code: string,
+): Promise<MFAVerifiedResponse> {
+  const response =
+    await fetch(
+      `${API_BASE_URL}/api/v1/auth/mfa/verify/`,
+      {
+        method:
+          'POST',
+
+        credentials:
+          'include',
+
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+
+        body:
+          JSON.stringify({
+            challenge_token:
+              challengeToken,
+
+            code,
+          }),
+      },
+    )
+
+
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(
+        response,
+        'Unable to verify the security code.',
+      ),
+    )
+  }
+
+
+  const result =
+    (await response.json()) as
+      MFAVerifiedResponse
+
+
+  if (
+    !result.access
+  ) {
+    throw new Error(
+      'The authentication service did not return an access token.',
+    )
+  }
+
+
+  setAuthenticatedAccess(
     result.access,
   )
 
@@ -465,7 +699,7 @@ Promise<string> {
   }
 
 
-  setAccessToken(
+  setAuthenticatedAccess(
     result.access,
   )
 
@@ -601,12 +835,6 @@ Promise<CurrentUser> {
 
 export async function logoutUser():
 Promise<void> {
-  /*
-   * Remove the bearer token from JavaScript immediately. The server
-   * request then blacklists the HttpOnly refresh token and expires the
-   * cookie. If the network is unavailable, no access JWT remains in
-   * browser storage or module memory.
-   */
   clearAccessToken()
 
   try {

@@ -338,3 +338,22 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         instance.profile.save()
 
         return instance
+
+
+class MFASetupStartSerializer(serializers.Serializer):
+    challenge_token = serializers.CharField(
+        trim_whitespace=False,
+    )
+
+
+class MFACodeVerificationSerializer(serializers.Serializer):
+    challenge_token = serializers.CharField(
+        trim_whitespace=False,
+    )
+
+    code = serializers.CharField(
+        trim_whitespace=True,
+        min_length=6,
+        max_length=32,
+    )
+
