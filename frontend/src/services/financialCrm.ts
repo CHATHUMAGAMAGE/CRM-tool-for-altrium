@@ -705,15 +705,30 @@ export async function openFinancialAssessmentDocument(
   assessmentId: number,
   documentId: number,
 ): Promise<void> {
-  const response = await authenticatedRequest(
-    `/api/v1/crm/financial-assessments/${assessmentId}/documents/${documentId}/download/`,
-  )
+  const documentWindow = window.open('', '_blank')
 
-  if (!response.ok) {
-    throw new Error(await getErrorMessage(response))
+  if (!documentWindow) {
+    throw new Error(
+      'The document window was blocked. Please allow pop-ups for this site.',
+    )
   }
 
-  const objectUrl = URL.createObjectURL(await response.blob())
-  window.open(objectUrl, '_blank', 'noopener,noreferrer')
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+  documentWindow.opener = null
+
+  try {
+    const response = await authenticatedRequest(
+      `/api/v1/crm/financial-assessments/${assessmentId}/documents/${documentId}/download/`,
+    )
+
+    if (!response.ok) {
+      throw new Error(await getErrorMessage(response))
+    }
+
+    const objectUrl = URL.createObjectURL(await response.blob())
+    documentWindow.location.replace(objectUrl)
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+  } catch (error) {
+    documentWindow.close()
+    throw error
+  }
 }
