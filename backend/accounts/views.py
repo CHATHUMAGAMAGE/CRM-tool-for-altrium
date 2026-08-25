@@ -3,7 +3,7 @@ import mimetypes
 
 from django.conf import settings
 from django.core import signing
-from django.http import FileResponse, Http404
+from django.http import Http404, HttpResponse
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.db.models import Count, Q
@@ -143,11 +143,11 @@ class ProfileAvatarView(APIView):
             ),
         )
 
-        avatar = user.profile.avatar
+        profile = user.profile
 
         if (
-            not avatar
-            or avatar.name
+            not profile.avatar_data
+            or profile.avatar_name
             != payload.get(
                 "avatar_name"
             )
@@ -156,27 +156,16 @@ class ProfileAvatarView(APIView):
                 "Profile picture not found."
             )
 
-        try:
-            avatar_file = avatar.open(
-                "rb"
-            )
-        except (
-            FileNotFoundError,
-            OSError,
-        ) as exc:
-            raise Http404(
-                "Profile picture not found."
-            ) from exc
-
         content_type = (
-            mimetypes.guess_type(
-                avatar.name
+            profile.avatar_content_type
+            or mimetypes.guess_type(
+                profile.avatar_name
             )[0]
             or "application/octet-stream"
         )
 
-        response = FileResponse(
-            avatar_file,
+        response = HttpResponse(
+            bytes(profile.avatar_data),
             content_type=content_type,
         )
 

@@ -673,6 +673,34 @@ class FinancialAssessmentAPITests(
             assessment.documents.exists()
         )
 
+        document = assessment.documents.get()
+        self.assertEqual(
+            bytes(document.file_data),
+            b"financial assessment test",
+        )
+        self.assertEqual(
+            document.file_name,
+            "financial-test.txt",
+        )
+
+        download_response = self.client.get(
+            reverse(
+                "crm:financial-assessment-document-download",
+                kwargs={
+                    "assessment_id": assessment.id,
+                    "pk": document.id,
+                },
+            )
+        )
+        self.assertEqual(
+            download_response.status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(
+            download_response.content,
+            b"financial assessment test",
+        )
+
     def test_submit_requires_financial_comments(
         self,
     ):

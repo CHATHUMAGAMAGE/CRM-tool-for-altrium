@@ -2,6 +2,7 @@ from django.urls import path
 
 from .financial_assessments import (
     FinancialAssessmentDetailView,
+    FinancialAssessmentDocumentDownloadView,
     FinancialAssessmentDocumentListCreateView,
     FinancialAssessmentHistoryListView,
     FinancialAssessmentListCreateView,
@@ -26,6 +27,7 @@ from .technical_assessments import (
     SoftwareEngineerLookupView,
     TechLeadLookupView,
     TechnicalAssessmentDetailView,
+    TechnicalAssessmentDocumentDownloadView,
     TechnicalAssessmentDocumentListCreateView,
     TechnicalAssessmentHistoryListView,
     TechnicalAssessmentListCreateView,
@@ -199,6 +201,12 @@ urlpatterns = [
     ),
 
     path(
+        "technical-assessments/<int:assessment_id>/documents/<int:pk>/download/",
+        TechnicalAssessmentDocumentDownloadView.as_view(),
+        name="technical-assessment-document-download",
+    ),
+
+    path(
         "financial-assessments/officers/",
         FinancialOfficerLookupView.as_view(),
         name="financial-assessment-officers",
@@ -256,5 +264,11 @@ urlpatterns = [
         "financial-assessments/<int:assessment_id>/documents/",
         FinancialAssessmentDocumentListCreateView.as_view(),
         name="financial-assessment-documents",
+    ),
+
+    path(
+        "financial-assessments/<int:assessment_id>/documents/<int:pk>/download/",
+        FinancialAssessmentDocumentDownloadView.as_view(),
+        name="financial-assessment-document-download",
     ),
 ]

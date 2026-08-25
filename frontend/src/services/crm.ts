@@ -1550,3 +1550,21 @@ export async function uploadTechnicalAssessmentDocument(
     await response.json()
   ) as TechnicalAssessmentDocument
 }
+
+
+export async function openTechnicalAssessmentDocument(
+  assessmentId: number,
+  documentId: number,
+): Promise<void> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/technical-assessments/${assessmentId}/documents/${documentId}/download/`,
+  )
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response))
+  }
+
+  const objectUrl = URL.createObjectURL(await response.blob())
+  window.open(objectUrl, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+}

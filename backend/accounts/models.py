@@ -59,10 +59,22 @@ class UserProfile(models.Model):
         blank=True,
     )
 
-    avatar = models.ImageField(
-        upload_to=(
-            "profile_avatars/%Y/%m/"
-        ),
+    avatar_data = models.BinaryField(
+        null=True,
+        blank=True,
+    )
+
+    avatar_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    avatar_content_type = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    avatar_size = models.PositiveIntegerField(
         null=True,
         blank=True,
     )
