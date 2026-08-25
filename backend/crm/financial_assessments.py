@@ -2,6 +2,9 @@ from django.contrib.auth import (
     get_user_model,
 )
 from django.db import transaction
+from django.db.models import Prefetch
+from django.http import HttpResponse
+from django.utils.http import content_disposition_header
 from django.shortcuts import (
     get_object_or_404,
 )
@@ -97,8 +100,17 @@ class FinancialAssessmentAccessMixin:
                 "reviewed_by__profile",
             )
             .prefetch_related(
-                "documents",
-                "documents__uploaded_by",
+                Prefetch(
+                    "documents",
+                    queryset=(
+                        FinancialAssessmentDocument.objects
+                        .select_related(
+                            "uploaded_by",
+                            "uploaded_by__profile",
+                        )
+                        .defer("file_data")
+                    ),
+                ),
                 "history",
                 "history__performed_by",
             )
@@ -640,6 +652,7 @@ class FinancialAssessmentDocumentListCreateView(
                 "uploaded_by",
                 "uploaded_by__profile",
             )
+            .defer("file_data")
             .order_by(
                 "-uploaded_at",
             )
@@ -674,6 +687,35 @@ class FinancialAssessmentDocumentListCreateView(
             uploaded_by=
                 self.request.user,
         )
+
+
+class FinancialAssessmentDocumentDownloadView(
+    FinancialAssessmentAccessMixin,
+    generics.GenericAPIView,
+):
+    permission_classes = [
+        IsAuthenticated,
+        FinancialAssessmentPermission,
+    ]
+    financial_assessment_action = "document"
+
+    def get(self, request, assessment_id, pk):
+        assessment = self.get_assessment("assessment_id")
+        document = get_object_or_404(
+            FinancialAssessmentDocument,
+            assessment=assessment,
+            pk=pk,
+        )
+        response = HttpResponse(
+            bytes(document.file_data),
+            content_type=document.content_type,
+        )
+        response["Content-Disposition"] = content_disposition_header(
+            False,
+            document.file_name,
+        )
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
 
 
 class FinancialOfficerLookupView(

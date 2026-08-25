@@ -1982,8 +1982,17 @@ class ProfileAndAssignableRoleTests(APITestCase):
 
         self.assertTrue(
             bool(
-                self.user.profile.avatar
+                self.user.profile.avatar_data
             )
+        )
+
+        self.assertEqual(
+            self.user.profile.avatar_name,
+            "avatar.png",
+        )
+        self.assertEqual(
+            self.user.profile.avatar_content_type,
+            "image/png",
         )
 
     def test_user_cannot_upload_non_image_as_avatar(self):
@@ -2061,4 +2070,3 @@ class ProfileAndAssignableRoleTests(APITestCase):
             "role",
             serializer.errors,
         )
-

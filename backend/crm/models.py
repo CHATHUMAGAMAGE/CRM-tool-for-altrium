@@ -779,11 +779,19 @@ class TechnicalAssessmentDocument(
         blank=True,
     )
 
-    file = models.FileField(
-        upload_to=(
-            "technical_assessments/"
-            "%Y/%m/"
-        ),
+    file_data = models.BinaryField()
+
+    file_name = models.CharField(
+        max_length=255,
+    )
+
+    content_type = models.CharField(
+        max_length=100,
+        default="application/octet-stream",
+    )
+
+    file_size = models.PositiveBigIntegerField(
+        default=0,
     )
 
     uploaded_by = models.ForeignKey(
@@ -1133,11 +1141,19 @@ class FinancialAssessmentDocument(
         blank=True,
     )
 
-    file = models.FileField(
-        upload_to=(
-            "financial_assessments/"
-            "%Y/%m/"
-        ),
+    file_data = models.BinaryField()
+
+    file_name = models.CharField(
+        max_length=255,
+    )
+
+    content_type = models.CharField(
+        max_length=100,
+        default="application/octet-stream",
+    )
+
+    file_size = models.PositiveBigIntegerField(
+        default=0,
     )
 
     uploaded_by = models.ForeignKey(

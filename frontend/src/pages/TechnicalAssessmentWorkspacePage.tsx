@@ -52,6 +52,7 @@ import {
   getTechnicalAssessmentDocuments,
   getTechnicalAssessmentHistory,
   getTechnicalAssessmentRecommendations,
+  openTechnicalAssessmentDocument,
   startTechnicalAssessment,
   submitTechnicalAssessment,
   updateTechnicalAssessmentWork,
@@ -64,11 +65,6 @@ import {
   type TechnicalAssessmentRecommendation,
   type TechnicalAssessmentStatus,
 } from '../services/crm'
-
-
-const API_BASE_URL =
-  import.meta.env
-    .VITE_API_BASE_URL
 
 
 function formatDate(
@@ -139,30 +135,6 @@ function availabilityColor(
   }
 
   return 'error'
-}
-
-
-function resolveFileUrl(
-  path: string,
-) {
-  if (
-    path.startsWith(
-      'http://',
-    ) ||
-    path.startsWith(
-      'https://',
-    )
-  ) {
-    return path
-  }
-
-  return `${
-    API_BASE_URL ?? ''
-  }${
-    path.startsWith('/')
-      ? path
-      : `/${path}`
-  }`
 }
 
 
@@ -1865,15 +1837,19 @@ function TechnicalAssessmentWorkspacePage() {
                         </Box>
 
                         <Button
-                          component="a"
                           size="small"
-                          href={
-                            resolveFileUrl(
-                              document.file,
-                            )
-                          }
-                          target="_blank"
-                          rel="noreferrer"
+                          onClick={() => {
+                            void openTechnicalAssessmentDocument(
+                              assessment.id,
+                              document.id,
+                            ).catch((openError) => {
+                              setError(
+                                openError instanceof Error
+                                  ? openError.message
+                                  : 'Unable to open the document.',
+                              )
+                            })
+                          }}
                           sx={{
                             textTransform: 'none',
                           }}
