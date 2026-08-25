@@ -1,3 +1,6 @@
+import time
+
+import pyotp
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -16,6 +19,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.core.cache import cache
 
 
+@override_settings(MFA_REQUIRED_ROLES=[])
 class AuthenticationAPITests(APITestCase):
     def setUp(self):
         cache.clear()
@@ -1046,5 +1050,803 @@ class LogoutAPITests(APITestCase):
         self.assertEqual(
             response.status_code,
             status.HTTP_403_FORBIDDEN,
+        )
+
+
+class MFAAuthenticationAPITests(APITestCase):
+    def setUp(self):
+        cache.clear()
+
+        self.password = (
+            "MFAAdminPassword@2026"
+        )
+
+        self.user = (
+            User.objects
+            .create_user(
+                username="mfa_admin",
+                email="mfa-admin@altrium.lk",
+                password=self.password,
+            )
+        )
+
+        self.user.profile.role = (
+            UserProfile.Role.ADMIN
+        )
+
+        self.user.profile.save(
+            update_fields=[
+                "role",
+            ]
+        )
+
+    def password_login(
+        self,
+        *,
+        web_session=True,
+        remember_me=False,
+        client=None,
+    ):
+        api_client = (
+            client
+            or self.client
+        )
+
+        payload = {
+            "username": (
+                self.user.username
+            ),
+            "password": (
+                self.password
+            ),
+        }
+
+        if web_session:
+            payload[
+                "web_session"
+            ] = True
+
+            payload[
+                "remember_me"
+            ] = remember_me
+
+        return api_client.post(
+            reverse("login"),
+            payload,
+        )
+
+    def begin_setup(
+        self,
+        challenge_token,
+    ):
+        return self.client.post(
+            reverse(
+                "mfa-setup-start"
+            ),
+            {
+                "challenge_token": (
+                    challenge_token
+                ),
+            },
+        )
+
+    def enroll_mfa(self):
+        login_response = (
+            self.password_login()
+        )
+
+        self.assertEqual(
+            login_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertTrue(
+            login_response.data[
+                "mfa_setup_required"
+            ]
+        )
+
+        challenge_token = (
+            login_response.data[
+                "challenge_token"
+            ]
+        )
+
+        setup_response = (
+            self.begin_setup(
+                challenge_token
+            )
+        )
+
+        self.assertEqual(
+            setup_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        secret = (
+            setup_response.data[
+                "secret"
+            ]
+        )
+
+        current_code = (
+            pyotp.TOTP(
+                secret
+            ).now()
+        )
+
+        confirm_response = (
+            self.client.post(
+                reverse(
+                    "mfa-setup-confirm"
+                ),
+                {
+                    "challenge_token": (
+                        challenge_token
+                    ),
+                    "code": (
+                        current_code
+                    ),
+                },
+            )
+        )
+
+        self.assertEqual(
+            confirm_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        return (
+            secret,
+            confirm_response,
+        )
+
+    def test_privileged_web_login_requires_mfa_setup_before_tokens(self):
+        response = (
+            self.password_login()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertTrue(
+            response.data[
+                "mfa_setup_required"
+            ]
+        )
+
+        self.assertNotIn(
+            "access",
+            response.data,
+        )
+
+        self.assertNotIn(
+            "refresh",
+            response.data,
+        )
+
+        # Password-only login must not create an authenticated refresh
+        # session. The response intentionally contains an expired deletion
+        # cookie so any older browser refresh cookie is cleared.
+        self.assertIn(
+            settings.AUTH_REFRESH_COOKIE_NAME,
+            response.cookies,
+        )
+
+        refresh_cookie = response.cookies[
+            settings.AUTH_REFRESH_COOKIE_NAME
+        ]
+
+        self.assertEqual(
+            refresh_cookie.value,
+            "",
+        )
+
+        self.assertEqual(
+            refresh_cookie["max-age"],
+            0,
+        )
+
+    def test_privileged_mobile_login_cannot_bypass_mfa(self):
+        response = (
+            self.password_login(
+                web_session=False,
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertTrue(
+            response.data[
+                "mfa_setup_required"
+            ]
+        )
+
+        self.assertNotIn(
+            "access",
+            response.data,
+        )
+
+        self.assertNotIn(
+            "refresh",
+            response.data,
+        )
+
+    def test_sales_rep_mobile_login_remains_compatible(self):
+        sales_user = (
+            User.objects
+            .create_user(
+                username="mobile_sales_rep",
+                email="mobile-sales@altrium.lk",
+                password="MobileSalesPassword@2026",
+            )
+        )
+
+        sales_user.profile.role = (
+            UserProfile.Role.SALES_REP
+        )
+
+        sales_user.profile.save(
+            update_fields=[
+                "role",
+            ]
+        )
+
+        response = (
+            self.client.post(
+                reverse("login"),
+                {
+                    "username": (
+                        sales_user.username
+                    ),
+                    "password": (
+                        "MobileSalesPassword@2026"
+                    ),
+                },
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertIn(
+            "access",
+            response.data,
+        )
+
+        self.assertIn(
+            "refresh",
+            response.data,
+        )
+
+    def test_setup_returns_qr_and_secret_without_issuing_session(self):
+        login_response = (
+            self.password_login()
+        )
+
+        challenge_token = (
+            login_response.data[
+                "challenge_token"
+            ]
+        )
+
+        response = (
+            self.begin_setup(
+                challenge_token
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertTrue(
+            response.data[
+                "secret"
+            ]
+        )
+
+        self.assertTrue(
+            response.data[
+                "provisioning_uri"
+            ].startswith(
+                "otpauth://totp/"
+            )
+        )
+
+        self.assertTrue(
+            response.data[
+                "qr_code_data_url"
+            ].startswith(
+                "data:image/png;base64,"
+            )
+        )
+
+        self.assertNotIn(
+            "access",
+            response.data,
+        )
+
+        self.user.profile.refresh_from_db()
+
+        self.assertNotEqual(
+            self.user.profile
+            .mfa_pending_secret_encrypted,
+            response.data[
+                "secret"
+            ],
+        )
+
+    def test_correct_setup_code_enables_mfa_and_returns_recovery_codes(self):
+        secret, response = (
+            self.enroll_mfa()
+        )
+
+        self.assertIn(
+            "access",
+            response.data,
+        )
+
+        self.assertNotIn(
+            "refresh",
+            response.data,
+        )
+
+        self.assertIn(
+            settings.AUTH_REFRESH_COOKIE_NAME,
+            response.cookies,
+        )
+
+        self.assertEqual(
+            len(
+                response.data[
+                    "recovery_codes"
+                ]
+            ),
+            settings.MFA_RECOVERY_CODE_COUNT,
+        )
+
+        self.user.profile.refresh_from_db()
+
+        self.assertTrue(
+            self.user.profile.mfa_enabled
+        )
+
+        self.assertTrue(
+            self.user.profile
+            .mfa_secret_encrypted
+        )
+
+        self.assertNotEqual(
+            self.user.profile
+            .mfa_secret_encrypted,
+            secret,
+        )
+
+        self.assertEqual(
+            self.user.profile
+            .mfa_pending_secret_encrypted,
+            "",
+        )
+
+    def test_invalid_setup_code_does_not_enable_mfa(self):
+        login_response = (
+            self.password_login()
+        )
+
+        challenge_token = (
+            login_response.data[
+                "challenge_token"
+            ]
+        )
+
+        self.begin_setup(
+            challenge_token
+        )
+
+        response = (
+            self.client.post(
+                reverse(
+                    "mfa-setup-confirm"
+                ),
+                {
+                    "challenge_token": (
+                        challenge_token
+                    ),
+                    "code": "000000",
+                },
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.user.profile.refresh_from_db()
+
+        self.assertFalse(
+            self.user.profile.mfa_enabled
+        )
+
+    def test_enrolled_user_receives_mfa_challenge_without_tokens(self):
+        self.enroll_mfa()
+
+        self.client.cookies.clear()
+
+        response = (
+            self.password_login()
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertTrue(
+            response.data[
+                "mfa_required"
+            ]
+        )
+
+        self.assertNotIn(
+            "access",
+            response.data,
+        )
+
+        self.assertNotIn(
+            "refresh",
+            response.data,
+        )
+
+    def test_correct_totp_completes_login_and_same_code_cannot_be_replayed(self):
+        secret, _ = (
+            self.enroll_mfa()
+        )
+
+        self.client.cookies.clear()
+
+        login_response = (
+            self.password_login()
+        )
+
+        challenge_token = (
+            login_response.data[
+                "challenge_token"
+            ]
+        )
+
+        # Setup consumed the current counter. The configured +1 clock
+        # window lets the test use the next counter without sleeping.
+        next_code = (
+            pyotp.TOTP(
+                secret
+            ).at(
+                time.time()
+                + 30
+            )
+        )
+
+        verify_response = (
+            self.client.post(
+                reverse(
+                    "mfa-verify"
+                ),
+                {
+                    "challenge_token": (
+                        challenge_token
+                    ),
+                    "code": (
+                        next_code
+                    ),
+                },
+            )
+        )
+
+        self.assertEqual(
+            verify_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertIn(
+            "access",
+            verify_response.data,
+        )
+
+        self.assertIn(
+            settings.AUTH_REFRESH_COOKIE_NAME,
+            verify_response.cookies,
+        )
+
+        # A new password login gets a new one-time challenge, but the
+        # already-consumed TOTP counter must still be rejected.
+        replay_login = (
+            self.password_login()
+        )
+
+        replay_response = (
+            self.client.post(
+                reverse(
+                    "mfa-verify"
+                ),
+                {
+                    "challenge_token": (
+                        replay_login.data[
+                            "challenge_token"
+                        ]
+                    ),
+                    "code": (
+                        next_code
+                    ),
+                },
+            )
+        )
+
+        self.assertEqual(
+            replay_response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    def test_recovery_code_is_one_time(self):
+        _, setup_response = (
+            self.enroll_mfa()
+        )
+
+        recovery_code = (
+            setup_response.data[
+                "recovery_codes"
+            ][0]
+        )
+
+        self.client.cookies.clear()
+
+        login_response = (
+            self.password_login()
+        )
+
+        verify_response = (
+            self.client.post(
+                reverse(
+                    "mfa-verify"
+                ),
+                {
+                    "challenge_token": (
+                        login_response.data[
+                            "challenge_token"
+                        ]
+                    ),
+                    "code": (
+                        recovery_code
+                    ),
+                },
+            )
+        )
+
+        self.assertEqual(
+            verify_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertTrue(
+            verify_response.data[
+                "used_recovery_code"
+            ]
+        )
+
+        second_login = (
+            self.password_login()
+        )
+
+        reused_response = (
+            self.client.post(
+                reverse(
+                    "mfa-verify"
+                ),
+                {
+                    "challenge_token": (
+                        second_login.data[
+                            "challenge_token"
+                        ]
+                    ),
+                    "code": (
+                        recovery_code
+                    ),
+                },
+            )
+        )
+
+        self.assertEqual(
+            reused_response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    def test_new_password_login_invalidates_older_mfa_challenge(self):
+        first_login = (
+            self.password_login()
+        )
+
+        second_login = (
+            self.password_login()
+        )
+
+        first_response = (
+            self.begin_setup(
+                first_login.data[
+                    "challenge_token"
+                ]
+            )
+        )
+
+        second_response = (
+            self.begin_setup(
+                second_login.data[
+                    "challenge_token"
+                ]
+            )
+        )
+
+        self.assertEqual(
+            first_response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.assertEqual(
+            second_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+    def test_mfa_verification_is_rate_limited(self):
+        secret, _ = (
+            self.enroll_mfa()
+        )
+
+        self.client.cookies.clear()
+
+        # Enrollment confirmation uses the same verification throttle.
+        # Clear its test-only cache entry so this test measures exactly
+        # five failed verification attempts before the sixth is blocked.
+        cache.clear()
+
+        # Use one challenge for repeated invalid attempts.
+        login_response = (
+            self.password_login()
+        )
+
+        challenge_token = (
+            login_response.data[
+                "challenge_token"
+            ]
+        )
+
+        for _ in range(
+            5
+        ):
+            response = (
+                self.client.post(
+                    reverse(
+                        "mfa-verify"
+                    ),
+                    {
+                        "challenge_token": (
+                            challenge_token
+                        ),
+                        "code": "000000",
+                    },
+                )
+            )
+
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        blocked = (
+            self.client.post(
+                reverse(
+                    "mfa-verify"
+                ),
+                {
+                    "challenge_token": (
+                        challenge_token
+                    ),
+                    "code": (
+                        pyotp.TOTP(
+                            secret
+                        ).at(
+                            time.time()
+                            + 30
+                        )
+                    ),
+                },
+            )
+        )
+
+        self.assertEqual(
+            blocked.status_code,
+            status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
+    def test_untrusted_origin_cannot_complete_web_mfa(self):
+        login_response = (
+            self.password_login()
+        )
+
+        challenge_token = (
+            login_response.data[
+                "challenge_token"
+            ]
+        )
+
+        response = (
+            self.client.post(
+                reverse(
+                    "mfa-setup-start"
+                ),
+                {
+                    "challenge_token": (
+                        challenge_token
+                    ),
+                },
+                HTTP_ORIGIN=(
+                    "https://evil.example"
+                ),
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_mfa_secret_fields_are_not_exposed_by_current_user_api(self):
+        _, setup_response = (
+            self.enroll_mfa()
+        )
+
+        access_token = (
+            setup_response.data[
+                "access"
+            ]
+        )
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=(
+                f"Bearer {access_token}"
+            ),
+        )
+
+        response = (
+            self.client.get(
+                reverse(
+                    "current-user"
+                )
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        response_keys = set(
+            response.data.keys()
+        )
+
+        self.assertFalse(
+            {
+                key
+                for key
+                in response_keys
+                if "mfa_secret"
+                in key
+            }
         )
 

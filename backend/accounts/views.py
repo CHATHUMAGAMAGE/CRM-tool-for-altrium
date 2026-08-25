@@ -307,6 +307,23 @@ class ResetPasswordView(APIView):
         )
         user.save(update_fields=["password"])
 
+        profile = getattr(
+            user,
+            "profile",
+            None,
+        )
+
+        if profile is not None:
+            profile.mfa_challenge_nonce = ""
+            profile.mfa_pending_secret_encrypted = ""
+
+            profile.save(
+                update_fields=[
+                    "mfa_challenge_nonce",
+                    "mfa_pending_secret_encrypted",
+                ]
+            )
+
         for outstanding_token in OutstandingToken.objects.filter(
             user=user,
         ):
@@ -524,6 +541,16 @@ class AdminUserUpdateView(UpdateAPIView):
         user = serializer.save()
 
         if not user.is_active:
+            user.profile.mfa_challenge_nonce = ""
+            user.profile.mfa_pending_secret_encrypted = ""
+
+            user.profile.save(
+                update_fields=[
+                    "mfa_challenge_nonce",
+                    "mfa_pending_secret_encrypted",
+                ]
+            )
+
             for outstanding_token in OutstandingToken.objects.filter(
                 user=user,
             ):
