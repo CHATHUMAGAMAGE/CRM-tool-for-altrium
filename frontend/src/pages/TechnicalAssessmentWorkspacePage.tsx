@@ -714,7 +714,7 @@ function TechnicalAssessmentWorkspacePage() {
         setSelectedFile(null)
 
         setSuccess(
-          'Document uploaded successfully.',
+          'Document uploaded. Submit the assessment when your findings are complete so the Sales Manager can review it.',
         )
 
         await loadWorkspace()
@@ -997,6 +997,34 @@ function TechnicalAssessmentWorkspacePage() {
               {isStarting
                 ? 'Starting...'
                 : 'Start Assessment'}
+            </Button>
+          )}
+
+          {canEdit && (
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={
+                <AssignmentTurnedInOutlined />
+              }
+              disabled={
+                isSubmitting ||
+                !technicalComments.trim()
+              }
+              onClick={() =>
+                void handleSubmit()
+              }
+              sx={{
+                minHeight: 40,
+                textTransform: 'none',
+                borderRadius: '8px',
+                fontWeight: 600,
+                boxShadow: 'none',
+              }}
+            >
+              {isSubmitting
+                ? 'Submitting...'
+                : 'Submit for Manager Review'}
             </Button>
           )}
         </Box>

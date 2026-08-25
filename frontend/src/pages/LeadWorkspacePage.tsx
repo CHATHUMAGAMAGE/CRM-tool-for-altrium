@@ -5611,6 +5611,21 @@ function LeadWorkspacePage() {
                           </Button>
                         )}
 
+                        {latestTechnicalAssessment
+                          .status ===
+                          'IN_PROGRESS' && (
+                          <Alert
+                            severity="warning"
+                            variant="outlined"
+                            sx={{
+                              alignSelf:
+                                'stretch',
+                            }}
+                          >
+                            Waiting for the Tech Lead to submit the assessment. Uploading documents alone does not make it ready for review.
+                          </Alert>
+                        )}
+
 
                         {canReviewTechnicalAssessment && (
                           <Button
