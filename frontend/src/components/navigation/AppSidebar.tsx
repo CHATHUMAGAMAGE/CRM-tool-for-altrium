@@ -44,10 +44,12 @@ import {
 } from 'react-router'
 
 import BrandLogo from '../BrandLogo'
+import ProfileSettingsDialog from '../profile/ProfileSettingsDialog'
 
 import {
   getCurrentUser,
   logoutUser,
+  PROFILE_UPDATED_EVENT,
   type CurrentUser,
 } from '../../services/auth'
 
@@ -177,6 +179,15 @@ function AppSidebar({
     )
 
 
+  const [
+    profileDialogOpen,
+    setProfileDialogOpen,
+  ] =
+    useState(
+      false,
+    )
+
+
   const isTechLead =
     currentUser?.role ===
     'TECH_LEAD'
@@ -295,6 +306,34 @@ function AppSidebar({
       return () => {
         isMounted =
           false
+      }
+    },
+    [],
+  )
+
+
+  useEffect(
+    () => {
+      const handleProfileUpdated =
+        (event: Event) => {
+          const customEvent =
+            event as CustomEvent<CurrentUser>
+
+          setCurrentUser(
+            customEvent.detail,
+          )
+        }
+
+      window.addEventListener(
+        PROFILE_UPDATED_EVENT,
+        handleProfileUpdated,
+      )
+
+      return () => {
+        window.removeEventListener(
+          PROFILE_UPDATED_EVENT,
+          handleProfileUpdated,
+        )
       }
     },
     [],
@@ -532,12 +571,12 @@ function AppSidebar({
 
       color:
         active
-          ? '#0b5cff'
-          : '#26344d',
+          ? 'primary.main'
+          : 'text.primary',
 
       backgroundColor:
         active
-          ? '#eef4ff'
+          ? 'action.selected'
           : 'transparent',
 
       '& .MuiButton-startIcon':
@@ -547,8 +586,8 @@ function AppSidebar({
 
           color:
             active
-              ? '#0b5cff'
-              : '#34445f',
+              ? 'primary.main'
+              : 'text.secondary',
 
           '& svg':
             {
@@ -564,8 +603,8 @@ function AppSidebar({
 
           color:
             active
-              ? '#0b5cff'
-              : '#657087',
+              ? 'primary.main'
+              : 'text.secondary',
 
           '& svg':
             {
@@ -600,7 +639,7 @@ function AppSidebar({
                   '0 3px 3px 0',
 
                 backgroundColor:
-                  '#0b5cff',
+                  'primary.main',
               },
           }
         : {}),
@@ -608,9 +647,7 @@ function AppSidebar({
       '&:hover':
         {
           backgroundColor:
-            active
-              ? '#e8f0ff'
-              : '#f7f9fc',
+            'action.hover',
         },
     })
 
@@ -649,12 +686,12 @@ function AppSidebar({
 
       color:
         active
-          ? '#0b5cff'
-          : '#56647a',
+          ? 'primary.main'
+          : 'text.secondary',
 
       backgroundColor:
         active
-          ? '#f3f7ff'
+          ? 'action.selected'
           : 'transparent',
 
       '& .MuiButton-startIcon':
@@ -667,8 +704,8 @@ function AppSidebar({
 
           color:
             active
-              ? '#0b5cff'
-              : '#68758c',
+              ? 'primary.main'
+              : 'text.secondary',
 
           '& svg':
             {
@@ -680,9 +717,7 @@ function AppSidebar({
       '&:hover':
         {
           backgroundColor:
-            active
-              ? '#edf3ff'
-              : '#f7f9fc',
+            'action.hover',
         },
     })
 
@@ -734,10 +769,10 @@ function AppSidebar({
           '1px solid',
 
         borderColor:
-          '#e5e9f0',
+          'divider',
 
         backgroundColor:
-          '#ffffff',
+          'background.paper',
 
         px:
           2,
@@ -788,7 +823,7 @@ function AppSidebar({
               5.6,
 
             color:
-              '#778198',
+              'var(--eleven-text-muted)',
 
             letterSpacing:
               '0.13em',
@@ -1136,7 +1171,7 @@ function AppSidebar({
             2.2,
 
           borderColor:
-            '#e4e8ef',
+            'var(--eleven-border)',
         }}
       />
 
@@ -1170,7 +1205,7 @@ function AppSidebar({
               '8px',
 
             color:
-              '#26344d',
+              'text.primary',
 
             textTransform:
               'none',
@@ -1190,7 +1225,7 @@ function AppSidebar({
             '&:hover':
               {
                 backgroundColor:
-                  '#f7f9fc',
+                  'action.hover',
               },
           }}
         >
@@ -1202,9 +1237,19 @@ function AppSidebar({
 
 
       <Box
+        component="button"
+        type="button"
+        onClick={() =>
+          setProfileDialogOpen(
+            true,
+          )
+        }
         sx={{
           mt:
             2.2,
+
+          width:
+            '100%',
 
           p:
             1.5,
@@ -1228,16 +1273,40 @@ function AppSidebar({
             '1px solid',
 
           borderColor:
-            '#dfe4ec',
+            'divider',
 
           borderRadius:
             '8px',
 
           backgroundColor:
-            '#ffffff',
+            'background.paper',
+
+          textAlign:
+            'left',
+
+          font:
+            'inherit',
+
+          color:
+            'inherit',
+
+          cursor:
+            'pointer',
+
+          '&:hover': {
+            backgroundColor:
+              'action.hover',
+          },
         }}
       >
         <Avatar
+          src={
+            currentUser?.avatar_url ||
+            undefined
+          }
+          alt={
+            displayName
+          }
           sx={{
             width:
               42,
@@ -1249,10 +1318,10 @@ function AppSidebar({
               0,
 
             backgroundColor:
-              '#edf2ff',
+              'action.selected',
 
             color:
-              '#1548c7',
+              'primary.main',
 
             fontWeight:
               700,
@@ -1278,7 +1347,7 @@ function AppSidebar({
           <Typography
             sx={{
               color:
-                '#111827',
+                'text.primary',
 
               fontSize:
                 14,
@@ -1309,7 +1378,7 @@ function AppSidebar({
                 0.25,
 
               color:
-                '#68758c',
+                'text.secondary',
 
               fontSize:
                 11.5,
@@ -1336,7 +1405,7 @@ function AppSidebar({
         <KeyboardArrowDownRounded
           sx={{
             color:
-              '#657087',
+              'text.secondary',
 
             fontSize:
               20,
@@ -1346,6 +1415,21 @@ function AppSidebar({
           }}
         />
       </Box>
+
+
+      <ProfileSettingsDialog
+        open={
+          profileDialogOpen
+        }
+        user={
+          currentUser
+        }
+        onClose={() =>
+          setProfileDialogOpen(
+            false,
+          )
+        }
+      />
     </Box>
   )
 }

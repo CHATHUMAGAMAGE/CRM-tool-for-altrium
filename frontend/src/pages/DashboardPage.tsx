@@ -1065,7 +1065,7 @@ function DashboardPage() {
             <Typography
               sx={{
                 color:
-                  '#172033',
+                  'var(--eleven-text)',
 
                 fontSize: {
                   xs:
@@ -1126,7 +1126,7 @@ function DashboardPage() {
               }
               sx={{
                 bgcolor:
-                  '#ffffff',
+                  'var(--eleven-paper)',
               }}
             >
               Refresh
@@ -1201,13 +1201,13 @@ function DashboardPage() {
                   2.5,
 
                 borderColor:
-                  '#e4e8ef',
+                  'var(--eleven-border)',
 
                 borderRadius:
                   '12px',
 
                 boxShadow:
-                  '0 2px 8px rgba(15, 23, 42, 0.035)',
+                  'var(--eleven-shadow)',
 
                 overflow:
                   'hidden',
@@ -1339,16 +1339,16 @@ function DashboardPage() {
                         '&:hover':
                           {
                             bgcolor:
-                              '#fafcff',
+                              'var(--eleven-hover)',
 
                             boxShadow:
-                              'inset 0 0 0 1px #d6e4ff',
+                              'inset 0 0 0 1px var(--eleven-primary-soft)',
                           },
 
                         '&:focus-visible':
                           {
                             boxShadow:
-                              'inset 0 0 0 2px #84adff',
+                              'inset 0 0 0 2px var(--eleven-primary)',
                           },
 
                         borderRight:
@@ -1356,7 +1356,7 @@ function DashboardPage() {
                           3
                             ? {
                                 md:
-                                  '1px solid #edf0f4',
+                                  '1px solid var(--eleven-border)',
                               }
                             : undefined,
 
@@ -1364,7 +1364,7 @@ function DashboardPage() {
                           xs:
                             index <
                             2
-                              ? '1px solid #edf0f4'
+                              ? '1px solid var(--eleven-border)'
                               : 'none',
 
                           md:
@@ -1375,7 +1375,7 @@ function DashboardPage() {
                       <Typography
                         sx={{
                           color:
-                            '#667085',
+                            'var(--eleven-text-secondary)',
 
                           fontSize:
                             12.5,
@@ -1393,7 +1393,7 @@ function DashboardPage() {
                             0.4,
 
                           color:
-                            '#172033',
+                            'var(--eleven-text)',
 
                           fontSize:
                             24,
@@ -1414,7 +1414,7 @@ function DashboardPage() {
                             0.55,
 
                           color:
-                            '#1557d5',
+                            'var(--eleven-primary)',
 
                           fontSize:
                             10.5,
@@ -1464,13 +1464,13 @@ function DashboardPage() {
                 variant="outlined"
                 sx={{
                   borderColor:
-                    '#e4e8ef',
+                    'var(--eleven-border)',
 
                   borderRadius:
                     '12px',
 
                   boxShadow:
-                    '0 2px 10px rgba(15, 23, 42, 0.04)',
+                    'var(--eleven-shadow)',
 
                   overflow:
                     'hidden',
@@ -1507,7 +1507,7 @@ function DashboardPage() {
                       <Typography
                         sx={{
                           color:
-                            '#172033',
+                            'var(--eleven-text)',
 
                           fontSize:
                             16,
@@ -1628,7 +1628,7 @@ function DashboardPage() {
                             '&:hover':
                               {
                                 bgcolor:
-                                  '#fafcff',
+                                  'var(--eleven-hover)',
                               },
                           }}
                         >
@@ -1668,10 +1668,10 @@ function DashboardPage() {
                                     38,
 
                                   bgcolor:
-                                    '#edf2ff',
+                                    'var(--eleven-primary-soft)',
 
                                   color:
-                                    '#1748bf',
+                                    'var(--eleven-primary)',
 
                                   fontSize:
                                     12.5,
@@ -1698,7 +1698,7 @@ function DashboardPage() {
                                 <Typography
                                   sx={{
                                     color:
-                                      '#172033',
+                                      'var(--eleven-text)',
 
                                     fontSize:
                                       13.5,
@@ -1725,7 +1725,7 @@ function DashboardPage() {
                                       0.15,
 
                                     color:
-                                      '#7a8699',
+                                      'var(--eleven-text-secondary)',
 
                                     fontSize:
                                       11.5,
@@ -1776,7 +1776,7 @@ function DashboardPage() {
                                 variant="outlined"
                                 sx={{
                                   bgcolor:
-                                    '#ffffff',
+                                    'var(--eleven-paper)',
 
                                   fontSize:
                                     11.5,
@@ -1797,7 +1797,7 @@ function DashboardPage() {
                                   },
 
                                   color:
-                                    '#667085',
+                                    'var(--eleven-text-secondary)',
 
                                   fontSize:
                                     11.5,
@@ -1835,13 +1835,13 @@ function DashboardPage() {
                   variant="outlined"
                   sx={{
                     borderColor:
-                      '#e4e8ef',
+                      'var(--eleven-border)',
 
                     borderRadius:
                       '12px',
 
                     boxShadow:
-                      '0 2px 8px rgba(15, 23, 42, 0.035)',
+                      'var(--eleven-shadow)',
                   }}
                 >
                   <Box
@@ -1870,7 +1870,7 @@ function DashboardPage() {
                         <Typography
                           sx={{
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
 
                             fontSize:
                               15,
@@ -1922,14 +1922,14 @@ function DashboardPage() {
                           bgcolor:
                             unassignedLeadCount >
                             0
-                              ? '#fff8e6'
-                              : '#f4f7fb',
+                              ? 'color-mix(in srgb, var(--eleven-warning) 14%, var(--eleven-paper))'
+                              : 'var(--eleven-surface-soft)',
 
                           color:
                             unassignedLeadCount >
                             0
-                              ? '#b54708'
-                              : '#475467',
+                              ? 'var(--eleven-warning)'
+                              : 'var(--eleven-text-secondary)',
 
                           borderRadius:
                             '8px',
@@ -1964,7 +1964,7 @@ function DashboardPage() {
                       <Typography
                         sx={{
                           color:
-                            '#667085',
+                            'var(--eleven-text-secondary)',
 
                           fontSize:
                             12.5,
@@ -2019,7 +2019,7 @@ function DashboardPage() {
                                 <Typography
                                   sx={{
                                     color:
-                                      '#172033',
+                                      'var(--eleven-text)',
 
                                     fontSize:
                                       12.75,
@@ -2037,7 +2037,7 @@ function DashboardPage() {
                                       0.15,
 
                                     color:
-                                      '#7a8699',
+                                      'var(--eleven-text-secondary)',
 
                                     fontSize:
                                       11.5,
@@ -2086,13 +2086,13 @@ function DashboardPage() {
                   variant="outlined"
                   sx={{
                     borderColor:
-                      '#e4e8ef',
+                      'var(--eleven-border)',
 
                     borderRadius:
                       '12px',
 
                     boxShadow:
-                      '0 2px 8px rgba(15, 23, 42, 0.035)',
+                      'var(--eleven-shadow)',
                   }}
                 >
                   <Box
@@ -2107,7 +2107,7 @@ function DashboardPage() {
                     <Typography
                       sx={{
                         color:
-                          '#172033',
+                          'var(--eleven-text)',
 
                         fontSize:
                           15,
@@ -2204,7 +2204,7 @@ function DashboardPage() {
                           <Typography
                             sx={{
                               color:
-                                '#475467',
+                                'var(--eleven-text-secondary)',
 
                               fontSize:
                                 12.5,
@@ -2216,7 +2216,7 @@ function DashboardPage() {
                           <Typography
                             sx={{
                               color:
-                                '#172033',
+                                'var(--eleven-text)',
 
                               fontSize:
                                 12.5,
@@ -2288,14 +2288,14 @@ function DashboardPage() {
                         isSalesRepresentative &&
                         card.focus ===
                           dashboardFocus
-                          ? '#84adff'
-                          : '#e4e8ef',
+                          ? 'var(--eleven-primary)'
+                          : 'var(--eleven-border)',
 
                       borderRadius:
                         '12px',
 
                       boxShadow:
-                        '0 2px 8px rgba(15, 23, 42, 0.035)',
+                        'var(--eleven-shadow)',
 
                       cursor:
                         isSalesRepresentative &&
@@ -2311,10 +2311,10 @@ function DashboardPage() {
                         card.focus
                           ? {
                               borderColor:
-                                '#84adff',
+                                'var(--eleven-primary)',
 
                               boxShadow:
-                                '0 6px 18px rgba(21, 87, 213, 0.10)',
+                                '0 6px 18px color-mix(in srgb, var(--eleven-primary) 18%, transparent)',
 
                               transform:
                                 'translateY(-1px)',
@@ -2337,7 +2337,7 @@ function DashboardPage() {
                           <Typography
                             sx={{
                               color:
-                                '#667085',
+                                'var(--eleven-text-secondary)',
 
                               fontSize:
                                 12.5,
@@ -2352,7 +2352,7 @@ function DashboardPage() {
                                 0.6,
 
                               color:
-                                '#172033',
+                                'var(--eleven-text)',
 
                               fontSize:
                                 24,
@@ -2372,7 +2372,7 @@ function DashboardPage() {
                                   0.55,
 
                                 color:
-                                  '#1557d5',
+                                  'var(--eleven-primary)',
 
                                 fontSize:
                                   10.5,
@@ -2423,13 +2423,13 @@ function DashboardPage() {
                   variant="outlined"
                   sx={{
                     borderColor:
-                      '#e4e8ef',
+                      'var(--eleven-border)',
 
                     borderRadius:
                       '12px',
 
                     boxShadow:
-                      '0 2px 8px rgba(15, 23, 42, 0.035)',
+                      'var(--eleven-shadow)',
                   }}
                 >
                   <Box
@@ -2444,7 +2444,7 @@ function DashboardPage() {
                     <Typography
                       sx={{
                         color:
-                          '#172033',
+                          'var(--eleven-text)',
 
                         fontSize:
                           16,
@@ -2502,7 +2502,7 @@ function DashboardPage() {
                         <Typography
                           sx={{
                             color:
-                              '#667085',
+                              'var(--eleven-text-secondary)',
 
                             fontSize:
                               12,
@@ -2517,7 +2517,7 @@ function DashboardPage() {
                               0.2,
 
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
 
                             fontSize:
                               24,
@@ -2562,7 +2562,7 @@ function DashboardPage() {
                           999,
 
                         bgcolor:
-                          '#edf0f4',
+                          'var(--eleven-border)',
                       }}
                     >
                       <Box
@@ -2579,11 +2579,11 @@ function DashboardPage() {
                           bgcolor:
                             workloadLevel ===
                             'Busy'
-                              ? '#f79009'
+                              ? 'var(--eleven-warning)'
                               : workloadLevel ===
                                   'Moderate'
-                                ? '#2e90fa'
-                                : '#12b76a',
+                                ? 'var(--eleven-info)'
+                                : 'var(--eleven-success)',
 
                           transition:
                             'width 220ms ease',
@@ -2598,7 +2598,7 @@ function DashboardPage() {
                           0.8,
 
                         color:
-                          '#98a2b3',
+                          'var(--eleven-text-muted)',
 
                         fontSize:
                           11,
@@ -2678,7 +2678,7 @@ function DashboardPage() {
                             <Typography
                               sx={{
                                 color:
-                                  '#475467',
+                                  'var(--eleven-text-secondary)',
 
                                 fontSize:
                                   12.5,
@@ -2690,7 +2690,7 @@ function DashboardPage() {
                             <Typography
                               sx={{
                                 color:
-                                  '#172033',
+                                  'var(--eleven-text)',
 
                                 fontSize:
                                   12.5,
@@ -2714,13 +2714,13 @@ function DashboardPage() {
                   variant="outlined"
                   sx={{
                     borderColor:
-                      '#e4e8ef',
+                      'var(--eleven-border)',
 
                     borderRadius:
                       '12px',
 
                     boxShadow:
-                      '0 2px 8px rgba(15, 23, 42, 0.035)',
+                      'var(--eleven-shadow)',
                   }}
                 >
                   <Box
@@ -2749,7 +2749,7 @@ function DashboardPage() {
                         <Typography
                           sx={{
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
 
                             fontSize:
                               16,
@@ -2819,7 +2819,7 @@ function DashboardPage() {
                         <EventRounded
                           sx={{
                             color:
-                              '#667085',
+                              'var(--eleven-text-secondary)',
                           }}
                         />
                       </Stack>
@@ -2847,7 +2847,7 @@ function DashboardPage() {
                       <Typography
                         sx={{
                           color:
-                            '#667085',
+                            'var(--eleven-text-secondary)',
 
                           fontSize:
                             13,
@@ -2868,7 +2868,7 @@ function DashboardPage() {
                             0.4,
 
                           color:
-                            '#98a2b3',
+                            'var(--eleven-text-muted)',
 
                           fontSize:
                             11.5,
@@ -2926,7 +2926,7 @@ function DashboardPage() {
                                 '&:hover':
                                   {
                                     bgcolor:
-                                      '#fafcff',
+                                      'var(--eleven-hover)',
                                   },
                               }}
                             >
@@ -2955,7 +2955,7 @@ function DashboardPage() {
                                   <Typography
                                     sx={{
                                       color:
-                                        '#172033',
+                                        'var(--eleven-text)',
 
                                       fontSize:
                                         13,
@@ -2976,7 +2976,7 @@ function DashboardPage() {
                                         0.25,
 
                                       color:
-                                        '#7a8699',
+                                        'var(--eleven-text-secondary)',
 
                                       fontSize:
                                         11.5,
@@ -3003,8 +3003,8 @@ function DashboardPage() {
 
                                       color:
                                         followUp.is_overdue
-                                          ? '#b42318'
-                                          : '#667085',
+                                          ? 'var(--eleven-error)'
+                                          : 'var(--eleven-text-secondary)',
 
                                       fontSize:
                                         11.5,
@@ -3056,13 +3056,13 @@ function DashboardPage() {
                   2.5,
 
                 borderColor:
-                  '#e4e8ef',
+                  'var(--eleven-border)',
 
                 borderRadius:
                   '12px',
 
                 boxShadow:
-                  '0 2px 10px rgba(15, 23, 42, 0.04)',
+                  'var(--eleven-shadow)',
               }}
             >
               <Box
@@ -3091,7 +3091,7 @@ function DashboardPage() {
                     <Typography
                       sx={{
                         color:
-                          '#172033',
+                          'var(--eleven-text)',
 
                         fontSize:
                           16,
@@ -3232,7 +3232,7 @@ function DashboardPage() {
                           '&:hover':
                             {
                               bgcolor:
-                                '#fafcff',
+                                'var(--eleven-hover)',
                             },
                         }}
                       >
@@ -3269,10 +3269,10 @@ function DashboardPage() {
                                   38,
 
                                 bgcolor:
-                                  '#edf2ff',
+                                  'var(--eleven-primary-soft)',
 
                                 color:
-                                  '#1748bf',
+                                  'var(--eleven-primary)',
 
                                 fontSize:
                                   12.5,
@@ -3291,7 +3291,7 @@ function DashboardPage() {
                               <Typography
                                 sx={{
                                   color:
-                                    '#172033',
+                                    'var(--eleven-text)',
 
                                   fontSize:
                                     13.5,
@@ -3306,7 +3306,7 @@ function DashboardPage() {
                               <Typography
                                 sx={{
                                   color:
-                                    '#7a8699',
+                                    'var(--eleven-text-secondary)',
 
                                   fontSize:
                                     11.5,

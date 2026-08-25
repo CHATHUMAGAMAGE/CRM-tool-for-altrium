@@ -1,4 +1,5 @@
-:root {
+:root,
+html[data-eleven-theme="light"] {
   font-family:
     Inter,
     system-ui,
@@ -7,16 +8,185 @@
     "Segoe UI",
     sans-serif;
 
-  color: #172033;
-  background-color: #f7f9fc;
+  color-scheme: light;
+
+  /*
+   * ELEVEN CRM semantic design tokens.
+   * Pages/components should consume these variables instead of
+   * hard-coded light or dark palette values.
+   */
+
+  --eleven-bg: #f7f9fc;
+  --eleven-paper: #ffffff;
+  --eleven-surface-soft: #fafbfc;
+  --eleven-surface-raised: #ffffff;
+  --eleven-input-bg: #ffffff;
+
+  --eleven-text: #172033;
+  --eleven-text-secondary: #667085;
+  --eleven-text-muted: #98a2b3;
+
+  --eleven-border: #e4e8ef;
+  --eleven-border-strong: #cbd3df;
+
+  --eleven-primary: #0b5cff;
+  --eleven-primary-hover: #084bd1;
+  --eleven-primary-soft: #eef4ff;
+  --eleven-primary-border: #cdd9ff;
+
+  --eleven-success: #039855;
+  --eleven-success-soft: #ecfdf3;
+
+  --eleven-warning: #dc6803;
+  --eleven-warning-soft: #fffaeb;
+
+  --eleven-error: #d92d20;
+  --eleven-error-soft: #fef3f2;
+  --eleven-error-border: #fecdca;
+
+  --eleven-info: #1570ef;
+  --eleven-info-soft: #eff8ff;
+  --eleven-info-border: #b2ddff;
+
+  --eleven-purple: #7f56d9;
+  --eleven-purple-soft: #f4f0ff;
+
+  --eleven-hover: #f7f9fc;
+  --eleven-selected: #eef4ff;
+  --eleven-disabled-bg: #f2f4f7;
+  --eleven-ring-track: #e9edf3;
+
+  --eleven-topbar-bg: rgba(255, 255, 255, 0.98);
+
+  --eleven-shadow:
+    0 2px 10px rgba(15, 23, 42, 0.04);
+
+  --eleven-shadow-lg:
+    0 14px 36px rgba(15, 23, 42, 0.14);
+
+  --eleven-shadow-primary:
+    0 8px 24px rgba(21, 87, 213, 0.10);
+
+  --eleven-auth-hero-bg:
+    radial-gradient(
+      circle at 70% 35%,
+      rgba(45, 125, 255, 0.45),
+      transparent 35%
+    ),
+    linear-gradient(
+      145deg,
+      #06152e 0%,
+      #0b2a59 55%,
+      #06162f 100%
+    );
+
+  --eleven-auth-text: #ffffff;
+  --eleven-auth-text-secondary: rgba(255, 255, 255, 0.78);
+  --eleven-auth-text-muted: rgba(255, 255, 255, 0.55);
+  --eleven-auth-logo-shadow:
+    drop-shadow(0 8px 18px rgba(0, 0, 0, 0.20));
+
+  --eleven-tooltip-bg: #172033;
+  --eleven-tooltip-text: #ffffff;
+
+  color: var(--eleven-text);
+  background-color: var(--eleven-bg);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
 
+
+html[data-eleven-theme="dark"] {
+  color-scheme: dark;
+
+  /*
+   * Charcoal dark mode.
+   * Blue is intentionally reserved for interaction/accent states.
+   */
+
+  --eleven-bg: #090a0c;
+  --eleven-paper: #111318;
+  --eleven-surface-soft: #171a21;
+  --eleven-surface-raised: #1d2129;
+  --eleven-input-bg: #0e1014;
+
+  --eleven-text: #f8fafc;
+  --eleven-text-secondary: #d0d5dd;
+  --eleven-text-muted: #98a2b3;
+
+  --eleven-border: #2a2f38;
+  --eleven-border-strong: #414854;
+
+  --eleven-primary: #5b8cff;
+  --eleven-primary-hover: #7ea5ff;
+  --eleven-primary-soft: #18233a;
+  --eleven-primary-border: #314d82;
+
+  --eleven-success: #32d583;
+  --eleven-success-soft: #10261b;
+
+  --eleven-warning: #fdb022;
+  --eleven-warning-soft: #2b2110;
+
+  --eleven-error: #f97066;
+  --eleven-error-soft: #2a1515;
+  --eleven-error-border: #613030;
+
+  --eleven-info: #53b1fd;
+  --eleven-info-soft: #102334;
+  --eleven-info-border: #264f6d;
+
+  --eleven-purple: #b692f6;
+  --eleven-purple-soft: #241b35;
+
+  --eleven-hover: #1a1e25;
+  --eleven-selected: #1b263c;
+  --eleven-disabled-bg: #20242c;
+  --eleven-ring-track: #272c35;
+
+  --eleven-topbar-bg: rgba(15, 16, 20, 0.97);
+
+  --eleven-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.22);
+
+  --eleven-shadow-lg:
+    0 16px 40px rgba(0, 0, 0, 0.34);
+
+  --eleven-shadow-primary:
+    0 8px 24px rgba(91, 140, 255, 0.14);
+
+  --eleven-auth-hero-bg:
+    radial-gradient(
+      circle at 70% 35%,
+      rgba(91, 140, 255, 0.30),
+      transparent 35%
+    ),
+    linear-gradient(
+      145deg,
+      #090a0c 0%,
+      #131926 55%,
+      #0c0e13 100%
+    );
+
+  --eleven-auth-text: #ffffff;
+  --eleven-auth-text-secondary: rgba(255, 255, 255, 0.82);
+  --eleven-auth-text-muted: rgba(255, 255, 255, 0.60);
+  --eleven-auth-logo-shadow:
+    drop-shadow(0 8px 18px rgba(0, 0, 0, 0.36));
+
+  --eleven-tooltip-bg: #e5e7eb;
+  --eleven-tooltip-text: #111827;
+
+  color: var(--eleven-text);
+  background-color: var(--eleven-bg);
+}
+
+
 * {
   box-sizing: border-box;
 }
+
 
 html,
 body,
@@ -28,14 +198,198 @@ body,
   padding: 0;
 }
 
+
+html {
+  background-color:
+    var(--eleven-bg);
+}
+
+
 body {
   min-height: 100vh;
-  background-color: #f7f9fc;
+
+  color:
+    var(--eleven-text);
+
+  background-color:
+    var(--eleven-bg);
+
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
 }
+
+
+#root {
+  min-height: 100vh;
+}
+
 
 button,
 input,
 textarea,
 select {
   font: inherit;
+}
+
+
+/*
+ * Reusable semantic utility classes.
+ */
+
+.eleven-surface {
+  color:
+    var(--eleven-text);
+
+  background:
+    var(--eleven-paper);
+
+  border-color:
+    var(--eleven-border);
+}
+
+
+.eleven-surface-soft {
+  background:
+    var(--eleven-surface-soft);
+}
+
+
+.eleven-text-secondary {
+  color:
+    var(--eleven-text-secondary);
+}
+
+
+.eleven-text-muted {
+  color:
+    var(--eleven-text-muted);
+}
+
+
+/*
+ * Shared MUI compatibility rules.
+ *
+ * Page-level styles now use semantic variables, so these rules are
+ * intentionally narrow and only normalize browser/MUI edge cases.
+ */
+
+.MuiPaper-root,
+.MuiCard-root,
+.MuiDialog-paper,
+.MuiMenu-paper,
+.MuiPopover-paper {
+  background-image: none;
+  border-color:
+    var(--eleven-border);
+}
+
+
+.MuiAppBar-root {
+  border-color:
+    var(--eleven-border);
+}
+
+
+.MuiOutlinedInput-root {
+  color:
+    var(--eleven-text);
+
+  background-color:
+    var(--eleven-input-bg);
+}
+
+
+.MuiOutlinedInput-notchedOutline {
+  border-color:
+    var(--eleven-border);
+}
+
+
+.MuiOutlinedInput-root:hover
+.MuiOutlinedInput-notchedOutline {
+  border-color:
+    var(--eleven-border-strong);
+}
+
+
+.MuiInputBase-input::placeholder {
+  color:
+    var(--eleven-text-muted);
+
+  opacity: 1;
+}
+
+
+.MuiInputLabel-root,
+.MuiFormHelperText-root {
+  color:
+    var(--eleven-text-secondary);
+}
+
+
+.MuiTableCell-head {
+  color:
+    var(--eleven-text);
+
+  background-color:
+    var(--eleven-surface-soft);
+
+  border-color:
+    var(--eleven-border);
+
+  font-weight: 700;
+}
+
+
+.MuiTableCell-body {
+  color:
+    var(--eleven-text);
+
+  border-color:
+    var(--eleven-border);
+}
+
+
+.MuiTableRow-hover:hover {
+  background-color:
+    var(--eleven-hover);
+}
+
+
+.MuiDivider-root {
+  border-color:
+    var(--eleven-border);
+}
+
+
+.MuiSelect-icon {
+  color:
+    var(--eleven-text-secondary);
+}
+
+
+/*
+ * Browser autofill otherwise paints a bright field in dark mode.
+ */
+
+html[data-eleven-theme="dark"]
+input:-webkit-autofill,
+html[data-eleven-theme="dark"]
+input:-webkit-autofill:hover,
+html[data-eleven-theme="dark"]
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color:
+    var(--eleven-text);
+
+  -webkit-box-shadow:
+    0 0 0 1000px
+    var(--eleven-input-bg)
+    inset;
+
+  caret-color:
+    var(--eleven-text);
+
+  transition:
+    background-color 9999s ease-out;
 }

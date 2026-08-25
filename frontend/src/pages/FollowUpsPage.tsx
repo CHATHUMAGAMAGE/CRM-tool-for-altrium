@@ -602,7 +602,7 @@ function FollowUpsPage() {
             <Typography
               sx={{
                 color:
-                  '#172033',
+                  'var(--eleven-text)',
 
                 fontSize: {
                   xs:
@@ -632,7 +632,7 @@ function FollowUpsPage() {
                   0.65,
 
                 color:
-                  '#667085',
+                  'var(--eleven-text-secondary)',
 
                 fontSize:
                   13.5,
@@ -659,7 +659,7 @@ function FollowUpsPage() {
             }
             sx={{
               bgcolor:
-                '#ffffff',
+                'var(--eleven-paper)',
             }}
           >
             Refresh
@@ -691,7 +691,7 @@ function FollowUpsPage() {
               2.5,
 
             borderColor:
-              '#e4e8ef',
+              'var(--eleven-border)',
 
             borderRadius:
               '12px',
@@ -787,13 +787,13 @@ function FollowUpsPage() {
                         index %
                           2 ===
                         0
-                          ? '1px solid #edf0f4'
+                          ? '1px solid var(--eleven-border)'
                           : 'none',
 
                       md:
                         index <
                         3
-                          ? '1px solid #edf0f4'
+                          ? '1px solid var(--eleven-border)'
                           : 'none',
                     },
 
@@ -801,7 +801,7 @@ function FollowUpsPage() {
                       xs:
                         index <
                         2
-                          ? '1px solid #edf0f4'
+                          ? '1px solid var(--eleven-border)'
                           : 'none',
 
                       md:
@@ -812,7 +812,7 @@ function FollowUpsPage() {
                   <Typography
                     sx={{
                       color:
-                        '#667085',
+                        'var(--eleven-text-secondary)',
 
                       fontSize:
                         12.5,
@@ -836,7 +836,7 @@ function FollowUpsPage() {
                         overdueCount >
                           0
                           ? 'error.main'
-                          : '#172033',
+                          : 'var(--eleven-text)',
 
                       fontSize:
                         24,
@@ -871,7 +871,7 @@ function FollowUpsPage() {
               1.75,
 
             borderColor:
-              '#e4e8ef',
+              'var(--eleven-border)',
 
             borderRadius:
               '12px',
@@ -914,7 +914,7 @@ function FollowUpsPage() {
                         <SearchRounded
                           sx={{
                             color:
-                              '#7a8699',
+                              'var(--eleven-text-muted)',
 
                             fontSize:
                               20,
@@ -1021,7 +1021,7 @@ function FollowUpsPage() {
           variant="outlined"
           sx={{
             borderColor:
-              '#e4e8ef',
+              'var(--eleven-border)',
 
             borderRadius:
               '12px',
@@ -1064,7 +1064,7 @@ function FollowUpsPage() {
                 <Typography
                   sx={{
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       15,
@@ -1082,7 +1082,7 @@ function FollowUpsPage() {
                       0.2,
 
                     color:
-                      '#7a8699',
+                      'var(--eleven-text-muted)',
 
                     fontSize:
                       11.5,
@@ -1099,7 +1099,7 @@ function FollowUpsPage() {
                 <Typography
                   sx={{
                     color:
-                      '#667085',
+                      'var(--eleven-text-secondary)',
 
                     fontSize:
                       12,
@@ -1149,7 +1149,7 @@ function FollowUpsPage() {
                 <Typography
                   sx={{
                     color:
-                      '#7a8699',
+                      'var(--eleven-text-muted)',
 
                     fontSize:
                       12.5,
@@ -1176,7 +1176,7 @@ function FollowUpsPage() {
               <CalendarTodayRounded
                 sx={{
                   color:
-                    '#98a2b3',
+                    'var(--eleven-text-muted)',
 
                   fontSize:
                     34,
@@ -1189,7 +1189,7 @@ function FollowUpsPage() {
                     1.25,
 
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
 
                   fontSize:
                     14,
@@ -1207,7 +1207,7 @@ function FollowUpsPage() {
                     0.4,
 
                   color:
-                    '#7a8699',
+                    'var(--eleven-text-muted)',
 
                   fontSize:
                     12.5,
@@ -1272,7 +1272,7 @@ function FollowUpsPage() {
                         '&:hover':
                           {
                             bgcolor:
-                              '#fafcff',
+                              'var(--eleven-surface-soft)',
                           },
                       }}
                     >
@@ -1328,7 +1328,7 @@ function FollowUpsPage() {
                             <Typography
                               sx={{
                                 color:
-                                  '#172033',
+                                  'var(--eleven-text)',
 
                                 fontSize:
                                   13.5,
@@ -1359,7 +1359,7 @@ function FollowUpsPage() {
                               variant="outlined"
                               sx={{
                                 bgcolor:
-                                  '#ffffff',
+                                  'var(--eleven-paper)',
 
                                 fontSize:
                                   10.5,
@@ -1371,7 +1371,7 @@ function FollowUpsPage() {
                           <Typography
                             sx={{
                               color:
-                                '#475467',
+                                'var(--eleven-text-secondary)',
 
                               fontSize:
                                 12.5,
@@ -1390,7 +1390,7 @@ function FollowUpsPage() {
                                 0.15,
 
                               color:
-                                '#98a2b3',
+                                'var(--eleven-text-muted)',
 
                               fontSize:
                                 11.5,
@@ -1416,7 +1416,7 @@ function FollowUpsPage() {
                                   0.7,
 
                                 color:
-                                  '#667085',
+                                  'var(--eleven-text-secondary)',
 
                                 fontSize:
                                   11.5,
@@ -1451,7 +1451,7 @@ function FollowUpsPage() {
                           <Typography
                             sx={{
                               color:
-                                '#98a2b3',
+                                'var(--eleven-text-muted)',
 
                               fontSize:
                                 10.5,
@@ -1477,7 +1477,7 @@ function FollowUpsPage() {
                               color:
                                 isOverdue
                                   ? 'error.main'
-                                  : '#475467',
+                                  : 'var(--eleven-text-secondary)',
 
                               fontSize:
                                 12,
@@ -1506,7 +1506,7 @@ function FollowUpsPage() {
                           <Typography
                             sx={{
                               color:
-                                '#98a2b3',
+                                'var(--eleven-text-muted)',
 
                               fontSize:
                                 10.5,
@@ -1530,7 +1530,7 @@ function FollowUpsPage() {
                                 0.4,
 
                               color:
-                                '#475467',
+                                'var(--eleven-text-secondary)',
 
                               fontSize:
                                 12,
@@ -1550,7 +1550,7 @@ function FollowUpsPage() {
                                 0.2,
 
                               color:
-                                '#98a2b3',
+                                'var(--eleven-text-muted)',
 
                               fontSize:
                                 10.5,

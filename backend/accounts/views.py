@@ -1,6 +1,9 @@
 import logging
+import mimetypes
 
 from django.conf import settings
+from django.core import signing
+from django.http import FileResponse, Http404
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.db.models import Count, Q
@@ -17,6 +20,7 @@ from rest_framework.generics import (
     RetrieveAPIView,
     UpdateAPIView,
 )
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -44,6 +48,7 @@ from .serializers import (
     AdminUserCreateSerializer,
     AdminUserListSerializer,
     AdminUserUpdateSerializer,
+    CurrentUserProfileUpdateSerializer,
     CurrentUserSerializer,
     ForgotPasswordSerializer,
     LogoutSerializer,
@@ -61,6 +66,129 @@ class CurrentUserView(RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class CurrentUserProfileUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [
+        MultiPartParser,
+        FormParser,
+        JSONParser,
+    ]
+
+    def patch(self, request):
+        serializer = (
+            CurrentUserProfileUpdateSerializer(
+                request.user,
+                data=request.data,
+                partial=True,
+                context={
+                    "request": request,
+                },
+            )
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        user = serializer.save()
+
+        return Response(
+            CurrentUserSerializer(
+                user,
+                context={
+                    "request": request,
+                },
+            ).data,
+            status=status.HTTP_200_OK,
+        )
+
+
+class ProfileAvatarView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    signing_salt = (
+        "eleven-crm-profile-avatar-v1"
+    )
+
+    def get(
+        self,
+        request,
+        token,
+    ):
+        try:
+            payload = signing.loads(
+                token,
+                salt=self.signing_salt,
+                max_age=(
+                    60 * 60 * 24 * 30
+                ),
+            )
+        except (
+            signing.BadSignature,
+            signing.SignatureExpired,
+        ) as exc:
+            raise Http404(
+                "Profile picture not found."
+            ) from exc
+
+        user = get_object_or_404(
+            User.objects.select_related(
+                "profile"
+            ),
+            pk=payload.get(
+                "user_id"
+            ),
+        )
+
+        avatar = user.profile.avatar
+
+        if (
+            not avatar
+            or avatar.name
+            != payload.get(
+                "avatar_name"
+            )
+        ):
+            raise Http404(
+                "Profile picture not found."
+            )
+
+        try:
+            avatar_file = avatar.open(
+                "rb"
+            )
+        except (
+            FileNotFoundError,
+            OSError,
+        ) as exc:
+            raise Http404(
+                "Profile picture not found."
+            ) from exc
+
+        content_type = (
+            mimetypes.guess_type(
+                avatar.name
+            )[0]
+            or "application/octet-stream"
+        )
+
+        response = FileResponse(
+            avatar_file,
+            content_type=content_type,
+        )
+
+        response[
+            "Content-Disposition"
+        ] = "inline"
+
+        response[
+            "X-Content-Type-Options"
+        ] = "nosniff"
+
+        return response
 
 
 class LogoutView(APIView):

@@ -1,12 +1,38 @@
 from django.contrib.auth.models import User
+from django.core import signing
+from django.urls import reverse
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 from .models import UserProfile
 
 
+PROFILE_AVATAR_SIGNING_SALT = (
+    "eleven-crm-profile-avatar-v1"
+)
+
+ADMIN_ASSIGNABLE_ROLE_VALUES = {
+    UserProfile.Role.ADMIN,
+    UserProfile.Role.SALES_REP,
+    UserProfile.Role.SALES_MANAGER,
+    UserProfile.Role.TECH_LEAD,
+    UserProfile.Role.FINANCIAL_OFFICER,
+}
+
+ADMIN_ASSIGNABLE_ROLE_CHOICES = [
+    (role_value, role_label)
+    for role_value, role_label
+    in UserProfile.Role.choices
+    if role_value
+    in ADMIN_ASSIGNABLE_ROLE_VALUES
+]
+
+
 class CurrentUserSerializer(serializers.ModelSerializer):
-    role = serializers.CharField(source="profile.role")
+    role = serializers.CharField(
+        source="profile.role",
+        read_only=True,
+    )
     role_display = serializers.CharField(
         source="profile.get_role_display",
         read_only=True,
@@ -15,6 +41,7 @@ class CurrentUserSerializer(serializers.ModelSerializer):
         source="profile.phone_number",
         read_only=True,
     )
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -27,7 +54,230 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "role",
             "role_display",
             "phone_number",
+            "avatar_url",
         ]
+
+    def get_avatar_url(self, obj):
+        profile = getattr(
+            obj,
+            "profile",
+            None,
+        )
+
+        if (
+            profile is None
+            or not profile.avatar
+        ):
+            return None
+
+        token = signing.dumps(
+            {
+                "user_id": obj.pk,
+                "avatar_name": (
+                    profile.avatar.name
+                ),
+            },
+            salt=(
+                PROFILE_AVATAR_SIGNING_SALT
+            ),
+        )
+
+        path = reverse(
+            "profile-avatar",
+            kwargs={
+                "token": token,
+            },
+        )
+
+        request = self.context.get(
+            "request"
+        )
+
+        if request is None:
+            return path
+
+        return request.build_absolute_uri(
+            path
+        )
+
+
+class CurrentUserProfileUpdateSerializer(
+    serializers.ModelSerializer,
+):
+    phone_number = serializers.CharField(
+        source="profile.phone_number",
+        required=False,
+        allow_blank=True,
+        max_length=20,
+    )
+
+    avatar = serializers.ImageField(
+        source="profile.avatar",
+        required=False,
+        allow_null=True,
+        write_only=True,
+    )
+
+    remove_avatar = serializers.BooleanField(
+        required=False,
+        default=False,
+        write_only=True,
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "first_name",
+            "last_name",
+            "phone_number",
+            "avatar",
+            "remove_avatar",
+        ]
+        extra_kwargs = {
+            "first_name": {
+                "required": False,
+                "allow_blank": True,
+            },
+            "last_name": {
+                "required": False,
+                "allow_blank": True,
+            },
+        }
+
+    def validate_avatar(self, value):
+        if value is None:
+            return value
+
+        maximum_size = 5 * 1024 * 1024
+
+        if value.size > maximum_size:
+            raise serializers.ValidationError(
+                "Profile pictures must be 5 MB or smaller."
+            )
+
+        allowed_content_types = {
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        }
+
+        content_type = getattr(
+            value,
+            "content_type",
+            "",
+        )
+
+        if (
+            content_type
+            and content_type
+            not in allowed_content_types
+        ):
+            raise serializers.ValidationError(
+                "Use a JPEG, PNG, or WebP image."
+            )
+
+        return value
+
+    def validate(self, attrs):
+        profile_data = attrs.get(
+            "profile",
+            {},
+        )
+
+        if (
+            attrs.get(
+                "remove_avatar",
+                False,
+            )
+            and profile_data.get(
+                "avatar"
+            ) is not None
+        ):
+            raise serializers.ValidationError(
+                {
+                    "avatar": (
+                        "Upload a new picture or remove the existing "
+                        "picture, not both at once."
+                    )
+                }
+            )
+
+        return attrs
+
+    def update(
+        self,
+        instance,
+        validated_data,
+    ):
+        profile_data = validated_data.pop(
+            "profile",
+            {},
+        )
+
+        remove_avatar = validated_data.pop(
+            "remove_avatar",
+            False,
+        )
+
+        user_update_fields = []
+
+        for field in (
+            "first_name",
+            "last_name",
+        ):
+            if field in validated_data:
+                setattr(
+                    instance,
+                    field,
+                    validated_data[field],
+                )
+                user_update_fields.append(
+                    field
+                )
+
+        if user_update_fields:
+            instance.save(
+                update_fields=(
+                    user_update_fields
+                )
+            )
+
+        profile = instance.profile
+        profile_changed = False
+
+        if "phone_number" in profile_data:
+            profile.phone_number = (
+                profile_data[
+                    "phone_number"
+                ]
+            )
+            profile_changed = True
+
+        if remove_avatar:
+            if profile.avatar:
+                profile.avatar.delete(
+                    save=False
+                )
+            profile.avatar = None
+            profile_changed = True
+
+        elif "avatar" in profile_data:
+            new_avatar = profile_data[
+                "avatar"
+            ]
+
+            if profile.avatar:
+                profile.avatar.delete(
+                    save=False
+                )
+
+            profile.avatar = new_avatar
+            profile_changed = True
+
+        if profile_changed:
+            profile.save()
+
+        return instance
 
 
 class ForgotPasswordSerializer(serializers.Serializer):
@@ -141,7 +391,7 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
         allow_blank=False,
     )
     role = serializers.ChoiceField(
-        choices=UserProfile.Role.choices,
+        choices=ADMIN_ASSIGNABLE_ROLE_CHOICES,
         write_only=True,
     )
     phone_number = serializers.CharField(
@@ -244,6 +494,23 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
             "phone_number",
             "is_active",
         ]
+
+    def validate_role(self, value):
+        if value in ADMIN_ASSIGNABLE_ROLE_VALUES:
+            return value
+
+        if (
+            self.instance
+            and self.instance.profile.role
+            == value
+        ):
+            # Existing legacy roles can remain unchanged so an
+            # administrator can still edit other account details.
+            return value
+
+        raise serializers.ValidationError(
+            "This role is not assignable in the current CRM workflow."
+        )
 
     def validate_username(self, value):
         normalized_username = value.strip()

@@ -157,7 +157,7 @@ function LabelValue({
             600,
 
           color:
-            '#667085',
+            'var(--eleven-text-secondary)',
         }}
       >
         {label}
@@ -175,7 +175,7 @@ function LabelValue({
             600,
 
           color:
-            '#172033',
+            'var(--eleven-text)',
         }}
       >
         {value ||
@@ -940,7 +940,7 @@ function FinancialAssessmentWorkspacePage() {
                   700,
 
                 color:
-                  '#172033',
+                  'var(--eleven-text)',
               }}
             >
               {
@@ -977,7 +977,7 @@ function FinancialAssessmentWorkspacePage() {
                 13,
 
               color:
-                '#667085',
+                'var(--eleven-text-secondary)',
             }}
           >
             Financial Assessment #
@@ -1174,7 +1174,7 @@ function FinancialAssessmentWorkspacePage() {
                 '10px',
 
               borderColor:
-                '#e4e9f1',
+                'var(--eleven-border)',
 
               boxShadow:
                 'none',
@@ -1189,7 +1189,7 @@ function FinancialAssessmentWorkspacePage() {
                   700,
 
                 color:
-                  '#172033',
+                  'var(--eleven-text)',
               }}
             >
               Lead Requirements
@@ -1259,7 +1259,7 @@ function FinancialAssessmentWorkspacePage() {
                     600,
 
                   color:
-                    '#667085',
+                    'var(--eleven-text-secondary)',
                 }}
               >
                 FINANCIAL ASSESSMENT REQUIREMENTS
@@ -1280,7 +1280,7 @@ function FinancialAssessmentWorkspacePage() {
                     1.65,
 
                   color:
-                    '#344054',
+                    'var(--eleven-text-secondary)',
                 }}
               >
                 {
@@ -1302,7 +1302,7 @@ function FinancialAssessmentWorkspacePage() {
                 '10px',
 
               borderColor:
-                '#e4e9f1',
+                'var(--eleven-border)',
 
               boxShadow:
                 'none',
@@ -1317,7 +1317,7 @@ function FinancialAssessmentWorkspacePage() {
                   700,
 
                 color:
-                  '#172033',
+                  'var(--eleven-text)',
               }}
             >
               Technical Assessment Context
@@ -1332,7 +1332,7 @@ function FinancialAssessmentWorkspacePage() {
                   12.5,
 
                 color:
-                  '#667085',
+                  'var(--eleven-text-secondary)',
               }}
             >
               Review the completed technical assessment before preparing the financial assessment.
@@ -1368,7 +1368,7 @@ function FinancialAssessmentWorkspacePage() {
                     600,
 
                   color:
-                    '#667085',
+                    'var(--eleven-text-secondary)',
                 }}
               >
                 TECHNICAL FINDINGS
@@ -1383,13 +1383,13 @@ function FinancialAssessmentWorkspacePage() {
                     1.5,
 
                   border:
-                    '1px solid #e4e9f1',
+                    '1px solid var(--eleven-border)',
 
                   borderRadius:
                     '8px',
 
                   backgroundColor:
-                    '#fafbfc',
+                    'var(--eleven-surface-soft)',
                 }}
               >
                 <Typography
@@ -1404,7 +1404,7 @@ function FinancialAssessmentWorkspacePage() {
                       1.6,
 
                     color:
-                      '#344054',
+                      'var(--eleven-text-secondary)',
                   }}
                 >
                   {
@@ -1431,7 +1431,7 @@ function FinancialAssessmentWorkspacePage() {
                     600,
 
                   color:
-                    '#667085',
+                    'var(--eleven-text-secondary)',
                 }}
               >
                 SALES MANAGER TECHNICAL REVIEW
@@ -1446,13 +1446,13 @@ function FinancialAssessmentWorkspacePage() {
                     1.5,
 
                   border:
-                    '1px solid #e4e9f1',
+                    '1px solid var(--eleven-border)',
 
                   borderRadius:
                     '8px',
 
                   backgroundColor:
-                    '#fafbfc',
+                    'var(--eleven-surface-soft)',
                 }}
               >
                 <Typography
@@ -1467,7 +1467,7 @@ function FinancialAssessmentWorkspacePage() {
                       1.6,
 
                     color:
-                      '#344054',
+                      'var(--eleven-text-secondary)',
                   }}
                 >
                   {
@@ -1491,7 +1491,7 @@ function FinancialAssessmentWorkspacePage() {
                 '10px',
 
               borderColor:
-                '#e4e9f1',
+                'var(--eleven-border)',
 
               boxShadow:
                 'none',
@@ -1535,7 +1535,7 @@ function FinancialAssessmentWorkspacePage() {
                       700,
 
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
                   }}
                 >
                   Financial Findings
@@ -1550,7 +1550,7 @@ function FinancialAssessmentWorkspacePage() {
                       12.5,
 
                     color:
-                      '#667085',
+                      'var(--eleven-text-secondary)',
                   }}
                 >
                   Record cost, budget, risk and overall financial viability.
@@ -1633,7 +1633,7 @@ function FinancialAssessmentWorkspacePage() {
                 '10px',
 
               borderColor:
-                '#e4e9f1',
+                'var(--eleven-border)',
 
               boxShadow:
                 'none',
@@ -1654,7 +1654,7 @@ function FinancialAssessmentWorkspacePage() {
               <DescriptionOutlined
                 sx={{
                   color:
-                    '#0b5cff',
+                    'var(--eleven-primary)',
                 }}
               />
 
@@ -1667,7 +1667,7 @@ function FinancialAssessmentWorkspacePage() {
                     700,
 
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
                 }}
               >
                 Financial Documents
@@ -1680,7 +1680,7 @@ function FinancialAssessmentWorkspacePage() {
                   0.4,
 
                 color:
-                  '#667085',
+                  'var(--eleven-text-secondary)',
 
                 fontSize:
                   12.5,
@@ -1813,7 +1813,7 @@ function FinancialAssessmentWorkspacePage() {
                         12.5,
 
                       color:
-                        '#667085',
+                        'var(--eleven-text-secondary)',
                     }}
                   >
                     {selectedFile
@@ -1879,7 +1879,7 @@ function FinancialAssessmentWorkspacePage() {
                       13,
 
                     color:
-                      '#667085',
+                      'var(--eleven-text-secondary)',
                   }}
                 >
                   No financial documents have been uploaded.
@@ -1902,7 +1902,7 @@ function FinancialAssessmentWorkspacePage() {
                           '8px',
 
                         borderColor:
-                          '#e4e9f1',
+                          'var(--eleven-border)',
 
                         boxShadow:
                           'none',
@@ -1946,7 +1946,7 @@ function FinancialAssessmentWorkspacePage() {
                                 700,
 
                               color:
-                                '#172033',
+                                'var(--eleven-text)',
                             }}
                           >
                             {
@@ -1965,7 +1965,7 @@ function FinancialAssessmentWorkspacePage() {
                                   12.5,
 
                                 color:
-                                  '#667085',
+                                  'var(--eleven-text-secondary)',
                               }}
                             >
                               {
@@ -1984,7 +1984,7 @@ function FinancialAssessmentWorkspacePage() {
                                 11.5,
 
                               color:
-                                '#98a2b3',
+                                'var(--eleven-text-muted)',
                             }}
                           >
                             Uploaded by{' '}
@@ -2039,10 +2039,10 @@ function FinancialAssessmentWorkspacePage() {
                   '10px',
 
                 borderColor:
-                  '#d8e3ff',
+                  'var(--eleven-primary-border)',
 
                 backgroundColor:
-                  '#f8faff',
+                  'var(--eleven-primary-soft)',
 
                 boxShadow:
                   'none',
@@ -2086,7 +2086,7 @@ function FinancialAssessmentWorkspacePage() {
                         700,
 
                       color:
-                        '#172033',
+                        'var(--eleven-text)',
                     }}
                   >
                     Submit Financial Assessment
@@ -2101,7 +2101,7 @@ function FinancialAssessmentWorkspacePage() {
                         12.5,
 
                       color:
-                        '#667085',
+                        'var(--eleven-text-secondary)',
                     }}
                   >
                     Submission returns the assessment to the Sales Manager for review.
@@ -2176,7 +2176,7 @@ function FinancialAssessmentWorkspacePage() {
                 '10px',
 
               borderColor:
-                '#e4e9f1',
+                'var(--eleven-border)',
 
               boxShadow:
                 'none',
@@ -2191,7 +2191,7 @@ function FinancialAssessmentWorkspacePage() {
                   700,
 
                 color:
-                  '#172033',
+                  'var(--eleven-text)',
               }}
             >
               Assessment Details
@@ -2276,7 +2276,7 @@ function FinancialAssessmentWorkspacePage() {
                   '10px',
 
                 borderColor:
-                  '#e4e9f1',
+                  'var(--eleven-border)',
 
                 boxShadow:
                   'none',
@@ -2291,7 +2291,7 @@ function FinancialAssessmentWorkspacePage() {
                     700,
 
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
                 }}
               >
                 Manager Review
@@ -2328,7 +2328,7 @@ function FinancialAssessmentWorkspacePage() {
                     1.6,
 
                   color:
-                    '#344054',
+                    'var(--eleven-text-secondary)',
                 }}
               >
                 {
@@ -2351,7 +2351,7 @@ function FinancialAssessmentWorkspacePage() {
                 '10px',
 
               borderColor:
-                '#e4e9f1',
+                'var(--eleven-border)',
 
               boxShadow:
                 'none',
@@ -2372,7 +2372,7 @@ function FinancialAssessmentWorkspacePage() {
               <HistoryRounded
                 sx={{
                   color:
-                    '#0b5cff',
+                    'var(--eleven-primary)',
 
                   fontSize:
                     20,
@@ -2388,7 +2388,7 @@ function FinancialAssessmentWorkspacePage() {
                     700,
 
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
                 }}
               >
                 Assessment History
@@ -2422,7 +2422,7 @@ function FinancialAssessmentWorkspacePage() {
                       13,
 
                     color:
-                      '#667085',
+                      'var(--eleven-text-secondary)',
                   }}
                 >
                   No history recorded.
@@ -2441,7 +2441,7 @@ function FinancialAssessmentWorkspacePage() {
                           1.4,
 
                         borderLeft:
-                          '2px solid #dbe5f7',
+                          '2px solid var(--eleven-primary-border)',
                       }}
                     >
                       <Typography
@@ -2453,7 +2453,7 @@ function FinancialAssessmentWorkspacePage() {
                             700,
 
                           color:
-                            '#344054',
+                            'var(--eleven-text-secondary)',
                         }}
                       >
                         {
@@ -2474,7 +2474,7 @@ function FinancialAssessmentWorkspacePage() {
                             1.5,
 
                           color:
-                            '#667085',
+                            'var(--eleven-text-secondary)',
                         }}
                       >
                         {
@@ -2492,7 +2492,7 @@ function FinancialAssessmentWorkspacePage() {
                             11,
 
                           color:
-                            '#98a2b3',
+                            'var(--eleven-text-muted)',
                         }}
                       >
                         {

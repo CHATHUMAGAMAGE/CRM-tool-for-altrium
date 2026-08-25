@@ -1144,7 +1144,7 @@ function LoginPage() {
           'flex',
 
         backgroundColor:
-          '#f5f7fa',
+          'var(--eleven-bg)',
       }}
     >
       <Box
@@ -1184,7 +1184,7 @@ function LoginPage() {
             'white',
 
           background:
-            'radial-gradient(circle at 70% 35%, rgba(45, 125, 255, 0.45), transparent 35%), linear-gradient(145deg, #06152e 0%, #0b2a59 55%, #06162f 100%)',
+            'var(--eleven-auth-hero-bg)',
         }}
       >
         <BrandLogo

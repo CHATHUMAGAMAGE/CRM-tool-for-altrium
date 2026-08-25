@@ -37,6 +37,7 @@ import {
   DashboardOutlined,
   KeyboardArrowDownRounded,
   LogoutRounded,
+  ManageAccountsRounded,
   MenuRounded,
   NotificationsNoneRounded,
   SearchRounded,
@@ -50,6 +51,7 @@ import {
 import {
   getCurrentUser,
   logoutUser,
+  PROFILE_UPDATED_EVENT,
   type CurrentUser,
 } from '../../services/auth'
 
@@ -61,6 +63,8 @@ import {
   type Lead,
   type TechnicalAssessment,
 } from '../../services/crm'
+
+import ProfileSettingsDialog from '../profile/ProfileSettingsDialog'
 
 import {
   getFinancialAssessments,
@@ -483,6 +487,15 @@ function AppTopBar({
 
 
   const [
+    profileDialogOpen,
+    setProfileDialogOpen,
+  ] =
+    useState(
+      false,
+    )
+
+
+  const [
     notificationAnchor,
     setNotificationAnchor,
   ] =
@@ -591,6 +604,31 @@ function AppTopBar({
     return () => {
       isMounted =
         false
+    }
+  }, [])
+
+
+  useEffect(() => {
+    const handleProfileUpdated =
+      (event: Event) => {
+        const customEvent =
+          event as CustomEvent<CurrentUser>
+
+        setCurrentUser(
+          customEvent.detail,
+        )
+      }
+
+    window.addEventListener(
+      PROFILE_UPDATED_EVENT,
+      handleProfileUpdated,
+    )
+
+    return () => {
+      window.removeEventListener(
+        PROFILE_UPDATED_EVENT,
+        handleProfileUpdated,
+      )
     }
   }, [])
 
@@ -1531,10 +1569,10 @@ function AppTopBar({
             '1px solid',
 
           borderColor:
-            '#e5e9f0',
+            'var(--eleven-border)',
 
           backgroundColor:
-            'rgba(255,255,255,0.98)',
+            'var(--eleven-topbar-bg)',
 
           backdropFilter:
             'blur(12px)',
@@ -1573,17 +1611,17 @@ function AppTopBar({
                 '1px solid',
 
               borderColor:
-                '#dfe4ec',
+                'var(--eleven-border)',
 
               borderRadius:
                 '8px',
 
               color:
-                '#182338',
+                'var(--eleven-text)',
 
               '&:hover': {
                 backgroundColor:
-                  '#f7f9fc',
+                  'var(--eleven-bg)',
               },
             }}
           >
@@ -1613,7 +1651,7 @@ function AppTopBar({
                       19,
 
                     color:
-                      '#7b879b',
+                      'var(--eleven-text-muted)',
                   }}
                 />
               }
@@ -1663,7 +1701,7 @@ function AppTopBar({
                             'pointer',
 
                           color:
-                            '#172033',
+                            'var(--eleven-text)',
 
                           font:
                             'inherit',
@@ -1677,7 +1715,7 @@ function AppTopBar({
                           '&:hover':
                             {
                               color:
-                                '#0b5cff',
+                                'var(--eleven-primary)',
                             },
                         }}
                       >
@@ -1713,7 +1751,7 @@ function AppTopBar({
                                 19,
 
                               color:
-                                '#657087',
+                                'var(--eleven-text-muted)',
                             }}
                           />
                         )}
@@ -1722,8 +1760,8 @@ function AppTopBar({
                         sx={{
                           color:
                             isLast
-                              ? '#536078'
-                              : '#172033',
+                              ? 'var(--eleven-text-secondary)'
+                              : 'var(--eleven-text)',
 
                           fontSize:
                             14,
@@ -1833,24 +1871,24 @@ function AppTopBar({
                       '8px',
 
                     backgroundColor:
-                      '#ffffff',
+                      'var(--eleven-paper)',
 
                     '& fieldset':
                       {
                         borderColor:
-                          '#dfe4ec',
+                          'var(--eleven-border)',
                       },
 
                     '&:hover fieldset':
                       {
                         borderColor:
-                          '#cbd3df',
+                          'var(--eleven-border-strong)',
                       },
 
                     '&.Mui-focused fieldset':
                       {
                         borderColor:
-                          '#0b5cff',
+                          'var(--eleven-primary)',
 
                         borderWidth:
                           1,
@@ -1877,7 +1915,7 @@ function AppTopBar({
                           <SearchRounded
                             sx={{
                               color:
-                                '#68758c',
+                                'var(--eleven-text-muted)',
                             }}
                           />
                         )}
@@ -1899,10 +1937,10 @@ function AppTopBar({
                               '5px',
 
                             backgroundColor:
-                              '#f2f4f7',
+                              'var(--eleven-surface-soft)',
 
                             color:
-                              '#7a8496',
+                              'var(--eleven-text-muted)',
 
                             fontSize:
                               11,
@@ -1936,7 +1974,7 @@ function AppTopBar({
               height: 44,
 
               color:
-                '#26344d',
+                'var(--eleven-text-secondary)',
             }}
           >
             <Badge
@@ -1984,20 +2022,27 @@ function AppTopBar({
 
               '&:hover': {
                 backgroundColor:
-                  '#f7f9fc',
+                  'var(--eleven-bg)',
               },
             }}
           >
             <Avatar
+              src={
+                currentUser?.avatar_url ||
+                undefined
+              }
+              alt={
+                displayName
+              }
               sx={{
                 width: 44,
                 height: 44,
 
                 backgroundColor:
-                  '#edf2ff',
+                  'var(--eleven-primary-soft)',
 
                 color:
-                  '#1748bf',
+                  'var(--eleven-primary)',
 
                 fontSize:
                   14,
@@ -2014,7 +2059,7 @@ function AppTopBar({
             <KeyboardArrowDownRounded
               sx={{
                 color:
-                  '#647188',
+                  'var(--eleven-text-muted)',
 
                 fontSize:
                   21,
@@ -2079,13 +2124,13 @@ function AppTopBar({
                 '1px solid',
 
               borderColor:
-                '#e1e5ec',
+                'var(--eleven-border)',
 
               borderRadius:
                 '10px',
 
               boxShadow:
-                '0 14px 36px rgba(15, 23, 42, 0.14)',
+                'var(--eleven-shadow-lg)',
             }}
           >
             <Box
@@ -2097,13 +2142,13 @@ function AppTopBar({
                   1.25,
 
                 borderBottom:
-                  '1px solid #edf0f4',
+                  '1px solid var(--eleven-border)',
               }}
             >
               <Typography
                 sx={{
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
 
                   fontSize:
                     12.5,
@@ -2121,7 +2166,7 @@ function AppTopBar({
                     0.2,
 
                   color:
-                    '#7a8699',
+                    'var(--eleven-text-muted)',
 
                   fontSize:
                     10.5,
@@ -2203,7 +2248,7 @@ function AppTopBar({
                       0.75,
 
                     color:
-                      '#98a2b3',
+                      'var(--eleven-text-muted)',
 
                     fontSize:
                       30,
@@ -2213,7 +2258,7 @@ function AppTopBar({
                 <Typography
                   sx={{
                     color:
-                      '#344054',
+                      'var(--eleven-text-secondary)',
 
                     fontSize:
                       12.5,
@@ -2231,7 +2276,7 @@ function AppTopBar({
                       0.35,
 
                     color:
-                      '#98a2b3',
+                      'var(--eleven-text-muted)',
 
                     fontSize:
                       10.5,
@@ -2298,13 +2343,13 @@ function AppTopBar({
                         '&.Mui-selected':
                           {
                             bgcolor:
-                              '#f2f6ff',
+                              'var(--eleven-primary-soft)',
                           },
 
                         '&.Mui-selected:hover':
                           {
                             bgcolor:
-                              '#edf3ff',
+                              'var(--eleven-primary-soft)',
                           },
                       }}
                     >
@@ -2348,7 +2393,7 @@ function AppTopBar({
                         <Typography
                           sx={{
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
 
                             fontSize:
                               12.5,
@@ -2369,7 +2414,7 @@ function AppTopBar({
                               0.25,
 
                             color:
-                              '#667085',
+                              'var(--eleven-text-secondary)',
 
                             fontSize:
                               10.75,
@@ -2397,7 +2442,7 @@ function AppTopBar({
                               0.3,
 
                             color:
-                              '#98a2b3',
+                              'var(--eleven-text-muted)',
 
                             fontSize:
                               9.75,
@@ -2425,16 +2470,16 @@ function AppTopBar({
                   1,
 
                 borderTop:
-                  '1px solid #edf0f4',
+                  '1px solid var(--eleven-border)',
 
                 bgcolor:
-                  '#fafbfc',
+                  'var(--eleven-surface-soft)',
               }}
             >
               <Typography
                 sx={{
                   color:
-                    '#98a2b3',
+                    'var(--eleven-text-muted)',
 
                   fontSize:
                     9.75,
@@ -2499,13 +2544,13 @@ function AppTopBar({
                 '1px solid',
 
               borderColor:
-                '#e1e5ec',
+                'var(--eleven-border)',
 
               borderRadius:
                 '10px',
 
               boxShadow:
-                '0 14px 36px rgba(15, 23, 42, 0.14)',
+                'var(--eleven-shadow-lg)',
             },
           },
         }}
@@ -2538,7 +2583,7 @@ function AppTopBar({
                     800,
 
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
                 }}
               >
                 Follow-up Reminders
@@ -2644,7 +2689,7 @@ function AppTopBar({
                     38,
 
                   color:
-                    '#98a2b3',
+                    'var(--eleven-text-muted)',
 
                   mb: 1,
                 }}
@@ -2716,7 +2761,7 @@ function AppTopBar({
                       '&:hover':
                         {
                           backgroundColor:
-                            '#f8fafc',
+                            'var(--eleven-surface-soft)',
                         },
                     }}
                   >
@@ -2759,20 +2804,20 @@ function AppTopBar({
                           backgroundColor:
                             reminderType ===
                             'OVERDUE'
-                              ? '#fef3f2'
+                              ? 'var(--eleven-error-soft)'
                               : reminderType ===
                                   'DUE_SOON'
-                                ? '#fffaeb'
-                                : '#eff8ff',
+                                ? 'var(--eleven-warning-soft)'
+                                : 'var(--eleven-info-soft)',
 
                           color:
                             reminderType ===
                             'OVERDUE'
-                              ? '#d92d20'
+                              ? 'var(--eleven-error)'
                               : reminderType ===
                                   'DUE_SOON'
-                                ? '#dc6803'
-                                : '#1570ef',
+                                ? 'var(--eleven-warning)'
+                                : 'var(--eleven-info)',
                         }}
                       >
                         <AccessTimeRounded
@@ -2860,7 +2905,7 @@ function AppTopBar({
                               700,
 
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
 
                             lineHeight:
                               1.4,
@@ -2902,7 +2947,7 @@ function AppTopBar({
                               0.3,
 
                             color:
-                              '#0b5cff',
+                              'var(--eleven-primary)',
 
                             fontWeight:
                               600,
@@ -2971,13 +3016,13 @@ function AppTopBar({
                 '1px solid',
 
               borderColor:
-                '#e1e5ec',
+                'var(--eleven-border)',
 
               borderRadius:
                 '8px',
 
               boxShadow:
-                '0 12px 32px rgba(15, 23, 42, 0.12)',
+                'var(--eleven-shadow-lg)',
             },
           },
         }}
@@ -2997,15 +3042,22 @@ function AppTopBar({
             }}
           >
             <Avatar
+              src={
+                currentUser?.avatar_url ||
+                undefined
+              }
+              alt={
+                displayName
+              }
               sx={{
                 width: 40,
                 height: 40,
 
                 backgroundColor:
-                  '#edf2ff',
+                  'var(--eleven-primary-soft)',
 
                 color:
-                  '#1748bf',
+                  'var(--eleven-primary)',
 
                 fontSize:
                   13,
@@ -3056,6 +3108,23 @@ function AppTopBar({
         <Divider />
 
         <MenuItem
+          onClick={() => {
+            handleCloseUserMenu()
+            setProfileDialogOpen(true)
+          }}
+          sx={{
+            minHeight: 48,
+            gap: 1.25,
+            fontSize: 14,
+          }}
+        >
+          <ManageAccountsRounded fontSize="small" />
+          Profile & appearance
+        </MenuItem>
+
+        <Divider />
+
+        <MenuItem
           onClick={
             handleLogout
           }
@@ -3069,7 +3138,7 @@ function AppTopBar({
               48,
 
             color:
-              '#d92d20',
+              'var(--eleven-error)',
 
             gap:
               1.25,
@@ -3085,6 +3154,13 @@ function AppTopBar({
             : 'Log out'}
         </MenuItem>
       </Menu>
+
+
+      <ProfileSettingsDialog
+        open={profileDialogOpen}
+        user={currentUser}
+        onClose={() => setProfileDialogOpen(false)}
+      />
     </>
   )
 }

@@ -1,3 +1,5 @@
+import base64
+import tempfile
 import time
 
 import pyotp
@@ -5,9 +7,11 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient, APITestCase
 
 from .models import UserProfile
+from .serializers import AdminUserCreateSerializer
 from django.core import mail
 from django.test import override_settings
 from datetime import datetime, timedelta
@@ -1848,5 +1852,213 @@ class MFAAuthenticationAPITests(APITestCase):
                 if "mfa_secret"
                 in key
             }
+        )
+
+@override_settings(MFA_REQUIRED_ROLES=[])
+class ProfileAndAssignableRoleTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+
+        self.media_directory = (
+            tempfile.TemporaryDirectory()
+        )
+
+        self.media_override = (
+            override_settings(
+                MEDIA_ROOT=(
+                    self.media_directory.name
+                )
+            )
+        )
+
+        self.media_override.enable()
+
+        self.user = User.objects.create_user(
+            username="profile_user",
+            email="profile@altrium.lk",
+            password="ProfilePassword@2026",
+            first_name="Original",
+            last_name="Name",
+        )
+
+        self.client.force_authenticate(
+            user=self.user
+        )
+
+    def tearDown(self):
+        self.media_override.disable()
+        self.media_directory.cleanup()
+        super().tearDown()
+
+    def test_current_user_includes_avatar_url_field(self):
+        response = self.client.get(
+            reverse("current-user")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertIn(
+            "avatar_url",
+            response.data,
+        )
+
+        self.assertIsNone(
+            response.data[
+                "avatar_url"
+            ]
+        )
+
+    def test_user_can_update_own_profile_details(self):
+        response = self.client.patch(
+            reverse(
+                "current-user-profile"
+            ),
+            {
+                "first_name": "Updated",
+                "last_name": "Employee",
+                "phone_number": "+94 77 123 4567",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.user.refresh_from_db()
+        self.user.profile.refresh_from_db()
+
+        self.assertEqual(
+            self.user.first_name,
+            "Updated",
+        )
+        self.assertEqual(
+            self.user.last_name,
+            "Employee",
+        )
+        self.assertEqual(
+            self.user.profile.phone_number,
+            "+94 77 123 4567",
+        )
+
+    def test_user_can_upload_profile_picture(self):
+        png_bytes = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1Pe"
+            "AAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC"
+        )
+
+        avatar = SimpleUploadedFile(
+            "avatar.png",
+            png_bytes,
+            content_type="image/png",
+        )
+
+        response = self.client.patch(
+            reverse(
+                "current-user-profile"
+            ),
+            {
+                "avatar": avatar,
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertTrue(
+            response.data[
+                "avatar_url"
+            ]
+        )
+
+        self.user.profile.refresh_from_db()
+
+        self.assertTrue(
+            bool(
+                self.user.profile.avatar
+            )
+        )
+
+    def test_user_cannot_upload_non_image_as_avatar(self):
+        invalid_avatar = (
+            SimpleUploadedFile(
+                "avatar.txt",
+                b"not an image",
+                content_type="text/plain",
+            )
+        )
+
+        response = self.client.patch(
+            reverse(
+                "current-user-profile"
+            ),
+            {
+                "avatar": invalid_avatar,
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    def test_admin_can_assign_tech_lead_role(self):
+        serializer = AdminUserCreateSerializer(
+            data={
+                "username": "new_tech_lead",
+                "email": "tech@altrium.lk",
+                "first_name": "Tech",
+                "last_name": "Lead",
+                "role": "TECH_LEAD",
+            }
+        )
+
+        self.assertTrue(
+            serializer.is_valid(),
+            serializer.errors,
+        )
+
+    def test_admin_can_assign_financial_officer_role(self):
+        serializer = AdminUserCreateSerializer(
+            data={
+                "username": "new_finance",
+                "email": "finance@altrium.lk",
+                "first_name": "Finance",
+                "last_name": "Officer",
+                "role": "FINANCIAL_OFFICER",
+            }
+        )
+
+        self.assertTrue(
+            serializer.is_valid(),
+            serializer.errors,
+        )
+
+    def test_admin_cannot_assign_unused_marketing_role(self):
+        serializer = AdminUserCreateSerializer(
+            data={
+                "username": "unused_marketing",
+                "email": "marketing@altrium.lk",
+                "first_name": "Marketing",
+                "last_name": "User",
+                "role": "MARKETING",
+            }
+        )
+
+        self.assertFalse(
+            serializer.is_valid()
+        )
+
+        self.assertIn(
+            "role",
+            serializer.errors,
         )
 

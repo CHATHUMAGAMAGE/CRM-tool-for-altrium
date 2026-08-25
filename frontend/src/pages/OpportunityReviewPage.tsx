@@ -376,7 +376,7 @@ function InformationItem({
       <Typography
         sx={{
           color:
-            '#7a8699',
+            'var(--eleven-text-muted)',
 
           fontSize:
             11,
@@ -400,7 +400,7 @@ function InformationItem({
             0.55,
 
           color:
-            '#172033',
+            'var(--eleven-text)',
 
           fontSize:
             13,
@@ -1330,7 +1330,7 @@ function OpportunityReviewPage() {
               <GavelRounded
                 sx={{
                   color:
-                    '#1557d5',
+                    'var(--eleven-primary)',
 
                   fontSize:
                     30,
@@ -1340,7 +1340,7 @@ function OpportunityReviewPage() {
               <Typography
                 sx={{
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
 
                   fontSize: {
                     xs:
@@ -1367,7 +1367,7 @@ function OpportunityReviewPage() {
                   0.6,
 
                 color:
-                  '#667085',
+                  'var(--eleven-text-secondary)',
 
                 fontSize:
                   13.5,
@@ -1403,7 +1403,7 @@ function OpportunityReviewPage() {
             }
             sx={{
               bgcolor:
-                '#ffffff',
+                'var(--eleven-paper)',
             }}
           >
             Refresh
@@ -1452,7 +1452,7 @@ function OpportunityReviewPage() {
               '12px',
 
             borderColor:
-              '#e4e8ef',
+              'var(--eleven-border)',
 
             boxShadow:
               '0 2px 8px rgba(15, 23, 42, 0.035)',
@@ -1515,13 +1515,13 @@ function OpportunityReviewPage() {
                         index %
                           2 ===
                         0
-                          ? '1px solid #e4e8ef'
+                          ? '1px solid var(--eleven-border)'
                           : 'none',
 
                       md:
                         index <
                         3
-                          ? '1px solid #e4e8ef'
+                          ? '1px solid var(--eleven-border)'
                           : 'none',
                     },
 
@@ -1529,7 +1529,7 @@ function OpportunityReviewPage() {
                       xs:
                         index <
                         2
-                          ? '1px solid #e4e8ef'
+                          ? '1px solid var(--eleven-border)'
                           : 'none',
 
                       md:
@@ -1540,7 +1540,7 @@ function OpportunityReviewPage() {
                   <Typography
                     sx={{
                       color:
-                        '#667085',
+                        'var(--eleven-text-secondary)',
 
                       fontSize:
                         12,
@@ -1555,7 +1555,7 @@ function OpportunityReviewPage() {
                         0.3,
 
                       color:
-                        '#172033',
+                        'var(--eleven-text)',
 
                       fontSize:
                         24,
@@ -1585,7 +1585,7 @@ function OpportunityReviewPage() {
                 '12px',
 
               borderColor:
-                '#e4e8ef',
+                'var(--eleven-border)',
 
               textAlign:
                 'center',
@@ -1597,7 +1597,7 @@ function OpportunityReviewPage() {
                   1,
 
                 color:
-                  '#98a2b3',
+                  'var(--eleven-text-muted)',
 
                 fontSize:
                   40,
@@ -1607,7 +1607,7 @@ function OpportunityReviewPage() {
             <Typography
               sx={{
                 color:
-                  '#172033',
+                  'var(--eleven-text)',
 
                 fontSize:
                   16,
@@ -1625,7 +1625,7 @@ function OpportunityReviewPage() {
                   0.5,
 
                 color:
-                  '#667085',
+                  'var(--eleven-text-secondary)',
 
                 fontSize:
                   13,
@@ -1662,7 +1662,7 @@ function OpportunityReviewPage() {
                   '12px',
 
                 borderColor:
-                  '#e4e8ef',
+                  'var(--eleven-border)',
 
                 overflow:
                   'hidden',
@@ -1683,7 +1683,7 @@ function OpportunityReviewPage() {
                 <Typography
                   sx={{
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       15,
@@ -1701,7 +1701,7 @@ function OpportunityReviewPage() {
                       0.25,
 
                     color:
-                      '#7a8699',
+                      'var(--eleven-text-muted)',
 
                     fontSize:
                       11.5,
@@ -1766,15 +1766,15 @@ function OpportunityReviewPage() {
 
                             bgcolor:
                               active
-                                ? '#f3f7ff'
-                                : '#ffffff',
+                                ? 'var(--eleven-primary-soft)'
+                                : 'var(--eleven-paper)',
 
                             '&:hover':
                               {
                                 bgcolor:
                                   active
-                                    ? '#edf3ff'
-                                    : '#fafbfc',
+                                    ? 'var(--eleven-primary-soft)'
+                                    : 'var(--eleven-surface-soft)',
                               },
                           }}
                         >
@@ -1812,10 +1812,10 @@ function OpportunityReviewPage() {
                                   '50%',
 
                                 bgcolor:
-                                  '#edf2ff',
+                                  'var(--eleven-primary-soft)',
 
                                 color:
-                                  '#1557d5',
+                                  'var(--eleven-primary)',
 
                                 fontSize:
                                   12,
@@ -1847,7 +1847,7 @@ function OpportunityReviewPage() {
                                     'hidden',
 
                                   color:
-                                    '#172033',
+                                    'var(--eleven-text)',
 
                                   fontSize:
                                     13.5,
@@ -1874,7 +1874,7 @@ function OpportunityReviewPage() {
                                     'hidden',
 
                                   color:
-                                    '#667085',
+                                    'var(--eleven-text-secondary)',
 
                                   fontSize:
                                     11.5,
@@ -1944,7 +1944,7 @@ function OpportunityReviewPage() {
                       '12px',
 
                     borderColor:
-                      '#e4e8ef',
+                      'var(--eleven-border)',
 
                     boxShadow:
                       '0 2px 8px rgba(15, 23, 42, 0.035)',
@@ -1984,7 +1984,7 @@ function OpportunityReviewPage() {
                         <Typography
                           sx={{
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
 
                             fontSize:
                               22,
@@ -2002,7 +2002,7 @@ function OpportunityReviewPage() {
                               0.3,
 
                             color:
-                              '#1557d5',
+                              'var(--eleven-primary)',
 
                             fontSize:
                               14,
@@ -2195,7 +2195,7 @@ function OpportunityReviewPage() {
                         '12px',
 
                       borderColor:
-                        '#e4e8ef',
+                        'var(--eleven-border)',
                     }}
                   >
                     <Box
@@ -2223,7 +2223,7 @@ function OpportunityReviewPage() {
                         <Typography
                           sx={{
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
 
                             fontSize:
                               15,
@@ -2351,7 +2351,7 @@ function OpportunityReviewPage() {
                                     0.7,
 
                                   color:
-                                    '#667085',
+                                    'var(--eleven-text-secondary)',
 
                                   fontSize:
                                     11,
@@ -2372,19 +2372,19 @@ function OpportunityReviewPage() {
                                     1.5,
 
                                   border:
-                                    '1px solid #e4e8ef',
+                                    '1px solid var(--eleven-border)',
 
                                   borderRadius:
                                     '8px',
 
                                   bgcolor:
-                                    '#fafbfc',
+                                    'var(--eleven-surface-soft)',
                                 }}
                               >
                                 <Typography
                                   sx={{
                                     color:
-                                      '#475467',
+                                      'var(--eleven-text-secondary)',
 
                                     fontSize:
                                       12.5,
@@ -2437,7 +2437,7 @@ function OpportunityReviewPage() {
                         '12px',
 
                       borderColor:
-                        '#e4e8ef',
+                        'var(--eleven-border)',
                     }}
                   >
                     <Box
@@ -2465,7 +2465,7 @@ function OpportunityReviewPage() {
                         <Typography
                           sx={{
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
 
                             fontSize:
                               15,
@@ -2593,7 +2593,7 @@ function OpportunityReviewPage() {
                                     0.7,
 
                                   color:
-                                    '#667085',
+                                    'var(--eleven-text-secondary)',
 
                                   fontSize:
                                     11,
@@ -2614,19 +2614,19 @@ function OpportunityReviewPage() {
                                     1.5,
 
                                   border:
-                                    '1px solid #e4e8ef',
+                                    '1px solid var(--eleven-border)',
 
                                   borderRadius:
                                     '8px',
 
                                   bgcolor:
-                                    '#fafbfc',
+                                    'var(--eleven-surface-soft)',
                                 }}
                               >
                                 <Typography
                                   sx={{
                                     color:
-                                      '#475467',
+                                      'var(--eleven-text-secondary)',
 
                                     fontSize:
                                       12.5,
@@ -2687,8 +2687,8 @@ function OpportunityReviewPage() {
                     borderColor:
                       selectedItem
                         .readyForDecision
-                        ? '#b2ddff'
-                        : '#e4e8ef',
+                        ? 'var(--eleven-info-border)'
+                        : 'var(--eleven-border)',
 
                     boxShadow:
                       '0 2px 8px rgba(15, 23, 42, 0.035)',
@@ -2731,7 +2731,7 @@ function OpportunityReviewPage() {
                         <Typography
                           sx={{
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
 
                             fontSize:
                               16,
@@ -2749,7 +2749,7 @@ function OpportunityReviewPage() {
                               0.25,
 
                             color:
-                              '#7a8699',
+                              'var(--eleven-text-muted)',
 
                             fontSize:
                               12,
@@ -2927,7 +2927,7 @@ function OpportunityReviewPage() {
                                 0.7,
 
                               color:
-                                '#667085',
+                                'var(--eleven-text-secondary)',
 
                               fontSize:
                                 11,
@@ -2948,19 +2948,19 @@ function OpportunityReviewPage() {
                                 1.5,
 
                               border:
-                                '1px solid #e4e8ef',
+                                '1px solid var(--eleven-border)',
 
                               borderRadius:
                                 '8px',
 
                               bgcolor:
-                                '#fafbfc',
+                                'var(--eleven-surface-soft)',
                             }}
                           >
                             <Typography
                               sx={{
                                 color:
-                                  '#475467',
+                                  'var(--eleven-text-secondary)',
 
                                 fontSize:
                                   13,
@@ -2986,7 +2986,7 @@ function OpportunityReviewPage() {
                         <Typography
                           sx={{
                             color:
-                              '#98a2b3',
+                              'var(--eleven-text-muted)',
 
                             fontSize:
                               11.5,
@@ -3191,13 +3191,13 @@ function OpportunityReviewPage() {
                       '10px',
 
                     bgcolor:
-                      '#fafbfc',
+                      'var(--eleven-surface-soft)',
                   }}
                 >
                   <Typography
                     sx={{
                       color:
-                        '#172033',
+                        'var(--eleven-text)',
 
                       fontSize:
                         14,
@@ -3215,7 +3215,7 @@ function OpportunityReviewPage() {
                         0.25,
 
                       color:
-                        '#667085',
+                        'var(--eleven-text-secondary)',
 
                       fontSize:
                         12.5,

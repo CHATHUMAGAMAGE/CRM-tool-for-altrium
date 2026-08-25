@@ -59,6 +59,14 @@ class UserProfile(models.Model):
         blank=True,
     )
 
+    avatar = models.ImageField(
+        upload_to=(
+            "profile_avatars/%Y/%m/"
+        ),
+        null=True,
+        blank=True,
+    )
+
     # -----------------------------------------------------------------
     # Multi-factor authentication
     # -----------------------------------------------------------------

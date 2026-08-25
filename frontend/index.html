@@ -16,8 +16,45 @@
 
     <meta
       name="theme-color"
-      content="#06152e"
+      content="#f7f9fc"
     />
+
+    <script>
+      ;(() => {
+        const storageKey = 'eleven_appearance'
+        let appearance = 'system'
+
+        try {
+          const storedAppearance = localStorage.getItem(storageKey)
+
+          if (
+            storedAppearance === 'light' ||
+            storedAppearance === 'dark' ||
+            storedAppearance === 'system'
+          ) {
+            appearance = storedAppearance
+          }
+        } catch {
+          // Storage can be unavailable in privacy-restricted contexts.
+        }
+
+        const resolvedMode =
+          appearance === 'system'
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+            : appearance
+
+        document.documentElement.dataset.elevenTheme = resolvedMode
+        document.documentElement.dataset.elevenAppearance = appearance
+        document
+          .querySelector('meta[name="theme-color"]')
+          ?.setAttribute(
+            'content',
+            resolvedMode === 'dark' ? '#090a0c' : '#f7f9fc',
+          )
+      })()
+    </script>
 
     <meta
       name="description"

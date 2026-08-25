@@ -124,7 +124,7 @@ function SummaryCard({
       sx={{
         p: 2,
         borderRadius: '10px',
-        borderColor: '#e4e9f1',
+        borderColor: 'var(--eleven-border)',
         boxShadow: 'none',
       }}
     >
@@ -143,8 +143,8 @@ function SummaryCard({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#eef4ff',
-            color: '#0b5cff',
+            backgroundColor: 'var(--eleven-primary-soft)',
+            color: 'var(--eleven-primary)',
           }}
         >
           {icon}
@@ -154,7 +154,7 @@ function SummaryCard({
           <Typography
             sx={{
               fontSize: 12,
-              color: '#667085',
+              color: 'var(--eleven-text-secondary)',
               fontWeight: 600,
             }}
           >
@@ -167,7 +167,7 @@ function SummaryCard({
               fontSize: 22,
               lineHeight: 1.1,
               fontWeight: 700,
-              color: '#172033',
+              color: 'var(--eleven-text)',
             }}
           >
             {value}
@@ -444,7 +444,7 @@ function TechnicalAssessmentsPage({
           <Typography
             component="h1"
             sx={{
-              color: '#172033',
+              color: 'var(--eleven-text)',
               fontSize: {
                 xs: 25,
                 md: 28,
@@ -461,7 +461,7 @@ function TechnicalAssessmentsPage({
           <Typography
             sx={{
               mt: 0.6,
-              color: '#667085',
+              color: 'var(--eleven-text-secondary)',
               fontSize: 13.5,
             }}
           >
@@ -570,7 +570,7 @@ function TechnicalAssessmentsPage({
         variant="outlined"
         sx={{
           mt: 2.5,
-          borderColor: '#e4e9f1',
+          borderColor: 'var(--eleven-border)',
           borderRadius: '10px',
           boxShadow: 'none',
           overflow: 'hidden',
@@ -580,7 +580,7 @@ function TechnicalAssessmentsPage({
           sx={{
             p: 2,
             borderBottom:
-              '1px solid #e5e9f0',
+              '1px solid var(--eleven-border)',
           }}
         >
           <Box
@@ -606,7 +606,7 @@ function TechnicalAssessmentsPage({
                 sx={{
                   fontSize: 16,
                   fontWeight: 700,
-                  color: '#172033',
+                  color: 'var(--eleven-text)',
                 }}
               >
                 {dashboardMode
@@ -618,7 +618,7 @@ function TechnicalAssessmentsPage({
                 sx={{
                   mt: 0.2,
                   fontSize: 12.5,
-                  color: '#667085',
+                  color: 'var(--eleven-text-secondary)',
                 }}
               >
                 {
@@ -727,7 +727,7 @@ function TechnicalAssessmentsPage({
             <AssignmentOutlined
               sx={{
                 fontSize: 44,
-                color: '#98a2b3',
+                color: 'var(--eleven-text-muted)',
               }}
             />
 
@@ -736,7 +736,7 @@ function TechnicalAssessmentsPage({
                 mt: 1,
                 fontSize: 15,
                 fontWeight: 700,
-                color: '#344054',
+                color: 'var(--eleven-text-secondary)',
               }}
             >
               No assessments found
@@ -746,7 +746,7 @@ function TechnicalAssessmentsPage({
               sx={{
                 mt: 0.4,
                 fontSize: 13,
-                color: '#667085',
+                color: 'var(--eleven-text-secondary)',
               }}
             >
               Assigned technical assessments will appear here.
@@ -759,7 +759,7 @@ function TechnicalAssessmentsPage({
                 <TableRow
                   sx={{
                     backgroundColor:
-                      '#f8fafc',
+                      'var(--eleven-surface-soft)',
                   }}
                 >
                   <TableCell>
@@ -804,7 +804,7 @@ function TechnicalAssessmentsPage({
                           sx={{
                             fontSize: 13.5,
                             fontWeight: 700,
-                            color: '#172033',
+                            color: 'var(--eleven-text)',
                           }}
                         >
                           {
@@ -896,7 +896,7 @@ function TechnicalAssessmentsPage({
                 justifyContent:
                   'flex-end',
                 borderTop:
-                  '1px solid #e5e9f0',
+                  '1px solid var(--eleven-border)',
               }}
             >
               <Button

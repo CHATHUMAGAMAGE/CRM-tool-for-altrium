@@ -41,7 +41,6 @@ import {
 
 import {
   useNavigate,
-  useSearchParams,
 } from 'react-router'
 
 import {
@@ -213,12 +212,6 @@ function getLeadInitials(
 function LeadsPage() {
   const navigate =
     useNavigate()
-
-
-  const [
-    searchParams,
-  ] =
-    useSearchParams()
 
 
   const [
@@ -429,101 +422,6 @@ function LeadsPage() {
       }
     },
     [],
-  )
-
-
-  useEffect(
-    () => {
-      const requestedView =
-        searchParams.get(
-          'view',
-        )
-
-      const requestedStatus =
-        searchParams.get(
-          'status',
-        )
-
-      const requestedAssignee =
-        searchParams.get(
-          'assignee',
-        )
-
-      const requestedSearch =
-        searchParams.get(
-          'search',
-        )
-
-      const requestedSource =
-        searchParams.get(
-          'source',
-        )
-
-      if (
-        requestedView ===
-          'ACTIVE' ||
-        requestedView ===
-          'CLOSED' ||
-        requestedView ===
-          'ALL'
-      ) {
-        setLeadView(
-          requestedView,
-        )
-      } else {
-        setLeadView(
-          'ACTIVE',
-        )
-      }
-
-      if (
-        requestedStatus &&
-        allStatuses.includes(
-          requestedStatus as LeadStatus,
-        )
-      ) {
-        setStatusFilter(
-          requestedStatus as LeadStatus,
-        )
-      } else {
-        setStatusFilter(
-          'ALL',
-        )
-      }
-
-      if (
-        requestedAssignee ===
-          'UNASSIGNED' ||
-        (
-          requestedAssignee !==
-            null &&
-          /^\d+$/.test(
-            requestedAssignee,
-          )
-        )
-      ) {
-        setAssigneeFilter(
-          requestedAssignee,
-        )
-      } else {
-        setAssigneeFilter(
-          'ALL',
-        )
-      }
-
-      setSearch(
-        requestedSearch ??
-        '',
-      )
-
-      setSourceFilter(
-        requestedSource ??
-        'ALL',
-      )
-    },
-    [
-      searchParams,
-    ],
   )
 
 
@@ -1157,7 +1055,7 @@ function LeadsPage() {
             <Typography
               sx={{
                 color:
-                  '#172033',
+                  'var(--eleven-text)',
 
                 fontSize: {
                   xs:
@@ -1217,7 +1115,7 @@ function LeadsPage() {
                   40,
 
                 bgcolor:
-                  '#ffffff',
+                  'var(--eleven-paper)',
               }}
             >
               Refresh
@@ -1297,13 +1195,13 @@ function LeadsPage() {
               2.5,
 
             borderColor:
-              '#e4e8ef',
+              'var(--eleven-border)',
 
             borderRadius:
               '12px',
 
             boxShadow:
-              '0 2px 8px rgba(15, 23, 42, 0.035)',
+              'var(--eleven-shadow)',
 
             overflow:
               'hidden',
@@ -1409,7 +1307,7 @@ function LeadsPage() {
                         1
                         ? {
                             md:
-                              '1px solid #edf0f4',
+                              '1px solid var(--eleven-border)',
                           }
                         : undefined,
 
@@ -1420,7 +1318,7 @@ function LeadsPage() {
                           2,
                           items.length,
                         )
-                          ? '1px solid #edf0f4'
+                          ? '1px solid var(--eleven-border)'
                           : 'none',
 
                       md:
@@ -1431,7 +1329,7 @@ function LeadsPage() {
                   <Typography
                     sx={{
                       color:
-                        '#667085',
+                        'var(--eleven-text-secondary)',
 
                       fontSize:
                         12.5,
@@ -1449,7 +1347,7 @@ function LeadsPage() {
                         0.45,
 
                       color:
-                        '#172033',
+                        'var(--eleven-text)',
 
                       fontSize:
                         24,
@@ -1481,13 +1379,13 @@ function LeadsPage() {
               2.5,
 
             borderColor:
-              '#e4e8ef',
+              'var(--eleven-border)',
 
             borderRadius:
               '12px',
 
             boxShadow:
-              '0 2px 8px rgba(15, 23, 42, 0.035)',
+              'var(--eleven-shadow)',
           }}
         >
           <Box
@@ -1548,7 +1446,7 @@ function LeadsPage() {
                           <SearchRounded
                             sx={{
                               color:
-                                '#7a8699',
+                                'var(--eleven-text-secondary)',
 
                               fontSize:
                                 20,
@@ -1792,13 +1690,13 @@ function LeadsPage() {
           variant="outlined"
           sx={{
             borderColor:
-              '#e4e8ef',
+              'var(--eleven-border)',
 
             borderRadius:
               '12px',
 
             boxShadow:
-              '0 2px 10px rgba(15, 23, 42, 0.04)',
+              'var(--eleven-shadow)',
 
             overflow:
               'hidden',
@@ -1835,7 +1733,7 @@ function LeadsPage() {
                 <Typography
                   sx={{
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       16,
@@ -2007,7 +1905,7 @@ function LeadsPage() {
                           '&:hover':
                             {
                               backgroundColor:
-                                '#fafcff',
+                                'var(--eleven-hover)',
                             },
                         }}
                       >
@@ -2037,10 +1935,10 @@ function LeadsPage() {
                                   38,
 
                                 bgcolor:
-                                  '#edf2ff',
+                                  'var(--eleven-primary-soft)',
 
                                 color:
-                                  '#1748bf',
+                                  'var(--eleven-primary)',
 
                                 fontSize:
                                   13,
@@ -2063,13 +1961,13 @@ function LeadsPage() {
                               <Typography
                                 sx={{
                                   color:
-                                    '#172033',
+                                    'var(--eleven-text)',
 
                                   fontSize:
                                     13.5,
 
                                   fontWeight:
-                                    600,
+                                    700,
 
                                   lineHeight:
                                     1.35,
@@ -2084,7 +1982,7 @@ function LeadsPage() {
                                     0.2,
 
                                   color:
-                                    '#7a8699',
+                                    'var(--eleven-text-secondary)',
 
                                   fontSize:
                                     11.5,
@@ -2118,10 +2016,13 @@ function LeadsPage() {
                           <Typography
                             sx={{
                               color:
-                                '#344054',
+                                'var(--eleven-text)',
 
                               fontSize:
                                 13,
+
+                              fontWeight:
+                                500,
                             }}
                           >
                             {lead.company_name}
@@ -2134,8 +2035,8 @@ function LeadsPage() {
                             sx={{
                               color:
                                 lead.source
-                                  ? '#344054'
-                                  : '#98a2b3',
+                                  ? 'var(--eleven-text-secondary)'
+                                  : 'var(--eleven-text-muted)',
 
                               fontSize:
                                 13,
@@ -2153,7 +2054,7 @@ function LeadsPage() {
                               <Typography
                                 sx={{
                                   color:
-                                    '#344054',
+                                    'var(--eleven-text-secondary)',
 
                                   fontSize:
                                     13,
@@ -2171,7 +2072,7 @@ function LeadsPage() {
                                 variant="outlined"
                                 sx={{
                                   bgcolor:
-                                    '#fffcf5',
+                                    'color-mix(in srgb, var(--eleven-warning) 10%, var(--eleven-paper))',
                                 }}
                               />
                             )}
@@ -2196,7 +2097,7 @@ function LeadsPage() {
                             variant="outlined"
                             sx={{
                               bgcolor:
-                                '#ffffff',
+                                'var(--eleven-paper)',
 
                               fontSize:
                                 11.5,
@@ -2209,7 +2110,7 @@ function LeadsPage() {
                           <Typography
                             sx={{
                               color:
-                                '#667085',
+                                'var(--eleven-text-secondary)',
 
                               fontSize:
                                 12.5,
@@ -2290,7 +2191,7 @@ function LeadsPage() {
                         <Typography
                           sx={{
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
 
                             fontSize:
                               14,
@@ -2367,7 +2268,7 @@ function LeadsPage() {
                     '12px',
 
                   border:
-                    '1px solid #e4e8ef',
+                    '1px solid var(--eleven-border)',
 
                   boxShadow:
                     '0 18px 48px rgba(15, 23, 42, 0.14)',
@@ -2387,7 +2288,7 @@ function LeadsPage() {
                   1,
 
                 color:
-                  '#172033',
+                  'var(--eleven-text)',
 
                 fontSize:
                   20,

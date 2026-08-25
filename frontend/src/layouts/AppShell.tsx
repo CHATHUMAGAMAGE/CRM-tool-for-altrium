@@ -45,7 +45,10 @@ function AppShell() {
       sx={{
         minHeight: '100vh',
         display: 'flex',
-        backgroundColor: '#f7f9fc',
+        backgroundColor: 'var(--eleven-bg)',
+        color: 'var(--eleven-text)',
+        transition:
+          'background-color 160ms ease, color 160ms ease',
       }}
     >
       {/* Desktop sidebar */}
@@ -70,6 +73,8 @@ function AppShell() {
           '& .MuiDrawer-paper': {
             width: SIDEBAR_WIDTH,
             boxSizing: 'border-box',
+            backgroundColor: 'var(--eleven-paper)',
+            borderColor: 'var(--eleven-border)',
           },
         }}
       >
@@ -97,6 +102,7 @@ function AppShell() {
           sx={{
             flexGrow: 1,
             minWidth: 0,
+            backgroundColor: 'var(--eleven-bg)',
           }}
         >
           <Outlet />

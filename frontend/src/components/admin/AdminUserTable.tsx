@@ -35,7 +35,11 @@ import {
   Typography,
 } from '@mui/material'
 
-import type { UserRole } from '../../auth/roles'
+import {
+  ADMIN_ASSIGNABLE_ROLE_OPTIONS,
+  USER_ROLE_LABELS,
+  type UserRole,
+} from '../../auth/roles'
 import {
   getAdminUsers,
   sendAdminPasswordResetEmail,
@@ -45,20 +49,9 @@ import {
 import AdminDeleteUserDialog from './AdminDeleteUserDialog'
 import AdminEditUserDialog from './AdminEditUserDialog'
 
-const roleLabels: Record<UserRole, string> = {
-  ADMIN: 'Administrator',
-  MARKETING: 'Marketing Employee',
-  SALES_REP: 'Sales Representative',
-  SALES_MANAGER: 'Sales Manager',
-  PROJECT_MANAGER: 'Project Manager',
-  SOFTWARE_ENGINEER: 'Software Engineer',
-  DIRECTOR: 'Director',
-}
+const roleLabels = USER_ROLE_LABELS
 
-const roleOptions = Object.entries(roleLabels) as [
-  UserRole,
-  string,
-][]
+const roleOptions = ADMIN_ASSIGNABLE_ROLE_OPTIONS
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error
@@ -340,9 +333,12 @@ function AdminUserTable() {
               >
                 <MenuItem value="">All roles</MenuItem>
 
-                {roleOptions.map(([value, label]) => (
-                  <MenuItem key={value} value={value}>
-                    {label}
+                {roleOptions.map((role) => (
+                  <MenuItem
+                    key={role.value}
+                    value={role.value}
+                  >
+                    {role.label}
                   </MenuItem>
                 ))}
               </Select>
