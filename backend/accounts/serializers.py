@@ -66,16 +66,14 @@ class CurrentUserSerializer(serializers.ModelSerializer):
 
         if (
             profile is None
-            or not profile.avatar
+            or not profile.avatar_data
         ):
             return None
 
         token = signing.dumps(
             {
                 "user_id": obj.pk,
-                "avatar_name": (
-                    profile.avatar.name
-                ),
+                "avatar_name": profile.avatar_name,
             },
             salt=(
                 PROFILE_AVATAR_SIGNING_SALT
@@ -112,7 +110,7 @@ class CurrentUserProfileUpdateSerializer(
     )
 
     avatar = serializers.ImageField(
-        source="profile.avatar",
+        source="profile.avatar_data",
         required=False,
         allow_null=True,
         write_only=True,
@@ -190,7 +188,7 @@ class CurrentUserProfileUpdateSerializer(
                 False,
             )
             and profile_data.get(
-                "avatar"
+                "avatar_data"
             ) is not None
         ):
             raise serializers.ValidationError(
@@ -254,24 +252,25 @@ class CurrentUserProfileUpdateSerializer(
             profile_changed = True
 
         if remove_avatar:
-            if profile.avatar:
-                profile.avatar.delete(
-                    save=False
-                )
-            profile.avatar = None
+            profile.avatar_data = None
+            profile.avatar_name = ""
+            profile.avatar_content_type = ""
+            profile.avatar_size = None
             profile_changed = True
 
-        elif "avatar" in profile_data:
+        elif "avatar_data" in profile_data:
             new_avatar = profile_data[
-                "avatar"
+                "avatar_data"
             ]
 
-            if profile.avatar:
-                profile.avatar.delete(
-                    save=False
-                )
-
-            profile.avatar = new_avatar
+            profile.avatar_data = new_avatar.read()
+            profile.avatar_name = new_avatar.name
+            profile.avatar_content_type = getattr(
+                new_avatar,
+                "content_type",
+                "application/octet-stream",
+            )
+            profile.avatar_size = new_avatar.size
             profile_changed = True
 
         if profile_changed:
@@ -623,4 +622,3 @@ class MFACodeVerificationSerializer(serializers.Serializer):
         min_length=6,
         max_length=32,
     )
-

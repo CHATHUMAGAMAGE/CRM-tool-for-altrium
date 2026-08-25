@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.urls import reverse
 from django.utils import timezone
 
 from rest_framework import serializers
@@ -1530,6 +1531,10 @@ class TechnicalAssessmentRecommendationSerializer(
 class TechnicalAssessmentDocumentSerializer(
     serializers.ModelSerializer,
 ):
+    file = serializers.FileField(
+        write_only=True,
+    )
+
     uploaded_by_name = (
         serializers.SerializerMethodField()
     )
@@ -1563,6 +1568,33 @@ class TechnicalAssessmentDocumentSerializer(
             obj.uploaded_by,
         )
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        path = reverse(
+            "crm:technical-assessment-document-download",
+            kwargs={
+                "assessment_id": instance.assessment_id,
+                "pk": instance.pk,
+            },
+        )
+        data["file"] = (
+            request.build_absolute_uri(path)
+            if request
+            else path
+        )
+        data["file_name"] = instance.file_name
+        data["content_type"] = instance.content_type
+        data["file_size"] = instance.file_size
+        return data
+
+    def validate_file(self, value):
+        if value.size > 10 * 1024 * 1024:
+            raise serializers.ValidationError(
+                "Documents must be 10 MB or smaller."
+            )
+        return value
+
     def validate_title(
         self,
         value,
@@ -1589,9 +1621,18 @@ class TechnicalAssessmentDocumentSerializer(
         self,
         validated_data,
     ):
-        document = super().create(
-            validated_data
-        )
+        uploaded_file = validated_data.pop("file")
+        document = super().create({
+            **validated_data,
+            "file_data": uploaded_file.read(),
+            "file_name": uploaded_file.name,
+            "content_type": getattr(
+                uploaded_file,
+                "content_type",
+                "application/octet-stream",
+            ),
+            "file_size": uploaded_file.size,
+        })
 
         TechnicalAssessmentHistory.objects.create(
             assessment=document.assessment,

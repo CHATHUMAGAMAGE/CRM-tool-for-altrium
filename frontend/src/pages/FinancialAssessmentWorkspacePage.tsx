@@ -41,6 +41,7 @@ import {
   getFinancialAssessment,
   getFinancialAssessmentDocuments,
   getFinancialAssessmentHistory,
+  openFinancialAssessmentDocument,
   startFinancialAssessment,
   submitFinancialAssessment,
   updateFinancialAssessmentWork,
@@ -50,11 +51,6 @@ import {
   type FinancialAssessmentHistory,
   type FinancialAssessmentStatus,
 } from '../services/financialCrm'
-
-
-const API_BASE_URL =
-  import.meta.env
-    .VITE_API_BASE_URL
 
 
 function formatDate(
@@ -107,32 +103,6 @@ function statusColor(
     default:
       return 'default'
   }
-}
-
-
-function resolveFileUrl(
-  path: string,
-) {
-  if (
-    path.startsWith(
-      'http://',
-    ) ||
-    path.startsWith(
-      'https://',
-    )
-  ) {
-    return path
-  }
-
-  return `${
-    API_BASE_URL ?? ''
-  }${
-    path.startsWith(
-      '/',
-    )
-      ? path
-      : `/${path}`
-  }`
 }
 
 
@@ -2003,15 +1973,19 @@ function FinancialAssessmentWorkspacePage() {
                         </Box>
 
                         <Button
-                          component="a"
                           size="small"
-                          href={
-                            resolveFileUrl(
-                              document.file,
-                            )
-                          }
-                          target="_blank"
-                          rel="noreferrer"
+                          onClick={() => {
+                            void openFinancialAssessmentDocument(
+                              assessment.id,
+                              document.id,
+                            ).catch((openError) => {
+                              setError(
+                                openError instanceof Error
+                                  ? openError.message
+                                  : 'Unable to open the document.',
+                              )
+                            })
+                          }}
                           sx={{
                             textTransform:
                               'none',
