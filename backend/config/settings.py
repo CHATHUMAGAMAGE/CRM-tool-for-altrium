@@ -393,7 +393,11 @@ AUTH_COOKIE_SECURE = env.bool(
 
 AUTH_COOKIE_SAMESITE = env(
     "AUTH_COOKIE_SAMESITE",
-    default="Lax",
+    # The deployed React frontend and Django API use separate Render
+    # hostnames. Their credentialed fetches therefore need a cross-site
+    # cookie in production. Keep the safer Lax policy for local/debug
+    # environments, where the services are same-site.
+    default="Lax" if DEBUG else "None",
 ).strip().capitalize()
 
 if AUTH_COOKIE_SAMESITE not in {

@@ -5592,6 +5592,26 @@ function LeadWorkspacePage() {
                         </Stack>
 
 
+                        {latestTechnicalAssessment
+                          .documents.length > 0 && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() =>
+                              navigate(
+                                `/technical-assessments/${latestTechnicalAssessment.id}`,
+                              )
+                            }
+                            sx={{
+                              alignSelf:
+                                'flex-start',
+                            }}
+                          >
+                            View Uploaded Documents
+                          </Button>
+                        )}
+
+
                         {canReviewTechnicalAssessment && (
                           <Button
                             size="small"
@@ -6098,6 +6118,26 @@ function LeadWorkspacePage() {
                               'flex-start',
                           }}
                         />
+
+
+                        {latestFinancialAssessment
+                          .documents.length > 0 && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() =>
+                              navigate(
+                                `/financial-assessments/${latestFinancialAssessment.id}`,
+                              )
+                            }
+                            sx={{
+                              alignSelf:
+                                'flex-start',
+                            }}
+                          >
+                            View Uploaded Documents
+                          </Button>
+                        )}
 
 
                         {canReviewFinancialAssessment && (
