@@ -233,18 +233,18 @@ function getScoreColor(
   score: number | null,
 ) {
   if (score === null) {
-    return '#98a2b3'
+    return 'var(--eleven-text-muted)'
   }
 
   if (score >= 75) {
-    return '#12b76a'
+    return 'var(--eleven-success)'
   }
 
   if (score >= 45) {
-    return '#f79009'
+    return 'var(--eleven-warning)'
   }
 
-  return '#f04438'
+  return 'var(--eleven-error)'
 }
 
 
@@ -741,19 +741,19 @@ function LeadRescueRadarCard({
           '14px',
 
         borderColor:
-          '#cdd9ff',
+          'var(--eleven-primary-border)',
 
         background:
           (
             'linear-gradient('
             + '180deg, '
-            + 'rgba(246, 249, 255, 0.98) 0%, '
-            + '#ffffff 34%'
+            + 'color-mix(in srgb, var(--eleven-primary) 5%, var(--eleven-paper)) 0%, '
+            + 'var(--eleven-paper) 34%'
             + ')'
           ),
 
         boxShadow:
-          '0 8px 24px rgba(21, 87, 213, 0.08)',
+          'var(--eleven-shadow-primary)',
 
         '&::before':
           {
@@ -779,9 +779,9 @@ function LeadRescueRadarCard({
               (
                 'linear-gradient('
                 + '90deg, '
-                + '#1557d5 0%, '
-                + '#7f56d9 50%, '
-                + '#2e90fa 100%'
+                + 'var(--eleven-primary) 0%, '
+                + 'var(--eleven-purple) 50%, '
+                + 'var(--eleven-info) 100%'
                 + ')'
               ),
           },
@@ -848,13 +848,13 @@ function LeadRescueRadarCard({
                   '10px',
 
                 bgcolor:
-                  '#eef4ff',
+                  'var(--eleven-primary-soft)',
 
                 color:
-                  '#1557d5',
+                  'var(--eleven-primary)',
 
                 border:
-                  '1px solid #d6e4ff',
+                  '1px solid var(--eleven-primary-border)',
               }}
             >
               <AutoAwesomeRounded
@@ -875,7 +875,7 @@ function LeadRescueRadarCard({
               <Typography
                 sx={{
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
 
                   fontSize:
                     18,
@@ -899,7 +899,7 @@ function LeadRescueRadarCard({
                     0.25,
 
                   color:
-                    '#667085',
+                    'var(--eleven-text-secondary)',
 
                   fontSize:
                     11.5,
@@ -931,13 +931,13 @@ function LeadRescueRadarCard({
                 0,
 
               bgcolor:
-                '#f6f8ff',
+                'var(--eleven-primary-soft)',
 
               borderColor:
-                '#cdd9ff',
+                'var(--eleven-primary-border)',
 
               color:
-                '#344054',
+                'var(--eleven-text-secondary)',
 
               fontSize:
                 10.5,
@@ -948,7 +948,7 @@ function LeadRescueRadarCard({
               '& .MuiChip-icon':
                 {
                   color:
-                    '#1557d5',
+                    'var(--eleven-primary)',
                 },
             }}
           />
@@ -961,7 +961,7 @@ function LeadRescueRadarCard({
               2,
 
             color:
-              '#667085',
+              'var(--eleven-text-secondary)',
 
             fontSize:
               12.5,
@@ -1000,13 +1000,13 @@ function LeadRescueRadarCard({
                 2,
 
               border:
-                '1px solid #d9e2ff',
+                '1px solid var(--eleven-primary-border)',
 
               borderRadius:
                 '12px',
 
               bgcolor:
-                'rgba(247, 249, 255, 0.9)',
+                'color-mix(in srgb, var(--eleven-primary) 5%, var(--eleven-paper))',
             }}
           >
             <Stack
@@ -1029,7 +1029,7 @@ function LeadRescueRadarCard({
                 <Typography
                   sx={{
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       13.5,
@@ -1047,7 +1047,7 @@ function LeadRescueRadarCard({
                       0.2,
 
                     color:
-                      '#667085',
+                      'var(--eleven-text-secondary)',
 
                     fontSize:
                       11,
@@ -1072,7 +1072,7 @@ function LeadRescueRadarCard({
                 <ScheduleRounded
                   sx={{
                     color:
-                      '#667085',
+                      'var(--eleven-text-secondary)',
 
                     fontSize:
                       16,
@@ -1082,7 +1082,7 @@ function LeadRescueRadarCard({
                 <Typography
                   sx={{
                     color:
-                      '#344054',
+                      'var(--eleven-text-secondary)',
 
                     fontSize:
                       11.5,
@@ -1118,7 +1118,7 @@ function LeadRescueRadarCard({
                   999,
 
                 bgcolor:
-                  '#e9eefb',
+                  'var(--eleven-ring-track)',
 
                 '& .MuiLinearProgress-bar':
                   {
@@ -1129,8 +1129,8 @@ function LeadRescueRadarCard({
                       (
                         'linear-gradient('
                         + '90deg, '
-                        + '#1557d5 0%, '
-                        + '#7f56d9 100%'
+                        + 'var(--eleven-primary) 0%, '
+                        + 'var(--eleven-purple) 100%'
                         + ')'
                       ),
                   },
@@ -1154,7 +1154,7 @@ function LeadRescueRadarCard({
               <Typography
                 sx={{
                   color:
-                    '#7a8699',
+                    'var(--eleven-text-muted)',
 
                   fontSize:
                     10.5,
@@ -1166,7 +1166,7 @@ function LeadRescueRadarCard({
               <Typography
                 sx={{
                   color:
-                    '#1557d5',
+                    'var(--eleven-primary)',
 
                   fontSize:
                     11,
@@ -1230,10 +1230,10 @@ function LeadRescueRadarCard({
 
                           color:
                             isComplete
-                              ? '#039855'
+                              ? 'var(--eleven-success)'
                               : isCurrent
-                                ? '#1557d5'
-                                : '#98a2b3',
+                                ? 'var(--eleven-primary)'
+                                : 'var(--eleven-text-muted)',
                         }}
                       >
                         {isComplete ? (
@@ -1269,10 +1269,10 @@ function LeadRescueRadarCard({
                           sx={{
                             color:
                               isCurrent
-                                ? '#172033'
+                                ? 'var(--eleven-text)'
                                 : isComplete
-                                  ? '#344054'
-                                  : '#98a2b3',
+                                  ? 'var(--eleven-text-secondary)'
+                                  : 'var(--eleven-text-muted)',
 
                             fontSize:
                               11.75,
@@ -1297,7 +1297,7 @@ function LeadRescueRadarCard({
                                 0.15,
 
                               color:
-                                '#7a8699',
+                                'var(--eleven-text-muted)',
 
                               fontSize:
                                 10.5,
@@ -1326,10 +1326,10 @@ function LeadRescueRadarCard({
                   1.25,
 
                 borderTop:
-                  '1px solid #e4e8ef',
+                  '1px solid var(--eleven-border)',
 
                 color:
-                  '#98a2b3',
+                  'var(--eleven-text-muted)',
 
                 fontSize:
                   10,
@@ -1383,10 +1383,7 @@ function LeadRescueRadarCard({
 
                 background:
                   (
-                    'conic-gradient('
-                    + '#dfe7f7 0deg, '
-                    + '#eef2f8 360deg'
-                    + ')'
+                    'conic-gradient(var(--eleven-ring-track) 0deg, var(--eleven-surface-soft) 360deg)'
                   ),
 
                 '&::after':
@@ -1404,7 +1401,7 @@ function LeadRescueRadarCard({
                       '50%',
 
                     bgcolor:
-                      '#ffffff',
+                      'var(--eleven-paper)',
                   },
               }}
             >
@@ -1423,7 +1420,7 @@ function LeadRescueRadarCard({
                       0.35,
 
                     color:
-                      '#98a2b3',
+                      'var(--eleven-text-muted)',
 
                     fontSize:
                       34,
@@ -1433,7 +1430,7 @@ function LeadRescueRadarCard({
                 <Typography
                   sx={{
                     color:
-                      '#475467',
+                      'var(--eleven-text-secondary)',
 
                     fontSize:
                       11,
@@ -1451,7 +1448,7 @@ function LeadRescueRadarCard({
                       0.15,
 
                     color:
-                      '#98a2b3',
+                      'var(--eleven-text-muted)',
 
                     fontSize:
                       9.5,
@@ -1486,7 +1483,7 @@ function LeadRescueRadarCard({
                   700,
 
                 boxShadow:
-                  '0 5px 14px rgba(21, 87, 213, 0.18)',
+                  'var(--eleven-shadow-primary)',
               }}
             >
               Run AI Analysis
@@ -1503,7 +1500,7 @@ function LeadRescueRadarCard({
                     1.25,
 
                   color:
-                    '#7a8699',
+                    'var(--eleven-text-muted)',
 
                   fontSize:
                     10.5,
@@ -1537,10 +1534,10 @@ function LeadRescueRadarCard({
                   '10px',
 
                 border:
-                  '1px solid #d9e2ff',
+                  '1px solid var(--eleven-primary-border)',
 
                 bgcolor:
-                  '#f7f9ff',
+                  'var(--eleven-primary-soft)',
               }}
             >
               <Stack
@@ -1567,7 +1564,7 @@ function LeadRescueRadarCard({
                   <DoneAllRounded
                     sx={{
                       color:
-                        '#039855',
+                        'var(--eleven-success)',
 
                       fontSize:
                         18,
@@ -1578,7 +1575,7 @@ function LeadRescueRadarCard({
                     <Typography
                       sx={{
                         color:
-                          '#172033',
+                          'var(--eleven-text)',
 
                         fontSize:
                           11.5,
@@ -1596,7 +1593,7 @@ function LeadRescueRadarCard({
                           0.1,
 
                         color:
-                          '#7a8699',
+                          'var(--eleven-text-muted)',
 
                         fontSize:
                           9.75,
@@ -1625,7 +1622,7 @@ function LeadRescueRadarCard({
                     variant="outlined"
                     sx={{
                       bgcolor:
-                        '#ffffff',
+                        'var(--eleven-paper)',
 
                       fontSize:
                         10,
@@ -1680,7 +1677,7 @@ function LeadRescueRadarCard({
                           0,
                       ),
                     ) * 3.6}deg, `
-                    + '#e9edf3 0deg'
+                    + 'var(--eleven-ring-track) 0deg'
                     + ')'
                   ),
 
@@ -1699,7 +1696,7 @@ function LeadRescueRadarCard({
                       '50%',
 
                     bgcolor:
-                      '#ffffff',
+                      'var(--eleven-paper)',
                   },
               }}
             >
@@ -1715,7 +1712,7 @@ function LeadRescueRadarCard({
                 <Typography
                   sx={{
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       34,
@@ -1737,7 +1734,7 @@ function LeadRescueRadarCard({
                       0.6,
 
                     color:
-                      '#667085',
+                      'var(--eleven-text-secondary)',
 
                     fontSize:
                       10.5,
@@ -1791,7 +1788,7 @@ function LeadRescueRadarCard({
                 variant="outlined"
                 sx={{
                   bgcolor:
-                    '#ffffff',
+                    'var(--eleven-paper)',
 
                   fontWeight:
                     700,
@@ -1810,7 +1807,7 @@ function LeadRescueRadarCard({
                     }
                     sx={{
                       bgcolor:
-                        '#ffffff',
+                        'var(--eleven-paper)',
 
                       fontWeight:
                         700,
@@ -1838,7 +1835,7 @@ function LeadRescueRadarCard({
                 <InsightsRounded
                   sx={{
                     color:
-                      '#1557d5',
+                      'var(--eleven-primary)',
 
                     fontSize:
                       18,
@@ -1848,7 +1845,7 @@ function LeadRescueRadarCard({
                 <Typography
                   sx={{
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       12,
@@ -1864,7 +1861,7 @@ function LeadRescueRadarCard({
               <Typography
                 sx={{
                   color:
-                    '#667085',
+                    'var(--eleven-text-secondary)',
 
                   fontSize:
                     12,
@@ -1898,7 +1895,7 @@ function LeadRescueRadarCard({
                     <DataObjectRounded
                       sx={{
                         color:
-                          '#7f56d9',
+                          'var(--eleven-purple)',
 
                         fontSize:
                           18,
@@ -1908,7 +1905,7 @@ function LeadRescueRadarCard({
                     <Typography
                       sx={{
                         color:
-                          '#172033',
+                          'var(--eleven-text)',
 
                         fontSize:
                           12,
@@ -1968,7 +1965,7 @@ function LeadRescueRadarCard({
                           <Typography
                             sx={{
                               color:
-                                '#667085',
+                                'var(--eleven-text-secondary)',
 
                               fontSize:
                                 11.75,
@@ -1995,10 +1992,10 @@ function LeadRescueRadarCard({
               }
               sx={{
                 border:
-                  '1px solid #b2ccff',
+                  '1px solid var(--eleven-primary-border)',
 
                 bgcolor:
-                  '#f5f8ff',
+                  'var(--eleven-primary-soft)',
               }}
             >
               <Typography
@@ -2007,7 +2004,7 @@ function LeadRescueRadarCard({
                     0.45,
 
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
 
                   fontSize:
                     11.5,
@@ -2042,10 +2039,10 @@ function LeadRescueRadarCard({
                   '9px',
 
                 bgcolor:
-                  '#fafbfc',
+                  'var(--eleven-surface-soft)',
 
                 border:
-                  '1px solid #e4e8ef',
+                  '1px solid var(--eleven-border)',
               }}
             >
               <Stack
@@ -2075,7 +2072,7 @@ function LeadRescueRadarCard({
                   <MemoryRounded
                     sx={{
                       color:
-                        '#1557d5',
+                        'var(--eleven-primary)',
 
                       fontSize:
                         16,
@@ -2091,7 +2088,7 @@ function LeadRescueRadarCard({
                     <Typography
                       sx={{
                         color:
-                          '#667085',
+                          'var(--eleven-text-secondary)',
 
                         fontSize:
                           9.5,
@@ -2109,7 +2106,7 @@ function LeadRescueRadarCard({
                           0.1,
 
                         color:
-                          '#344054',
+                          'var(--eleven-text-secondary)',
 
                         fontSize:
                           10.5,
@@ -2144,7 +2141,7 @@ function LeadRescueRadarCard({
                       0,
 
                     bgcolor:
-                      '#ffffff',
+                      'var(--eleven-paper)',
 
                     fontSize:
                       9.5,
@@ -2184,7 +2181,7 @@ function LeadRescueRadarCard({
             <Typography
               sx={{
                 color:
-                  '#98a2b3',
+                  'var(--eleven-text-muted)',
 
                 fontSize:
                   9.75,

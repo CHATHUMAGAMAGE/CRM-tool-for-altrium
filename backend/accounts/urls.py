@@ -15,9 +15,11 @@ from .views import (
     AdminUserListView,
     AdminUserPasswordResetEmailView,
     AdminUserUpdateView,
+    CurrentUserProfileUpdateView,
     CurrentUserView,
     ForgotPasswordView,
     LogoutView,
+    ProfileAvatarView,
     ResetPasswordView,
     SalesRepLookupView,
 )
@@ -58,6 +60,16 @@ urlpatterns = [
         "me/",
         CurrentUserView.as_view(),
         name="current-user",
+    ),
+    path(
+        "me/profile/",
+        CurrentUserProfileUpdateView.as_view(),
+        name="current-user-profile",
+    ),
+    path(
+        "profile-avatar/<str:token>/",
+        ProfileAvatarView.as_view(),
+        name="profile-avatar",
     ),
     path(
         "sales-representatives/",

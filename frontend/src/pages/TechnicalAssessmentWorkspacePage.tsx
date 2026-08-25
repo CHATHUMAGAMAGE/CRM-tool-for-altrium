@@ -179,7 +179,7 @@ function LabelValue({
         sx={{
           fontSize: 11.5,
           fontWeight: 600,
-          color: '#667085',
+          color: 'var(--eleven-text-secondary)',
         }}
       >
         {label}
@@ -190,7 +190,7 @@ function LabelValue({
           mt: 0.35,
           fontSize: 13.5,
           fontWeight: 600,
-          color: '#172033',
+          color: 'var(--eleven-text)',
         }}
       >
         {value || '—'}
@@ -919,7 +919,7 @@ function TechnicalAssessmentWorkspacePage() {
                   md: 28,
                 },
                 fontWeight: 700,
-                color: '#172033',
+                color: 'var(--eleven-text)',
               }}
             >
               {
@@ -950,7 +950,7 @@ function TechnicalAssessmentWorkspacePage() {
             sx={{
               mt: 0.4,
               fontSize: 13,
-              color: '#667085',
+              color: 'var(--eleven-text-secondary)',
             }}
           >
             Technical Assessment #
@@ -1098,7 +1098,7 @@ function TechnicalAssessmentWorkspacePage() {
             sx={{
               p: 2.2,
               borderRadius: '10px',
-              borderColor: '#e4e9f1',
+              borderColor: 'var(--eleven-border)',
               boxShadow: 'none',
             }}
           >
@@ -1106,7 +1106,7 @@ function TechnicalAssessmentWorkspacePage() {
               sx={{
                 fontSize: 16,
                 fontWeight: 700,
-                color: '#172033',
+                color: 'var(--eleven-text)',
               }}
             >
               Lead Requirements
@@ -1162,7 +1162,7 @@ function TechnicalAssessmentWorkspacePage() {
                 sx={{
                   fontSize: 11.5,
                   fontWeight: 600,
-                  color: '#667085',
+                  color: 'var(--eleven-text-secondary)',
                 }}
               >
                 ASSESSMENT REQUIREMENTS
@@ -1175,7 +1175,7 @@ function TechnicalAssessmentWorkspacePage() {
                     'pre-wrap',
                   fontSize: 13.5,
                   lineHeight: 1.65,
-                  color: '#344054',
+                  color: 'var(--eleven-text-secondary)',
                 }}
               >
                 {
@@ -1192,7 +1192,7 @@ function TechnicalAssessmentWorkspacePage() {
             sx={{
               p: 2.2,
               borderRadius: '10px',
-              borderColor: '#e4e9f1',
+              borderColor: 'var(--eleven-border)',
               boxShadow: 'none',
             }}
           >
@@ -1217,7 +1217,7 @@ function TechnicalAssessmentWorkspacePage() {
                   sx={{
                     fontSize: 16,
                     fontWeight: 700,
-                    color: '#172033',
+                    color: 'var(--eleven-text)',
                   }}
                 >
                   Technical Findings
@@ -1227,7 +1227,7 @@ function TechnicalAssessmentWorkspacePage() {
                   sx={{
                     mt: 0.3,
                     fontSize: 12.5,
-                    color: '#667085',
+                    color: 'var(--eleven-text-secondary)',
                   }}
                 >
                   Record technical feasibility, risks, skills, resources and integration constraints.
@@ -1292,7 +1292,7 @@ function TechnicalAssessmentWorkspacePage() {
             sx={{
               p: 2.2,
               borderRadius: '10px',
-              borderColor: '#e4e9f1',
+              borderColor: 'var(--eleven-border)',
               boxShadow: 'none',
             }}
           >
@@ -1305,7 +1305,7 @@ function TechnicalAssessmentWorkspacePage() {
             >
               <EngineeringOutlined
                 sx={{
-                  color: '#0b5cff',
+                  color: 'var(--eleven-primary)',
                 }}
               />
 
@@ -1313,7 +1313,7 @@ function TechnicalAssessmentWorkspacePage() {
                 sx={{
                   fontSize: 16,
                   fontWeight: 700,
-                  color: '#172033',
+                  color: 'var(--eleven-text)',
                 }}
               >
                 Recommended Team Members
@@ -1324,7 +1324,7 @@ function TechnicalAssessmentWorkspacePage() {
               sx={{
                 mt: 0.5,
                 fontSize: 12.5,
-                color: '#667085',
+                color: 'var(--eleven-text-secondary)',
               }}
             >
               Check engineer availability and recommend suitable software engineers.
@@ -1493,7 +1493,7 @@ function TechnicalAssessmentWorkspacePage() {
                   sx={{
                     py: 2,
                     fontSize: 13,
-                    color: '#667085',
+                    color: 'var(--eleven-text-secondary)',
                   }}
                 >
                   No team members have been recommended yet.
@@ -1510,7 +1510,7 @@ function TechnicalAssessmentWorkspacePage() {
                         p: 1.5,
                         borderRadius: '8px',
                         borderColor:
-                          '#e4e9f1',
+                          'var(--eleven-border)',
                         boxShadow: 'none',
                       }}
                     >
@@ -1543,7 +1543,7 @@ function TechnicalAssessmentWorkspacePage() {
                               sx={{
                                 fontSize: 13.5,
                                 fontWeight: 700,
-                                color: '#172033',
+                                color: 'var(--eleven-text)',
                               }}
                             >
                               {
@@ -1573,7 +1573,7 @@ function TechnicalAssessmentWorkspacePage() {
                               sx={{
                                 mt: 0.5,
                                 fontSize: 12.5,
-                                color: '#667085',
+                                color: 'var(--eleven-text-secondary)',
                               }}
                             >
                               {
@@ -1617,7 +1617,7 @@ function TechnicalAssessmentWorkspacePage() {
             sx={{
               p: 2.2,
               borderRadius: '10px',
-              borderColor: '#e4e9f1',
+              borderColor: 'var(--eleven-border)',
               boxShadow: 'none',
             }}
           >
@@ -1630,7 +1630,7 @@ function TechnicalAssessmentWorkspacePage() {
             >
               <DescriptionOutlined
                 sx={{
-                  color: '#0b5cff',
+                  color: 'var(--eleven-primary)',
                 }}
               />
 
@@ -1638,7 +1638,7 @@ function TechnicalAssessmentWorkspacePage() {
                 sx={{
                   fontSize: 16,
                   fontWeight: 700,
-                  color: '#172033',
+                  color: 'var(--eleven-text)',
                 }}
               >
                 Assessment Documents
@@ -1732,7 +1732,7 @@ function TechnicalAssessmentWorkspacePage() {
                     sx={{
                       flexGrow: 1,
                       fontSize: 12.5,
-                      color: '#667085',
+                      color: 'var(--eleven-text-secondary)',
                     }}
                   >
                     {selectedFile
@@ -1779,7 +1779,7 @@ function TechnicalAssessmentWorkspacePage() {
                   sx={{
                     py: 2,
                     fontSize: 13,
-                    color: '#667085',
+                    color: 'var(--eleven-text-secondary)',
                   }}
                 >
                   No technical documents have been uploaded.
@@ -1796,7 +1796,7 @@ function TechnicalAssessmentWorkspacePage() {
                         p: 1.5,
                         borderRadius: '8px',
                         borderColor:
-                          '#e4e9f1',
+                          'var(--eleven-border)',
                         boxShadow: 'none',
                       }}
                     >
@@ -1821,7 +1821,7 @@ function TechnicalAssessmentWorkspacePage() {
                             sx={{
                               fontSize: 13.5,
                               fontWeight: 700,
-                              color: '#172033',
+                              color: 'var(--eleven-text)',
                             }}
                           >
                             {
@@ -1834,7 +1834,7 @@ function TechnicalAssessmentWorkspacePage() {
                               sx={{
                                 mt: 0.3,
                                 fontSize: 12.5,
-                                color: '#667085',
+                                color: 'var(--eleven-text-secondary)',
                               }}
                             >
                               {
@@ -1847,7 +1847,7 @@ function TechnicalAssessmentWorkspacePage() {
                             sx={{
                               mt: 0.4,
                               fontSize: 11.5,
-                              color: '#98a2b3',
+                              color: 'var(--eleven-text-muted)',
                             }}
                           >
                             Uploaded by{' '}
@@ -1895,8 +1895,8 @@ function TechnicalAssessmentWorkspacePage() {
               sx={{
                 p: 2.2,
                 borderRadius: '10px',
-                borderColor: '#d8e3ff',
-                backgroundColor: '#f8faff',
+                borderColor: 'var(--eleven-primary-border)',
+                backgroundColor: 'var(--eleven-primary-soft)',
                 boxShadow: 'none',
               }}
             >
@@ -1921,7 +1921,7 @@ function TechnicalAssessmentWorkspacePage() {
                     sx={{
                       fontSize: 15,
                       fontWeight: 700,
-                      color: '#172033',
+                      color: 'var(--eleven-text)',
                     }}
                   >
                     Submit Technical Assessment
@@ -1931,7 +1931,7 @@ function TechnicalAssessmentWorkspacePage() {
                     sx={{
                       mt: 0.35,
                       fontSize: 12.5,
-                      color: '#667085',
+                      color: 'var(--eleven-text-secondary)',
                     }}
                   >
                     Submission returns the assessment to the Sales Manager for review.
@@ -1982,7 +1982,7 @@ function TechnicalAssessmentWorkspacePage() {
             sx={{
               p: 2,
               borderRadius: '10px',
-              borderColor: '#e4e9f1',
+              borderColor: 'var(--eleven-border)',
               boxShadow: 'none',
             }}
           >
@@ -1990,7 +1990,7 @@ function TechnicalAssessmentWorkspacePage() {
               sx={{
                 fontSize: 15,
                 fontWeight: 700,
-                color: '#172033',
+                color: 'var(--eleven-text)',
               }}
             >
               Assessment Details
@@ -2054,7 +2054,7 @@ function TechnicalAssessmentWorkspacePage() {
               sx={{
                 p: 2,
                 borderRadius: '10px',
-                borderColor: '#e4e9f1',
+                borderColor: 'var(--eleven-border)',
                 boxShadow: 'none',
               }}
             >
@@ -2062,7 +2062,7 @@ function TechnicalAssessmentWorkspacePage() {
                 sx={{
                   fontSize: 15,
                   fontWeight: 700,
-                  color: '#172033',
+                  color: 'var(--eleven-text)',
                 }}
               >
                 Manager Review
@@ -2090,7 +2090,7 @@ function TechnicalAssessmentWorkspacePage() {
                     'pre-wrap',
                   fontSize: 13,
                   lineHeight: 1.6,
-                  color: '#344054',
+                  color: 'var(--eleven-text-secondary)',
                 }}
               >
                 {
@@ -2108,7 +2108,7 @@ function TechnicalAssessmentWorkspacePage() {
             sx={{
               p: 2,
               borderRadius: '10px',
-              borderColor: '#e4e9f1',
+              borderColor: 'var(--eleven-border)',
               boxShadow: 'none',
             }}
           >
@@ -2121,7 +2121,7 @@ function TechnicalAssessmentWorkspacePage() {
             >
               <HistoryRounded
                 sx={{
-                  color: '#0b5cff',
+                  color: 'var(--eleven-primary)',
                   fontSize: 20,
                 }}
               />
@@ -2130,7 +2130,7 @@ function TechnicalAssessmentWorkspacePage() {
                 sx={{
                   fontSize: 15,
                   fontWeight: 700,
-                  color: '#172033',
+                  color: 'var(--eleven-text)',
                 }}
               >
                 Assessment History
@@ -2155,7 +2155,7 @@ function TechnicalAssessmentWorkspacePage() {
                 <Typography
                   sx={{
                     fontSize: 13,
-                    color: '#667085',
+                    color: 'var(--eleven-text-secondary)',
                   }}
                 >
                   No history recorded.
@@ -2170,14 +2170,14 @@ function TechnicalAssessmentWorkspacePage() {
                       sx={{
                         pl: 1.4,
                         borderLeft:
-                          '2px solid #dbe5f7',
+                          '2px solid var(--eleven-primary-border)',
                       }}
                     >
                       <Typography
                         sx={{
                           fontSize: 12.5,
                           fontWeight: 700,
-                          color: '#344054',
+                          color: 'var(--eleven-text-secondary)',
                         }}
                       >
                         {
@@ -2191,7 +2191,7 @@ function TechnicalAssessmentWorkspacePage() {
                           mt: 0.3,
                           fontSize: 12,
                           lineHeight: 1.5,
-                          color: '#667085',
+                          color: 'var(--eleven-text-secondary)',
                         }}
                       >
                         {
@@ -2203,7 +2203,7 @@ function TechnicalAssessmentWorkspacePage() {
                         sx={{
                           mt: 0.35,
                           fontSize: 11,
-                          color: '#98a2b3',
+                          color: 'var(--eleven-text-muted)',
                         }}
                       >
                         {

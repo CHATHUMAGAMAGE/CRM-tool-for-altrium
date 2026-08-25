@@ -956,7 +956,7 @@ function InformationItem({
       <Typography
         sx={{
           color:
-            '#7a8699',
+            'var(--eleven-text-muted)',
 
           fontSize:
             11,
@@ -983,7 +983,7 @@ function InformationItem({
             0.55,
 
           color:
-            '#172033',
+            'var(--eleven-text)',
 
           fontSize:
             13,
@@ -3668,10 +3668,10 @@ function LeadWorkspacePage() {
               '12px',
 
             borderColor:
-              '#e4e8ef',
+              'var(--eleven-border)',
 
             boxShadow:
-              '0 2px 10px rgba(15, 23, 42, 0.04)',
+              'var(--eleven-shadow)',
           }}
         >
           <Box
@@ -3729,10 +3729,10 @@ function LeadWorkspacePage() {
                       64,
 
                     bgcolor:
-                      '#e8efff',
+                      'var(--eleven-primary-soft)',
 
                     color:
-                      '#1557d5',
+                      'var(--eleven-primary)',
 
                     fontSize:
                       22,
@@ -3773,7 +3773,7 @@ function LeadWorkspacePage() {
                     <Typography
                       sx={{
                         color:
-                          '#172033',
+                          'var(--eleven-text)',
 
                         fontSize: {
                           xs:
@@ -3815,7 +3815,7 @@ function LeadWorkspacePage() {
                         0.25,
 
                       color:
-                        '#1557d5',
+                        'var(--eleven-primary)',
 
                       fontSize:
                         14,
@@ -3849,13 +3849,13 @@ function LeadWorkspacePage() {
                       }
                       sx={{
                         bgcolor:
-                          '#f5f7fa',
+                          'var(--eleven-bg)',
 
                         color:
-                          '#667085',
+                          'var(--eleven-text-secondary)',
 
                         border:
-                          '1px solid #e4e8ef',
+                          '1px solid var(--eleven-border)',
                       }}
                     />
 
@@ -3863,7 +3863,7 @@ function LeadWorkspacePage() {
                     <Typography
                       sx={{
                         color:
-                          '#7a8699',
+                          'var(--eleven-text-muted)',
 
                         fontSize:
                           12,
@@ -3875,7 +3875,7 @@ function LeadWorkspacePage() {
                         component="span"
                         sx={{
                           color:
-                            '#344054',
+                            'var(--eleven-text-secondary)',
 
                           fontWeight:
                             600,
@@ -3921,7 +3921,7 @@ function LeadWorkspacePage() {
                       }
                       sx={{
                         bgcolor:
-                          '#ffffff',
+                          'var(--eleven-paper)',
                       }}
                     >
                       Edit Lead
@@ -3941,7 +3941,7 @@ function LeadWorkspacePage() {
                         }
                         sx={{
                           bgcolor:
-                            '#ffffff',
+                            'var(--eleven-paper)',
                         }}
                       >
                         Assign Rep
@@ -3975,7 +3975,7 @@ function LeadWorkspacePage() {
                       }
                       sx={{
                         bgcolor:
-                          '#ffffff',
+                          'var(--eleven-paper)',
                       }}
                     >
                       Schedule Follow-up
@@ -4002,10 +4002,10 @@ function LeadWorkspacePage() {
               '12px',
 
             borderColor:
-              '#e4e8ef',
+              'var(--eleven-border)',
 
             boxShadow:
-              '0 2px 8px rgba(15, 23, 42, 0.025)',
+              'var(--eleven-shadow)',
           }}
         >
           <Tabs
@@ -4144,10 +4144,10 @@ function LeadWorkspacePage() {
                     '12px',
 
                   borderColor:
-                    '#e4e8ef',
+                    'var(--eleven-border)',
 
                   boxShadow:
-                    '0 2px 8px rgba(15, 23, 42, 0.035)',
+                    'var(--eleven-shadow)',
                 }}
               >
                 <Box
@@ -4162,7 +4162,7 @@ function LeadWorkspacePage() {
                   <Typography
                     sx={{
                       color:
-                        '#172033',
+                        'var(--eleven-text)',
 
                       fontSize:
                         16,
@@ -4180,7 +4180,7 @@ function LeadWorkspacePage() {
                         0.25,
 
                       color:
-                        '#7a8699',
+                        'var(--eleven-text-muted)',
 
                       fontSize:
                         12,
@@ -4320,10 +4320,10 @@ function LeadWorkspacePage() {
                     '12px',
 
                   borderColor:
-                    '#e4e8ef',
+                    'var(--eleven-border)',
 
                   boxShadow:
-                    '0 2px 8px rgba(15, 23, 42, 0.035)',
+                    'var(--eleven-shadow)',
                 }}
               >
                 <Box
@@ -4363,7 +4363,7 @@ function LeadWorkspacePage() {
                       <Typography
                         sx={{
                           color:
-                            '#172033',
+                            'var(--eleven-text)',
 
                           fontSize:
                             16,
@@ -4381,7 +4381,7 @@ function LeadWorkspacePage() {
                             0.25,
 
                           color:
-                            '#7a8699',
+                            'var(--eleven-text-muted)',
 
                           fontSize:
                             12,
@@ -4439,7 +4439,7 @@ function LeadWorkspacePage() {
                       <Typography
                         sx={{
                           color:
-                            '#7a8699',
+                            'var(--eleven-text-muted)',
 
                           fontSize:
                             11,
@@ -4470,19 +4470,19 @@ function LeadWorkspacePage() {
                             1.25,
 
                           border:
-                            '1px solid #e4e8ef',
+                            '1px solid var(--eleven-border)',
 
                           borderRadius:
                             '8px',
 
                           bgcolor:
-                            '#fafbfc',
+                            'var(--eleven-surface-soft)',
                         }}
                       >
                         <Typography
                           sx={{
                             color:
-                              '#475467',
+                              'var(--eleven-text-secondary)',
 
                             fontSize:
                               13,
@@ -4507,7 +4507,7 @@ function LeadWorkspacePage() {
                             : 0,
 
                         color:
-                          '#7a8699',
+                          'var(--eleven-text-muted)',
 
                         fontSize:
                           13,
@@ -4600,10 +4600,10 @@ function LeadWorkspacePage() {
                     '12px',
 
                   borderColor:
-                    '#e4e8ef',
+                    'var(--eleven-border)',
 
                   boxShadow:
-                    '0 2px 8px rgba(15, 23, 42, 0.035)',
+                    'var(--eleven-shadow)',
                 }}
               >
                 <Box
@@ -4618,7 +4618,7 @@ function LeadWorkspacePage() {
                   <Typography
                     sx={{
                       color:
-                        '#172033',
+                        'var(--eleven-text)',
 
                       fontSize:
                         15,
@@ -4636,7 +4636,7 @@ function LeadWorkspacePage() {
                         0.2,
 
                       color:
-                        '#7a8699',
+                        'var(--eleven-text-muted)',
 
                       fontSize:
                         11.5,
@@ -4662,7 +4662,7 @@ function LeadWorkspacePage() {
                         0.75,
 
                       color:
-                        '#667085',
+                        'var(--eleven-text-secondary)',
 
                       fontSize:
                         11.5,
@@ -4686,19 +4686,19 @@ function LeadWorkspacePage() {
                         1.25,
 
                       border:
-                        '1px solid #e4e8ef',
+                        '1px solid var(--eleven-border)',
 
                       borderRadius:
                         '8px',
 
                       bgcolor:
-                        '#fafbfc',
+                        'var(--eleven-surface-soft)',
                     }}
                   >
                     <PersonOutlineRounded
                       sx={{
                         color:
-                          '#667085',
+                          'var(--eleven-text-secondary)',
 
                         fontSize:
                           19,
@@ -4714,7 +4714,7 @@ function LeadWorkspacePage() {
                       <Typography
                         sx={{
                           color:
-                            '#344054',
+                            'var(--eleven-text-secondary)',
 
                           fontSize:
                             13,
@@ -4733,7 +4733,7 @@ function LeadWorkspacePage() {
                             0.15,
 
                           color:
-                            '#98a2b3',
+                            'var(--eleven-text-muted)',
 
                           fontSize:
                             10.5,
@@ -4779,10 +4779,10 @@ function LeadWorkspacePage() {
                   '12px',
 
                 borderColor:
-                  '#e4e8ef',
+                  'var(--eleven-border)',
 
                 boxShadow:
-                  '0 2px 8px rgba(15, 23, 42, 0.035)',
+                  'var(--eleven-shadow)',
 
                 overflow:
                   'hidden',
@@ -4800,7 +4800,7 @@ function LeadWorkspacePage() {
                 <Typography
                   sx={{
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       15,
@@ -4818,7 +4818,7 @@ function LeadWorkspacePage() {
                       0.2,
 
                     color:
-                      '#7a8699',
+                      'var(--eleven-text-muted)',
 
                     fontSize:
                       11.5,
@@ -4849,7 +4849,7 @@ function LeadWorkspacePage() {
                   <Typography
                     sx={{
                       color:
-                        '#7a8699',
+                        'var(--eleven-text-muted)',
 
                       fontSize:
                         12.5,
@@ -4894,7 +4894,7 @@ function LeadWorkspacePage() {
                             '1px',
 
                           bgcolor:
-                            '#e4e8ef',
+                            'var(--eleven-border)',
                         },
                     }}
                   >
@@ -4946,25 +4946,25 @@ function LeadWorkspacePage() {
                                   '50%',
 
                                 border:
-                                  '1px solid #e4e8ef',
+                                  '1px solid var(--eleven-border)',
 
                                 bgcolor:
                                   item.type ===
                                   'COMMUNICATION'
-                                    ? '#eef4ff'
+                                    ? 'var(--eleven-primary-soft)'
                                     : item.type ===
                                         'FOLLOW_UP'
-                                      ? '#ecfdf3'
-                                      : '#fff7ed',
+                                      ? 'var(--eleven-success-soft)'
+                                      : 'var(--eleven-warning-soft)',
 
                                 color:
                                   item.type ===
                                   'COMMUNICATION'
-                                    ? '#1557d5'
+                                    ? 'var(--eleven-primary)'
                                     : item.type ===
                                         'FOLLOW_UP'
-                                      ? '#039855'
-                                      : '#dc6803',
+                                      ? 'var(--eleven-success)'
+                                      : 'var(--eleven-warning)',
                               }}
                             >
                               {item.type ===
@@ -5005,7 +5005,7 @@ function LeadWorkspacePage() {
                               <Typography
                                 sx={{
                                   color:
-                                    '#172033',
+                                    'var(--eleven-text)',
 
                                   fontSize:
                                     12.5,
@@ -5027,7 +5027,7 @@ function LeadWorkspacePage() {
                                     0.25,
 
                                   color:
-                                    '#98a2b3',
+                                    'var(--eleven-text-muted)',
 
                                   fontSize:
                                     10.5,
@@ -5046,7 +5046,7 @@ function LeadWorkspacePage() {
                                       0.65,
 
                                     color:
-                                      '#667085',
+                                      'var(--eleven-text-secondary)',
 
                                     fontSize:
                                       11.5,
@@ -5066,7 +5066,7 @@ function LeadWorkspacePage() {
                                     0.45,
 
                                   color:
-                                    '#98a2b3',
+                                    'var(--eleven-text-muted)',
 
                                   fontSize:
                                     10.5,
@@ -5156,10 +5156,10 @@ function LeadWorkspacePage() {
                       '12px',
 
                     borderColor:
-                      '#e4e8ef',
+                      'var(--eleven-border)',
 
                     boxShadow:
-                      '0 2px 8px rgba(15, 23, 42, 0.035)',
+                      'var(--eleven-shadow)',
                   }}
                 >
                   <Box
@@ -5199,7 +5199,7 @@ function LeadWorkspacePage() {
                         <Typography
                           sx={{
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
 
                             fontSize:
                               16,
@@ -5217,7 +5217,7 @@ function LeadWorkspacePage() {
                               0.25,
 
                             color:
-                              '#7a8699',
+                              'var(--eleven-text-muted)',
 
                             fontSize:
                               12,
@@ -5285,7 +5285,7 @@ function LeadWorkspacePage() {
                             <Typography
                               sx={{
                                 color:
-                                  '#667085',
+                                  'var(--eleven-text-secondary)',
 
                                 fontSize:
                                   13,
@@ -5426,7 +5426,7 @@ function LeadWorkspacePage() {
                           <Typography
                             sx={{
                               color:
-                                '#7a8699',
+                                'var(--eleven-text-muted)',
 
                               fontSize:
                                 11,
@@ -5454,19 +5454,19 @@ function LeadWorkspacePage() {
                                 1.5,
 
                               border:
-                                '1px solid #e4e8ef',
+                                '1px solid var(--eleven-border)',
 
                               borderRadius:
                                 '8px',
 
                               bgcolor:
-                                '#fafbfc',
+                                'var(--eleven-surface-soft)',
                             }}
                           >
                             <Typography
                               sx={{
                                 color:
-                                  '#475467',
+                                  'var(--eleven-text-secondary)',
 
                                 fontSize:
                                   13,
@@ -5493,7 +5493,7 @@ function LeadWorkspacePage() {
                             <Typography
                               sx={{
                                 color:
-                                  '#7a8699',
+                                  'var(--eleven-text-muted)',
 
                                 fontSize:
                                   11,
@@ -5521,19 +5521,19 @@ function LeadWorkspacePage() {
                                   1.5,
 
                                 border:
-                                  '1px solid #e4e8ef',
+                                  '1px solid var(--eleven-border)',
 
                                 borderRadius:
                                   '8px',
 
                                 bgcolor:
-                                  '#fafbfc',
+                                  'var(--eleven-surface-soft)',
                               }}
                             >
                               <Typography
                                 sx={{
                                   color:
-                                    '#475467',
+                                    'var(--eleven-text-secondary)',
 
                                   fontSize:
                                     13,
@@ -5675,10 +5675,10 @@ function LeadWorkspacePage() {
                       '12px',
 
                     borderColor:
-                      '#e4e8ef',
+                      'var(--eleven-border)',
 
                     boxShadow:
-                      '0 2px 8px rgba(15, 23, 42, 0.035)',
+                      'var(--eleven-shadow)',
                   }}
                 >
                   <Box
@@ -5718,7 +5718,7 @@ function LeadWorkspacePage() {
                         <Typography
                           sx={{
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
 
                             fontSize:
                               16,
@@ -5736,7 +5736,7 @@ function LeadWorkspacePage() {
                               0.25,
 
                             color:
-                              '#7a8699',
+                              'var(--eleven-text-muted)',
 
                             fontSize:
                               12,
@@ -5812,7 +5812,7 @@ function LeadWorkspacePage() {
                             <Typography
                               sx={{
                                 color:
-                                  '#667085',
+                                  'var(--eleven-text-secondary)',
 
                                 fontSize:
                                   13,
@@ -5960,7 +5960,7 @@ function LeadWorkspacePage() {
                           <Typography
                             sx={{
                               color:
-                                '#7a8699',
+                                'var(--eleven-text-muted)',
 
                               fontSize:
                                 11,
@@ -5987,19 +5987,19 @@ function LeadWorkspacePage() {
                                 1.5,
 
                               border:
-                                '1px solid #e4e8ef',
+                                '1px solid var(--eleven-border)',
 
                               borderRadius:
                                 '8px',
 
                               bgcolor:
-                                '#fafbfc',
+                                'var(--eleven-surface-soft)',
                             }}
                           >
                             <Typography
                               sx={{
                                 color:
-                                  '#475467',
+                                  'var(--eleven-text-secondary)',
 
                                 fontSize:
                                   13,
@@ -6026,7 +6026,7 @@ function LeadWorkspacePage() {
                             <Typography
                               sx={{
                                 color:
-                                  '#7a8699',
+                                  'var(--eleven-text-muted)',
 
                                 fontSize:
                                   11,
@@ -6053,19 +6053,19 @@ function LeadWorkspacePage() {
                                   1.5,
 
                                 border:
-                                  '1px solid #e4e8ef',
+                                  '1px solid var(--eleven-border)',
 
                                 borderRadius:
                                   '8px',
 
                                 bgcolor:
-                                  '#fafbfc',
+                                  'var(--eleven-surface-soft)',
                               }}
                             >
                               <Typography
                                 sx={{
                                   color:
-                                    '#475467',
+                                    'var(--eleven-text-secondary)',
 
                                   fontSize:
                                     13,
@@ -6180,7 +6180,7 @@ function LeadWorkspacePage() {
                       '12px',
 
                     borderColor:
-                      '#fecdca',
+                      'var(--eleven-error-border)',
                   }}
                 >
                   <Box
@@ -6195,7 +6195,7 @@ function LeadWorkspacePage() {
                           1.25,
 
                         color:
-                          '#172033',
+                          'var(--eleven-text)',
 
                         fontSize:
                           15,
@@ -6258,7 +6258,7 @@ function LeadWorkspacePage() {
                 <Typography
                   sx={{
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       21,
@@ -6421,7 +6421,7 @@ function LeadWorkspacePage() {
                           '12px',
 
                         borderColor:
-                          '#e4e8ef',
+                          'var(--eleven-border)',
                       }}
                     >
                       <Stack
@@ -6431,10 +6431,10 @@ function LeadWorkspacePage() {
                         <Avatar
                           sx={{
                             bgcolor:
-                              '#eef4ff',
+                              'var(--eleven-primary-soft)',
 
                             color:
-                              '#1557d5',
+                              'var(--eleven-primary)',
 
                             width:
                               40,
@@ -6518,7 +6518,7 @@ function LeadWorkspacePage() {
                           <Typography
                             sx={{
                               color:
-                                '#98a2b3',
+                                'var(--eleven-text-muted)',
 
                               fontSize:
                                 11.5,
@@ -6578,7 +6578,7 @@ function LeadWorkspacePage() {
                 <Typography
                   sx={{
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       21,
@@ -6673,15 +6673,15 @@ function LeadWorkspacePage() {
                           '12px',
 
                         borderColor:
-                          '#e4e8ef',
+                          'var(--eleven-border)',
 
                         '&:hover':
                           {
                             borderColor:
-                              '#b8c7e7',
+                              'var(--eleven-primary-border)',
 
                             bgcolor:
-                              '#fafcff',
+                              'var(--eleven-hover)',
                           },
                       }}
                     >
@@ -6760,7 +6760,7 @@ function LeadWorkspacePage() {
                           <Typography
                             sx={{
                               color:
-                                '#98a2b3',
+                                'var(--eleven-text-muted)',
 
                               fontSize:
                                 11.5,
@@ -6801,7 +6801,7 @@ function LeadWorkspacePage() {
               <Typography
                 sx={{
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
 
                   fontSize:
                     21,
@@ -6914,14 +6914,14 @@ function LeadWorkspacePage() {
                             bgcolor:
                               item.type ===
                               'COMMUNICATION'
-                                ? '#eef4ff'
-                                : '#ecfdf3',
+                                ? 'var(--eleven-primary-soft)'
+                                : 'var(--eleven-success-soft)',
 
                             color:
                               item.type ===
                               'COMMUNICATION'
-                                ? '#1557d5'
-                                : '#039855',
+                                ? 'var(--eleven-primary)'
+                                : 'var(--eleven-success)',
                           }}
                         >
                           {item.type ===
@@ -6951,7 +6951,7 @@ function LeadWorkspacePage() {
                               '12px',
 
                             borderColor:
-                              '#e4e8ef',
+                              'var(--eleven-border)',
                           }}
                         >
                           <Stack
@@ -7020,7 +7020,7 @@ function LeadWorkspacePage() {
                           <Typography
                             sx={{
                               color:
-                                '#98a2b3',
+                                'var(--eleven-text-muted)',
 
                               fontSize:
                                 11.5,
@@ -7056,7 +7056,7 @@ function LeadWorkspacePage() {
               <Typography
                 sx={{
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
 
                   fontSize:
                     21,
@@ -7200,7 +7200,7 @@ function LeadWorkspacePage() {
                                 '12px',
 
                               borderColor:
-                                '#e4e8ef',
+                                'var(--eleven-border)',
 
                               boxShadow:
                                 'none',
@@ -7456,28 +7456,28 @@ function LeadWorkspacePage() {
                               'stretch',
 
                             color:
-                              '#344054',
+                              'var(--eleven-text-secondary)',
 
                             textTransform:
                               'none',
 
                             borderColor:
                               isSelected
-                                ? '#1557d5'
-                                : '#e4e8ef',
+                                ? 'var(--eleven-primary)'
+                                : 'var(--eleven-border)',
 
                             bgcolor:
                               isSelected
-                                ? '#f5f8ff'
-                                : '#ffffff',
+                                ? 'var(--eleven-primary-soft)'
+                                : 'var(--eleven-paper)',
 
                             '&:hover':
                               {
                                 borderColor:
-                                  '#1557d5',
+                                  'var(--eleven-primary)',
 
                                 bgcolor:
-                                  '#f8faff',
+                                  'var(--eleven-primary-soft)',
                               },
                           }}
                         >
@@ -7512,7 +7512,7 @@ function LeadWorkspacePage() {
                                 <Typography
                                   sx={{
                                     color:
-                                      '#172033',
+                                      'var(--eleven-text)',
 
                                     fontSize:
                                       13.5,
@@ -7530,7 +7530,7 @@ function LeadWorkspacePage() {
                                       0.15,
 
                                     color:
-                                      '#7a8699',
+                                      'var(--eleven-text-muted)',
 
                                     fontSize:
                                       11.5,
@@ -7594,7 +7594,7 @@ function LeadWorkspacePage() {
                                   999,
 
                                 bgcolor:
-                                  '#edf0f4',
+                                  'var(--eleven-border)',
                               }}
                             />
 
@@ -7605,7 +7605,7 @@ function LeadWorkspacePage() {
                                   0.6,
 
                                 color:
-                                  '#667085',
+                                  'var(--eleven-text-secondary)',
 
                                 fontSize:
                                   11.5,
@@ -8092,10 +8092,10 @@ function LeadWorkspacePage() {
                   <Avatar
                     sx={{
                       bgcolor:
-                        '#eef4ff',
+                        'var(--eleven-primary-soft)',
 
                       color:
-                        '#1557d5',
+                        'var(--eleven-primary)',
                     }}
                   >
                     {getLeadInitials(
@@ -8127,7 +8127,7 @@ function LeadWorkspacePage() {
                             15,
 
                           color:
-                            '#7a8699',
+                            'var(--eleven-text-muted)',
                         }}
                       />
 
@@ -8730,13 +8730,13 @@ function LeadWorkspacePage() {
                       2,
 
                     border:
-                      '1px solid #e4e8ef',
+                      '1px solid var(--eleven-border)',
 
                     borderRadius:
                       '10px',
 
                     bgcolor:
-                      '#fafbfc',
+                      'var(--eleven-surface-soft)',
                   }}
                 >
                   <Typography
@@ -8751,7 +8751,7 @@ function LeadWorkspacePage() {
                         600,
 
                       color:
-                        '#667085',
+                        'var(--eleven-text-secondary)',
                     }}
                   >
                     Technical Findings
@@ -8896,13 +8896,13 @@ function LeadWorkspacePage() {
                       '10px',
 
                     bgcolor:
-                      '#fafbfc',
+                      'var(--eleven-surface-soft)',
                   }}
                 >
                   <Typography
                     sx={{
                       color:
-                        '#667085',
+                        'var(--eleven-text-secondary)',
 
                       fontSize:
                         11.5,
@@ -8920,7 +8920,7 @@ function LeadWorkspacePage() {
                         0.4,
 
                       color:
-                        '#172033',
+                        'var(--eleven-text)',
 
                       fontSize:
                         13,
@@ -8942,7 +8942,7 @@ function LeadWorkspacePage() {
                           1,
 
                         color:
-                          '#667085',
+                          'var(--eleven-text-secondary)',
 
                         fontSize:
                           12.5,
@@ -9127,13 +9127,13 @@ function LeadWorkspacePage() {
                       2,
 
                     border:
-                      '1px solid #e4e8ef',
+                      '1px solid var(--eleven-border)',
 
                     borderRadius:
                       '10px',
 
                     bgcolor:
-                      '#fafbfc',
+                      'var(--eleven-surface-soft)',
                   }}
                 >
                   <Typography
@@ -9148,7 +9148,7 @@ function LeadWorkspacePage() {
                         600,
 
                       color:
-                        '#667085',
+                        'var(--eleven-text-secondary)',
                     }}
                   >
                     Financial Findings

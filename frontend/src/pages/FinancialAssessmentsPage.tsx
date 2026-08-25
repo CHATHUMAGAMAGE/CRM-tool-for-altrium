@@ -128,7 +128,7 @@ function SummaryCard({
           '10px',
 
         borderColor:
-          '#e4e9f1',
+          'var(--eleven-border)',
 
         boxShadow:
           'none',
@@ -167,10 +167,10 @@ function SummaryCard({
               'center',
 
             backgroundColor:
-              '#eef4ff',
+              'var(--eleven-primary-soft)',
 
             color:
-              '#0b5cff',
+              'var(--eleven-primary)',
           }}
         >
           {icon}
@@ -183,7 +183,7 @@ function SummaryCard({
                 12,
 
               color:
-                '#667085',
+                'var(--eleven-text-secondary)',
 
               fontWeight:
                 600,
@@ -207,7 +207,7 @@ function SummaryCard({
                 700,
 
               color:
-                '#172033',
+                'var(--eleven-text)',
             }}
           >
             {value}
@@ -576,7 +576,7 @@ function FinancialAssessmentsPage({
             component="h1"
             sx={{
               color:
-                '#172033',
+                'var(--eleven-text)',
 
               fontSize: {
                 xs:
@@ -604,7 +604,7 @@ function FinancialAssessmentsPage({
                 0.6,
 
               color:
-                '#667085',
+                'var(--eleven-text-secondary)',
 
               fontSize:
                 13.5,
@@ -741,7 +741,7 @@ function FinancialAssessmentsPage({
             2.5,
 
           borderColor:
-            '#e4e9f1',
+            'var(--eleven-border)',
 
           borderRadius:
             '10px',
@@ -759,7 +759,7 @@ function FinancialAssessmentsPage({
               2,
 
             borderBottom:
-              '1px solid #e5e9f0',
+              '1px solid var(--eleven-border)',
           }}
         >
           <Box
@@ -802,7 +802,7 @@ function FinancialAssessmentsPage({
                     700,
 
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
                 }}
               >
                 {dashboardMode
@@ -819,7 +819,7 @@ function FinancialAssessmentsPage({
                     12.5,
 
                   color:
-                    '#667085',
+                    'var(--eleven-text-secondary)',
                 }}
               >
                 {
@@ -965,7 +965,7 @@ function FinancialAssessmentsPage({
                   44,
 
                 color:
-                  '#98a2b3',
+                  'var(--eleven-text-muted)',
               }}
             />
 
@@ -981,7 +981,7 @@ function FinancialAssessmentsPage({
                   700,
 
                 color:
-                  '#344054',
+                  'var(--eleven-text-secondary)',
               }}
             >
               No assessments found
@@ -996,7 +996,7 @@ function FinancialAssessmentsPage({
                   13,
 
                 color:
-                  '#667085',
+                  'var(--eleven-text-secondary)',
               }}
             >
               Assigned financial assessments will appear here.
@@ -1009,7 +1009,7 @@ function FinancialAssessmentsPage({
                 <TableRow
                   sx={{
                     backgroundColor:
-                      '#f8fafc',
+                      'var(--eleven-surface-soft)',
                   }}
                 >
                   <TableCell>
@@ -1061,7 +1061,7 @@ function FinancialAssessmentsPage({
                               700,
 
                             color:
-                              '#172033',
+                              'var(--eleven-text)',
                           }}
                         >
                           {
@@ -1162,7 +1162,7 @@ function FinancialAssessmentsPage({
                   'flex-end',
 
                 borderTop:
-                  '1px solid #e5e9f0',
+                  '1px solid var(--eleven-border)',
               }}
             >
               <Button

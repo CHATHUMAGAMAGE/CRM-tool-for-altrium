@@ -12,14 +12,15 @@ import {
 
 import {
   CssBaseline,
-  ThemeProvider,
 } from '@mui/material'
 
 import './index.css'
 
 import App from './App.tsx'
 
-import theme from './theme'
+import {
+  AppearanceProvider,
+} from './appearance/AppearanceProvider'
 
 
 createRoot(
@@ -28,14 +29,12 @@ createRoot(
   )!,
 ).render(
   <StrictMode>
-    <ThemeProvider
-      theme={theme}
-    >
+    <AppearanceProvider>
       <CssBaseline />
 
       <BrowserRouter>
         <App />
       </BrowserRouter>
-    </ThemeProvider>
+    </AppearanceProvider>
   </StrictMode>,
 )

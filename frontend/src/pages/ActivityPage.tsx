@@ -587,7 +587,7 @@ function ActivityPage() {
             <Typography
               sx={{
                 color:
-                  '#172033',
+                  'var(--eleven-text)',
 
                 fontSize: {
                   xs:
@@ -617,7 +617,7 @@ function ActivityPage() {
                   0.65,
 
                 color:
-                  '#667085',
+                  'var(--eleven-text-secondary)',
 
                 fontSize:
                   13.5,
@@ -644,7 +644,7 @@ function ActivityPage() {
             }
             sx={{
               bgcolor:
-                '#ffffff',
+                'var(--eleven-paper)',
             }}
           >
             Refresh
@@ -676,7 +676,7 @@ function ActivityPage() {
               2.5,
 
             borderColor:
-              '#e4e8ef',
+              'var(--eleven-border)',
 
             borderRadius:
               '12px',
@@ -766,7 +766,7 @@ function ActivityPage() {
                       sm:
                         index <
                         2
-                          ? '1px solid #edf0f4'
+                          ? '1px solid var(--eleven-border)'
                           : 'none',
                     },
 
@@ -774,7 +774,7 @@ function ActivityPage() {
                       xs:
                         index <
                         2
-                          ? '1px solid #edf0f4'
+                          ? '1px solid var(--eleven-border)'
                           : 'none',
 
                       sm:
@@ -785,7 +785,7 @@ function ActivityPage() {
                   <Typography
                     sx={{
                       color:
-                        '#667085',
+                        'var(--eleven-text-secondary)',
 
                       fontSize:
                         12.5,
@@ -804,7 +804,7 @@ function ActivityPage() {
                         0.4,
 
                       color:
-                        '#172033',
+                        'var(--eleven-text)',
 
                       fontSize:
                         24,
@@ -839,7 +839,7 @@ function ActivityPage() {
               2.5,
 
             borderColor:
-              '#e4e8ef',
+              'var(--eleven-border)',
 
             borderRadius:
               '12px',
@@ -882,7 +882,7 @@ function ActivityPage() {
                         <SearchRounded
                           sx={{
                             color:
-                              '#7a8699',
+                              'var(--eleven-text-muted)',
 
                             fontSize:
                               20,
@@ -945,7 +945,7 @@ function ActivityPage() {
           variant="outlined"
           sx={{
             borderColor:
-              '#e4e8ef',
+              'var(--eleven-border)',
 
             borderRadius:
               '12px',
@@ -988,7 +988,7 @@ function ActivityPage() {
                 <Typography
                   sx={{
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       15,
@@ -1007,7 +1007,7 @@ function ActivityPage() {
                       0.2,
 
                     color:
-                      '#7a8699',
+                      'var(--eleven-text-muted)',
 
                     fontSize:
                       11.5,
@@ -1024,7 +1024,7 @@ function ActivityPage() {
                 <Typography
                   sx={{
                     color:
-                      '#667085',
+                      'var(--eleven-text-secondary)',
 
                     fontSize:
                       12,
@@ -1074,7 +1074,7 @@ function ActivityPage() {
                 <Typography
                   sx={{
                     color:
-                      '#7a8699',
+                      'var(--eleven-text-muted)',
 
                     fontSize:
                       12.5,
@@ -1101,7 +1101,7 @@ function ActivityPage() {
               <EventRounded
                 sx={{
                   color:
-                    '#98a2b3',
+                    'var(--eleven-text-muted)',
 
                   fontSize:
                     34,
@@ -1114,7 +1114,7 @@ function ActivityPage() {
                     1.25,
 
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
 
                   fontSize:
                     14,
@@ -1133,7 +1133,7 @@ function ActivityPage() {
                     0.4,
 
                   color:
-                    '#7a8699',
+                    'var(--eleven-text-muted)',
 
                   fontSize:
                     12.5,
@@ -1196,7 +1196,7 @@ function ActivityPage() {
                           '&:hover':
                             {
                               bgcolor:
-                                '#fafcff',
+                                'var(--eleven-surface-soft)',
                             },
                         }}
                       >
@@ -1260,10 +1260,10 @@ function ActivityPage() {
                                   'center',
 
                                 bgcolor:
-                                  '#eef4ff',
+                                  'var(--eleven-primary-soft)',
 
                                 color:
-                                  '#0b5cff',
+                                  'var(--eleven-primary)',
                               }}
                             >
                               {getCommunicationIcon(
@@ -1295,7 +1295,7 @@ function ActivityPage() {
                                 <Typography
                                   sx={{
                                     color:
-                                      '#172033',
+                                      'var(--eleven-text)',
 
                                     fontSize:
                                       13.5,
@@ -1317,7 +1317,7 @@ function ActivityPage() {
                                   variant="outlined"
                                   sx={{
                                     bgcolor:
-                                      '#ffffff',
+                                      'var(--eleven-paper)',
 
                                     fontSize:
                                       10.5,
@@ -1329,7 +1329,7 @@ function ActivityPage() {
                               <Typography
                                 sx={{
                                   color:
-                                    '#475467',
+                                    'var(--eleven-text-secondary)',
 
                                   fontSize:
                                     12.5,
@@ -1348,7 +1348,7 @@ function ActivityPage() {
                                     0.15,
 
                                   color:
-                                    '#98a2b3',
+                                    'var(--eleven-text-muted)',
 
                                   fontSize:
                                     11.5,
@@ -1365,7 +1365,7 @@ function ActivityPage() {
                                       0.65,
 
                                     color:
-                                      '#667085',
+                                      'var(--eleven-text-secondary)',
 
                                     fontSize:
                                       11.5,
@@ -1397,7 +1397,7 @@ function ActivityPage() {
                             <Typography
                               sx={{
                                 color:
-                                  '#98a2b3',
+                                  'var(--eleven-text-muted)',
 
                                 fontSize:
                                   10.5,
@@ -1427,7 +1427,7 @@ function ActivityPage() {
                                   'center',
 
                                 color:
-                                  '#475467',
+                                  'var(--eleven-text-secondary)',
                               }}
                             >
                               <CalendarTodayRounded
@@ -1458,7 +1458,7 @@ function ActivityPage() {
                             <Typography
                               sx={{
                                 color:
-                                  '#98a2b3',
+                                  'var(--eleven-text-muted)',
 
                                 fontSize:
                                   10.5,
@@ -1488,7 +1488,7 @@ function ActivityPage() {
                                   'center',
 
                                 color:
-                                  '#475467',
+                                  'var(--eleven-text-secondary)',
                               }}
                             >
                               <PersonOutlineRounded
@@ -1588,7 +1588,7 @@ function ActivityPage() {
                         '&:hover':
                           {
                             bgcolor:
-                              '#fafcff',
+                              'var(--eleven-surface-soft)',
                           },
                       }}
                     >
@@ -1653,13 +1653,13 @@ function ActivityPage() {
 
                               bgcolor:
                                 isOverdue
-                                  ? '#fef3f2'
-                                  : '#ecfdf3',
+                                  ? 'var(--eleven-error-soft)'
+                                  : 'var(--eleven-success-soft)',
 
                               color:
                                 isOverdue
-                                  ? '#d92d20'
-                                  : '#039855',
+                                  ? 'var(--eleven-error)'
+                                  : 'var(--eleven-success)',
                             }}
                           >
                             <EventRounded
@@ -1691,7 +1691,7 @@ function ActivityPage() {
                               <Typography
                                 sx={{
                                   color:
-                                    '#172033',
+                                    'var(--eleven-text)',
 
                                   fontSize:
                                     13.5,
@@ -1719,7 +1719,7 @@ function ActivityPage() {
                                 variant="outlined"
                                 sx={{
                                   bgcolor:
-                                    '#ffffff',
+                                    'var(--eleven-paper)',
 
                                   fontSize:
                                     10.5,
@@ -1731,7 +1731,7 @@ function ActivityPage() {
                             <Typography
                               sx={{
                                 color:
-                                  '#475467',
+                                  'var(--eleven-text-secondary)',
 
                                 fontSize:
                                   12.5,
@@ -1750,7 +1750,7 @@ function ActivityPage() {
                                   0.15,
 
                                 color:
-                                  '#98a2b3',
+                                  'var(--eleven-text-muted)',
 
                                 fontSize:
                                   11.5,
@@ -1767,7 +1767,7 @@ function ActivityPage() {
                                     0.65,
 
                                   color:
-                                    '#667085',
+                                    'var(--eleven-text-secondary)',
 
                                   fontSize:
                                     11.5,
@@ -1799,7 +1799,7 @@ function ActivityPage() {
                           <Typography
                             sx={{
                               color:
-                                '#98a2b3',
+                                'var(--eleven-text-muted)',
 
                               fontSize:
                                 10.5,
@@ -1831,7 +1831,7 @@ function ActivityPage() {
                               color:
                                 isOverdue
                                   ? 'error.main'
-                                  : '#475467',
+                                  : 'var(--eleven-text-secondary)',
                             }}
                           >
                             <CalendarTodayRounded
@@ -1867,7 +1867,7 @@ function ActivityPage() {
                           <Typography
                             sx={{
                               color:
-                                '#98a2b3',
+                                'var(--eleven-text-muted)',
 
                               fontSize:
                                 10.5,
@@ -1897,7 +1897,7 @@ function ActivityPage() {
                                 'center',
 
                               color:
-                                '#475467',
+                                'var(--eleven-text-secondary)',
                             }}
                           >
                             <PersonOutlineRounded

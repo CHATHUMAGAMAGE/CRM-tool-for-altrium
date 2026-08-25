@@ -2,6 +2,10 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL
 
 
+export const PROFILE_UPDATED_EVENT =
+  'eleven-profile-updated'
+
+
 export type LoginSuccessResponse = {
   access: string
 }
@@ -59,6 +63,16 @@ export type CurrentUser = {
   role: string
   role_display: string
   phone_number: string
+  avatar_url: string | null
+}
+
+
+export type UpdateCurrentUserProfileRequest = {
+  firstName: string
+  lastName: string
+  phoneNumber: string
+  avatarFile?: File | null
+  removeAvatar?: boolean
 }
 
 
@@ -77,6 +91,7 @@ export type PasswordRecoveryResponse = {
 
 type ApiErrorResponse = {
   detail?: string
+  [field: string]: unknown
 }
 
 
@@ -179,6 +194,19 @@ async function getApiErrorMessage(
       errorData.detail
     ) {
       return errorData.detail
+    }
+
+    for (const value of Object.values(errorData)) {
+      if (
+        Array.isArray(value) &&
+        typeof value[0] === 'string'
+      ) {
+        return value[0]
+      }
+
+      if (typeof value === 'string') {
+        return value
+      }
     }
   } catch {
     // Use fallback below.
@@ -830,6 +858,95 @@ Promise<CurrentUser> {
   return (
     await response.json()
   ) as CurrentUser
+}
+
+
+export function publishCurrentUserUpdate(
+  user: CurrentUser,
+): void {
+  window.dispatchEvent(
+    new CustomEvent<CurrentUser>(
+      PROFILE_UPDATED_EVENT,
+      {
+        detail: user,
+      },
+    ),
+  )
+}
+
+
+export async function updateCurrentUserProfile({
+  firstName,
+  lastName,
+  phoneNumber,
+  avatarFile,
+  removeAvatar = false,
+}: UpdateCurrentUserProfileRequest):
+Promise<CurrentUser> {
+  const sessionIsValid =
+    await ensureValidSession()
+
+  if (!sessionIsValid) {
+    throw new Error(
+      'Your session has expired. Please log in again.',
+    )
+  }
+
+  const formData = new FormData()
+
+  formData.set('first_name', firstName.trim())
+  formData.set('last_name', lastName.trim())
+  formData.set('phone_number', phoneNumber.trim())
+
+  if (avatarFile) {
+    formData.set('avatar', avatarFile)
+  }
+
+  if (removeAvatar) {
+    formData.set('remove_avatar', 'true')
+  }
+
+  const makeRequest = (token: string) =>
+    fetch(
+      `${API_BASE_URL}/api/v1/auth/me/profile/`,
+      {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      },
+    )
+
+  let token = getAccessToken()
+
+  if (!token) {
+    token = await refreshAccessToken()
+  }
+
+  let response = await makeRequest(token)
+
+  if (response.status === 401) {
+    token = await refreshAccessToken()
+    response = await makeRequest(token)
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(
+        response,
+        'Unable to update your profile.',
+      ),
+    )
+  }
+
+  const user =
+    (await response.json()) as CurrentUser
+
+  publishCurrentUserUpdate(user)
+
+  return user
 }
 
 

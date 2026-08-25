@@ -178,7 +178,7 @@ function DetailRow({
             'center',
 
           color:
-            '#667085',
+            'var(--eleven-text-secondary)',
         }}
       >
         <Box
@@ -190,7 +190,7 @@ function DetailRow({
               'center',
 
             color:
-              '#7a8699',
+              'var(--eleven-text-muted)',
           }}
         >
           {icon}
@@ -213,7 +213,7 @@ function DetailRow({
       <Typography
         sx={{
           color:
-            '#172033',
+            'var(--eleven-text)',
 
           fontSize:
             13,
@@ -501,7 +501,7 @@ function FollowUpDetailPage() {
           <Typography
             sx={{
               color:
-                '#7a8699',
+                'var(--eleven-text-muted)',
 
               fontSize:
                 12.5,
@@ -902,7 +902,7 @@ function FollowUpDetailPage() {
               32,
 
             color:
-              '#667085',
+              'var(--eleven-text-secondary)',
 
             fontSize:
               12.5,
@@ -912,7 +912,7 @@ function FollowUpDetailPage() {
                 'transparent',
 
               color:
-                '#0b5cff',
+                'var(--eleven-primary)',
             },
           }}
         >
@@ -971,7 +971,7 @@ function FollowUpDetailPage() {
               <Typography
                 sx={{
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
 
                   fontSize: {
                     xs:
@@ -1023,7 +1023,7 @@ function FollowUpDetailPage() {
                   0.65,
 
                 color:
-                  '#667085',
+                  'var(--eleven-text-secondary)',
 
                 fontSize:
                   13,
@@ -1058,7 +1058,7 @@ function FollowUpDetailPage() {
                     }
                     sx={{
                       bgcolor:
-                        '#ffffff',
+                        'var(--eleven-paper)',
                     }}
                   >
                     Edit
@@ -1136,7 +1136,7 @@ function FollowUpDetailPage() {
             variant="outlined"
             sx={{
               borderColor:
-                '#e4e8ef',
+                'var(--eleven-border)',
 
               borderRadius:
                 '12px',
@@ -1165,7 +1165,7 @@ function FollowUpDetailPage() {
               <Typography
                 sx={{
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
 
                   fontSize:
                     15,
@@ -1184,7 +1184,7 @@ function FollowUpDetailPage() {
                     0.25,
 
                   color:
-                    '#7a8699',
+                    'var(--eleven-text-muted)',
 
                   fontSize:
                     11.5,
@@ -1353,7 +1353,7 @@ function FollowUpDetailPage() {
                           18,
 
                         color:
-                          '#039855',
+                          'var(--eleven-success)',
                       }}
                     />
                   }
@@ -1402,7 +1402,7 @@ function FollowUpDetailPage() {
               variant="outlined"
               sx={{
                 borderColor:
-                  '#e4e8ef',
+                  'var(--eleven-border)',
 
                 borderRadius:
                   '12px',
@@ -1426,7 +1426,7 @@ function FollowUpDetailPage() {
                 <Typography
                   sx={{
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       14,
@@ -1445,7 +1445,7 @@ function FollowUpDetailPage() {
                       0.25,
 
                     color:
-                      '#7a8699',
+                      'var(--eleven-text-muted)',
 
                     fontSize:
                       11.5,
@@ -1491,7 +1491,7 @@ function FollowUpDetailPage() {
                       1.5,
 
                     color:
-                      '#667085',
+                      'var(--eleven-text-secondary)',
 
                     fontSize:
                       12,
@@ -1515,7 +1515,7 @@ function FollowUpDetailPage() {
               variant="outlined"
               sx={{
                 borderColor:
-                  '#e4e8ef',
+                  'var(--eleven-border)',
 
                 borderRadius:
                   '12px',
@@ -1533,7 +1533,7 @@ function FollowUpDetailPage() {
                 <Typography
                   sx={{
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       14,
@@ -1552,7 +1552,7 @@ function FollowUpDetailPage() {
                       1.25,
 
                     color:
-                      '#172033',
+                      'var(--eleven-text)',
 
                     fontSize:
                       13,
@@ -1571,7 +1571,7 @@ function FollowUpDetailPage() {
                       0.15,
 
                     color:
-                      '#7a8699',
+                      'var(--eleven-text-muted)',
 
                     fontSize:
                       11.5,
@@ -1594,7 +1594,7 @@ function FollowUpDetailPage() {
                       2,
 
                     bgcolor:
-                      '#ffffff',
+                      'var(--eleven-paper)',
                   }}
                 >
                   Open Lead
@@ -1638,7 +1638,7 @@ function FollowUpDetailPage() {
               <Typography
                 sx={{
                   color:
-                    '#172033',
+                    'var(--eleven-text)',
 
                   fontSize:
                     18,
@@ -1657,7 +1657,7 @@ function FollowUpDetailPage() {
                     0.3,
 
                   color:
-                    '#7a8699',
+                    'var(--eleven-text-muted)',
 
                   fontSize:
                     12,
@@ -1887,7 +1887,7 @@ function FollowUpDetailPage() {
                 '50%',
 
               bgcolor:
-                '#ecfdf3',
+                'var(--eleven-success-soft)',
 
               display:
                 'flex',
@@ -1899,7 +1899,7 @@ function FollowUpDetailPage() {
                 'center',
 
               color:
-                '#039855',
+                'var(--eleven-success)',
             }}
           >
             <CheckCircleRounded
@@ -1914,7 +1914,7 @@ function FollowUpDetailPage() {
           <Typography
             sx={{
               color:
-                '#172033',
+                'var(--eleven-text)',
 
               fontSize:
                 18,
@@ -1939,7 +1939,7 @@ function FollowUpDetailPage() {
                 300,
 
               color:
-                '#667085',
+                'var(--eleven-text-secondary)',
 
               fontSize:
                 12.5,

@@ -21,7 +21,12 @@ import {
   Typography,
 } from '@mui/material'
 
-import type { UserRole } from '../../auth/roles'
+import {
+  ADMIN_ASSIGNABLE_ROLE_OPTIONS,
+  USER_ROLE_LABELS,
+  isAdminAssignableRole,
+  type UserRole,
+} from '../../auth/roles'
 import {
   updateAdminUser,
   type AdminUser,
@@ -44,39 +49,7 @@ interface EditUserFormState {
   isActive: boolean
 }
 
-const roleOptions: Array<{
-  value: UserRole
-  label: string
-}> = [
-  {
-    value: 'ADMIN',
-    label: 'Administrator',
-  },
-  {
-    value: 'MARKETING',
-    label: 'Marketing Employee',
-  },
-  {
-    value: 'SALES_REP',
-    label: 'Sales Representative',
-  },
-  {
-    value: 'SALES_MANAGER',
-    label: 'Sales Manager',
-  },
-  {
-    value: 'PROJECT_MANAGER',
-    label: 'Project Manager',
-  },
-  {
-    value: 'SOFTWARE_ENGINEER',
-    label: 'Software Engineer',
-  },
-  {
-    value: 'DIRECTOR',
-    label: 'Director',
-  },
-]
+const roleOptions = ADMIN_ASSIGNABLE_ROLE_OPTIONS
 
 function createInitialFormState(
   user: AdminUser,
@@ -302,6 +275,16 @@ function AdminEditUserDialog({
               fullWidth
               disabled={isSubmitting}
             >
+              {!isAdminAssignableRole(formState.role) && (
+                <MenuItem
+                  value={formState.role}
+                  disabled
+                >
+                  {USER_ROLE_LABELS[formState.role]}
+                  {' (legacy role)'}
+                </MenuItem>
+              )}
+
               {roleOptions.map((role) => (
                 <MenuItem
                   key={role.value}
