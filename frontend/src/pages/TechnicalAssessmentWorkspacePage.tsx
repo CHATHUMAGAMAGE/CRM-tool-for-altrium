@@ -219,6 +219,11 @@ function TechnicalAssessmentWorkspacePage() {
     SoftwareEngineer[]
   >([])
 
+  const [
+    canManageAssessment,
+    setCanManageAssessment,
+  ] = useState(false)
+
 
   const [
     technicalComments,
@@ -329,8 +334,8 @@ function TechnicalAssessmentWorkspacePage() {
           await getCurrentUser()
 
         if (
-          user.role !==
-          'TECH_LEAD'
+          user.role !== 'TECH_LEAD' &&
+          user.role !== 'SALES_MANAGER'
         ) {
           navigate(
             '/dashboard',
@@ -346,7 +351,12 @@ function TechnicalAssessmentWorkspacePage() {
             id,
           )
 
+        const isAssignedTechLead =
+          user.role === 'TECH_LEAD' &&
+          assessmentData.assigned_to === user.id
+
         if (
+          user.role === 'TECH_LEAD' &&
           assessmentData.assigned_to !==
           user.id
         ) {
@@ -358,6 +368,10 @@ function TechnicalAssessmentWorkspacePage() {
 
           return
         }
+
+        setCanManageAssessment(
+          isAssignedTechLead,
+        )
 
         const [
           recommendationData,
@@ -375,7 +389,9 @@ function TechnicalAssessmentWorkspacePage() {
             getTechnicalAssessmentHistory(
               id,
             ),
-            getSoftwareEngineers(),
+            isAssignedTechLead
+              ? getSoftwareEngineers()
+              : Promise.resolve([]),
           ])
 
         setAssessment(
@@ -447,10 +463,12 @@ function TechnicalAssessmentWorkspacePage() {
 
 
   const canStart =
+    canManageAssessment &&
     assessment?.status ===
     'REQUESTED'
 
   const canEdit =
+    canManageAssessment &&
     assessment?.status ===
     'IN_PROGRESS'
 

@@ -187,7 +187,12 @@ function FinancialAssessmentWorkspacePage() {
   ] =
     useState<
       FinancialAssessmentDocument[]
-    >([])
+  >([])
+
+  const [
+    canManageAssessment,
+    setCanManageAssessment,
+  ] = useState(false)
 
   const [
     history,
@@ -329,8 +334,8 @@ function FinancialAssessmentWorkspacePage() {
             await getCurrentUser()
 
           if (
-            user.role !==
-            'FINANCIAL_OFFICER'
+            user.role !== 'FINANCIAL_OFFICER' &&
+            user.role !== 'SALES_MANAGER'
           ) {
             navigate(
               '/dashboard',
@@ -348,7 +353,12 @@ function FinancialAssessmentWorkspacePage() {
               id,
             )
 
+          const isAssignedFinancialOfficer =
+            user.role === 'FINANCIAL_OFFICER' &&
+            assessmentData.assigned_to === user.id
+
           if (
+            user.role === 'FINANCIAL_OFFICER' &&
             assessmentData.assigned_to !==
             user.id
           ) {
@@ -362,6 +372,10 @@ function FinancialAssessmentWorkspacePage() {
 
             return
           }
+
+          setCanManageAssessment(
+            isAssignedFinancialOfficer,
+          )
 
           const [
             documentData,
@@ -427,11 +441,13 @@ function FinancialAssessmentWorkspacePage() {
 
 
   const canStart =
+    canManageAssessment &&
     assessment?.status ===
     'REQUESTED'
 
 
   const canEdit =
+    canManageAssessment &&
     assessment?.status ===
     'IN_PROGRESS'
 
