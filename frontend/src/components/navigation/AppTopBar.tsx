@@ -1832,6 +1832,7 @@ function AppTopBar({
 
           {/* Global search */}
 
+          {currentUser?.role !== 'ADMIN' && (
           <Box
             ref={
               searchAnchorRef
@@ -2003,10 +2004,12 @@ function AppTopBar({
               }}
             />
           </Box>
+          )}
 
 
           {/* Notifications */}
 
+          {currentUser?.role !== 'ADMIN' && (
           <IconButton
             aria-label="Notifications"
             onClick={
@@ -2036,6 +2039,7 @@ function AppTopBar({
               <NotificationsNoneRounded />
             </Badge>
           </IconButton>
+          )}
 
 
           {/* User menu */}

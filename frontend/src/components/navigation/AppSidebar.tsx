@@ -845,6 +845,7 @@ function AppSidebar({
           0.45
         }
       >
+        {currentUser?.role !== 'ADMIN' && (
         <Button
           startIcon={
             <DashboardOutlined />
@@ -862,9 +863,10 @@ function AppSidebar({
         >
           Dashboard
         </Button>
+        )}
 
 
-        {isSpecialist ? (
+        {currentUser?.role !== 'ADMIN' && (isSpecialist ? (
           <>
             <Button
               startIcon={
@@ -1153,7 +1155,7 @@ function AppSidebar({
               </Button>
             )}
           </>
-        )}
+        ))}
       </Stack>
 
 

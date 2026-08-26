@@ -6,6 +6,19 @@ from rest_framework.permissions import (
 from accounts.models import UserProfile
 
 
+class OperationalCrmPermission(BasePermission):
+    """Keep application Administrators out of operational CRM APIs."""
+
+    message = "Administrators can only access the administration workspace."
+
+    def has_permission(self, request, view):
+        profile = getattr(request.user, "profile", None)
+        return (
+            profile is not None
+            and profile.role != UserProfile.Role.ADMIN
+        )
+
+
 class LeadPermission(BasePermission):
     message = (
         "You do not have permission "
@@ -41,7 +54,6 @@ class LeadPermission(BasePermission):
 
         if getattr(view, "is_qualification_return", False):
             return role in {
-                UserProfile.Role.ADMIN,
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.PROJECT_MANAGER,
             }
@@ -59,7 +71,6 @@ class LeadPermission(BasePermission):
             False,
         ):
             return role in {
-                UserProfile.Role.ADMIN,
                 UserProfile.Role.SALES_REP,
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.PROJECT_MANAGER,
@@ -67,7 +78,6 @@ class LeadPermission(BasePermission):
 
         if request.method in SAFE_METHODS:
             return role in {
-                UserProfile.Role.ADMIN,
                 UserProfile.Role.MARKETING,
                 UserProfile.Role.SALES_REP,
                 UserProfile.Role.SALES_MANAGER,
@@ -77,7 +87,6 @@ class LeadPermission(BasePermission):
 
         if request.method == "POST":
             return role in {
-                UserProfile.Role.ADMIN,
                 UserProfile.Role.MARKETING,
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.PROJECT_MANAGER,
@@ -88,7 +97,6 @@ class LeadPermission(BasePermission):
             "PATCH",
         }:
             return role in {
-                UserProfile.Role.ADMIN,
                 UserProfile.Role.MARKETING,
                 UserProfile.Role.SALES_REP,
                 UserProfile.Role.SALES_MANAGER,
@@ -124,7 +132,6 @@ class LeadPermission(BasePermission):
             return False
 
         if role in {
-            UserProfile.Role.ADMIN,
             UserProfile.Role.SALES_MANAGER,
             UserProfile.Role.PROJECT_MANAGER,
         }:
@@ -209,7 +216,6 @@ class CommunicationPermission(
 
         if request.method in SAFE_METHODS:
             return role in {
-                UserProfile.Role.ADMIN,
                 UserProfile.Role.MARKETING,
                 UserProfile.Role.SALES_REP,
                 UserProfile.Role.SALES_MANAGER,
@@ -224,7 +230,6 @@ class CommunicationPermission(
             "DELETE",
         }:
             return role in {
-                UserProfile.Role.ADMIN,
                 UserProfile.Role.SALES_REP,
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.PROJECT_MANAGER,
@@ -244,7 +249,6 @@ class CommunicationPermission(
         role = request.user.profile.role
 
         if role in {
-            UserProfile.Role.ADMIN,
             UserProfile.Role.SALES_MANAGER,
             UserProfile.Role.PROJECT_MANAGER,
         }:
@@ -297,7 +301,6 @@ class FollowUpPermission(
 
         if request.method in SAFE_METHODS:
             return role in {
-                UserProfile.Role.ADMIN,
                 UserProfile.Role.MARKETING,
                 UserProfile.Role.SALES_REP,
                 UserProfile.Role.SALES_MANAGER,
@@ -307,7 +310,6 @@ class FollowUpPermission(
 
         if request.method == "POST":
             return role in {
-                UserProfile.Role.ADMIN,
                 UserProfile.Role.SALES_REP,
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.PROJECT_MANAGER,
@@ -319,7 +321,6 @@ class FollowUpPermission(
             "DELETE",
         }:
             return role in {
-                UserProfile.Role.ADMIN,
                 UserProfile.Role.SALES_REP,
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.PROJECT_MANAGER,
@@ -339,7 +340,6 @@ class FollowUpPermission(
         role = request.user.profile.role
 
         if role in {
-            UserProfile.Role.ADMIN,
             UserProfile.Role.SALES_MANAGER,
             UserProfile.Role.PROJECT_MANAGER,
         }:
@@ -370,7 +370,6 @@ class LeadInsightPermission(
     )
 
     allowed_roles = {
-        UserProfile.Role.ADMIN,
         UserProfile.Role.MARKETING,
         UserProfile.Role.SALES_REP,
         UserProfile.Role.SALES_MANAGER,
