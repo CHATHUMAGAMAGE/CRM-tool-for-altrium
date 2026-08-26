@@ -101,6 +101,12 @@ class CommunicationApiTests(APITestCase):
             kwargs={"lead_id": lead.id},
         )
 
+    def detail_url(self, communication):
+        return reverse(
+            "crm:communication-detail",
+            kwargs={"pk": communication.id},
+        )
+
     def payload(self):
         return {
             "communication_type": Communication.CommunicationType.EMAIL,
@@ -301,3 +307,40 @@ class CommunicationApiTests(APITestCase):
             status.HTTP_400_BAD_REQUEST,
         )
         self.assertIn("lead", response.data)
+
+    def test_sales_rep_can_update_own_communication(self):
+        self.client.force_authenticate(self.sales_rep)
+        response = self.client.patch(
+            self.detail_url(self.communication),
+            {"summary": "Corrected requirements"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.communication.refresh_from_db()
+        self.assertEqual(self.communication.summary, "Corrected requirements")
+
+    def test_sales_rep_can_delete_own_communication(self):
+        self.client.force_authenticate(self.sales_rep)
+        response = self.client.delete(self.detail_url(self.communication))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(
+            Communication.objects.filter(pk=self.communication.pk).exists()
+        )
+
+    def test_sales_rep_cannot_change_another_users_communication(self):
+        communication = Communication.objects.create(
+            lead=self.lead,
+            communication_type=Communication.CommunicationType.EMAIL,
+            communication_date=timezone.now() - timedelta(minutes=10),
+            summary="Manager note",
+            created_by=self.sales_manager,
+        )
+        self.client.force_authenticate(self.sales_rep)
+        patch_response = self.client.patch(
+            self.detail_url(communication),
+            {"summary": "Changed"},
+            format="json",
+        )
+        delete_response = self.client.delete(self.detail_url(communication))
+        self.assertEqual(patch_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(delete_response.status_code, status.HTTP_403_FORBIDDEN)

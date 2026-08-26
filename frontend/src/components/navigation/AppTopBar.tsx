@@ -57,11 +57,15 @@ import {
 
 import {
   getFollowUpReminders,
+  getNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
   getLeads,
   getTechnicalAssessments,
   type FollowUp,
   type Lead,
   type TechnicalAssessment,
+  type WorkflowNotification,
 } from '../../services/crm'
 
 import ProfileSettingsDialog from '../profile/ProfileSettingsDialog'
@@ -512,6 +516,20 @@ function AppTopBar({
       [],
     )
 
+  const [notifications, setNotifications] = useState<WorkflowNotification[]>([])
+  const [notificationError, setNotificationError] = useState('')
+
+  const loadNotifications = useCallback(async () => {
+    try {
+      setNotifications(await getNotifications())
+      setNotificationError('')
+    } catch (requestError) {
+      setNotificationError(
+        requestError instanceof Error ? requestError.message : 'Unable to load notifications.',
+      )
+    }
+  }, [])
+
 
   const [
     isLoadingReminders,
@@ -606,6 +624,12 @@ function AppTopBar({
         false
     }
   }, [])
+
+  useEffect(() => {
+    void loadNotifications()
+    const interval = window.setInterval(() => void loadNotifications(), 30_000)
+    return () => window.clearInterval(interval)
+  }, [loadNotifications])
 
 
   useEffect(() => {
@@ -1346,7 +1370,35 @@ function AppTopBar({
       )
 
       void loadReminders()
+      void loadNotifications()
     }
+
+  const handleOpenWorkflowNotification = async (item: WorkflowNotification) => {
+    if (!item.read_at) {
+      try {
+        await markNotificationRead(item.id)
+        setNotifications((current) => current.map((notification) =>
+          notification.id === item.id
+            ? { ...notification, read_at: new Date().toISOString() }
+            : notification,
+        ))
+      } catch {
+        // Navigation remains available if marking read fails.
+      }
+    }
+    handleCloseNotifications()
+    navigate(item.target_url)
+  }
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead()
+      const readAt = new Date().toISOString()
+      setNotifications((current) => current.map((item) => ({ ...item, read_at: item.read_at || readAt })))
+    } catch (requestError) {
+      setNotificationError(requestError instanceof Error ? requestError.message : 'Unable to mark notifications as read.')
+    }
+  }
 
 
   const handleCloseNotifications =
@@ -1540,15 +1592,6 @@ function AppTopBar({
         },
       )
     }
-
-
-  const isManagerView =
-    currentUser?.role ===
-      'ADMIN' ||
-    currentUser?.role ===
-      'SALES_MANAGER' ||
-    currentUser?.role ===
-      'PROJECT_MANAGER'
 
 
   return (
@@ -1962,10 +2005,10 @@ function AppTopBar({
           </Box>
 
 
-          {/* Follow-up notifications */}
+          {/* Notifications */}
 
           <IconButton
-            aria-label="Follow-up reminders"
+            aria-label="Notifications"
             onClick={
               handleOpenNotifications
             }
@@ -1981,14 +2024,13 @@ function AppTopBar({
               color="error"
 
               badgeContent={
-                reminders.length
+                reminders.length + notifications.filter((item) => !item.read_at).length
               }
 
               max={99}
 
               invisible={
-                reminders.length ===
-                0
+                reminders.length + notifications.filter((item) => !item.read_at).length === 0
               }
             >
               <NotificationsNoneRounded />
@@ -2586,7 +2628,7 @@ function AppTopBar({
                     'var(--eleven-text)',
                 }}
               >
-                Follow-up Reminders
+                Notifications
               </Typography>
 
               <Typography
@@ -2596,14 +2638,21 @@ function AppTopBar({
                     'text.secondary',
                 }}
               >
-                {isManagerView
-                  ? 'Team overdue follow-ups'
-                  : 'Due within the next 24 hours'}
+                Tasks, submissions, reviews, and reminders
               </Typography>
             </Box>
 
-            {reminders.length >
-              0 && (
+            {notifications.some((item) => !item.read_at) && (
+              <Chip
+                size="small"
+                label="Mark all read"
+                variant="outlined"
+                onClick={() => void handleMarkAllRead()}
+                sx={{ cursor: 'pointer' }}
+              />
+            )}
+
+            {reminders.length > 0 && (
               <Chip
                 size="small"
 
@@ -2623,6 +2672,42 @@ function AppTopBar({
         </Box>
 
         <Divider />
+
+        {notificationError && (
+          <Typography color="error" variant="caption" sx={{ px: 2.25, py: 1.25 }}>
+            {notificationError}
+          </Typography>
+        )}
+
+        {notifications.map((item) => (
+          <MenuItem
+            key={`notification-${item.id}`}
+            onClick={() => void handleOpenWorkflowNotification(item)}
+            sx={{
+              px: 2.25,
+              py: 1.5,
+              whiteSpace: 'normal',
+              alignItems: 'flex-start',
+              bgcolor: item.read_at ? 'transparent' : 'var(--eleven-primary-soft)',
+            }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontSize: 13.5, fontWeight: item.read_at ? 600 : 800 }}>
+                {item.title}
+              </Typography>
+              {item.message && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.35 }}>
+                  {item.message}
+                </Typography>
+              )}
+              <Typography variant="caption" sx={{ color: 'var(--eleven-primary)', display: 'block', mt: 0.5 }}>
+                {new Date(item.created_at).toLocaleString()}
+              </Typography>
+            </Box>
+          </MenuItem>
+        ))}
+
+        {notifications.length > 0 && <Divider />}
 
 
         {isLoadingReminders && (
@@ -2672,6 +2757,7 @@ function AppTopBar({
 
         {!isLoadingReminders &&
           !reminderError &&
+          notifications.length === 0 &&
           sortedReminders.length ===
             0 && (
             <Box

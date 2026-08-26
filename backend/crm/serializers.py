@@ -13,11 +13,13 @@ from .models import (
     FollowUp,
     Lead,
     LeadHistory,
+    Notification,
     TechnicalAssessment,
     TechnicalAssessmentDocument,
     TechnicalAssessmentHistory,
     TechnicalAssessmentRecommendation,
 )
+from .notifications import create_notification
 
 
 User = get_user_model()
@@ -74,6 +76,8 @@ class LeadSerializer(
         required=False,
     )
 
+    responsible_manager_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Lead
 
@@ -87,10 +91,16 @@ class LeadSerializer(
             "status",
             "status_display",
             "qualification_notes",
+            "handover_note",
+            "review_feedback",
+            "submitted_for_qualification_at",
+            "submitted_for_qualification_by",
             "lost_reason",
             "assigned_to",
             "assigned_to_name",
             "assigned_to_username",
+            "responsible_manager",
+            "responsible_manager_name",
             "created_by",
             "created_by_name",
             "created_by_username",
@@ -105,6 +115,11 @@ class LeadSerializer(
             "created_at",
             "updated_at",
             "converted_at",
+            "handover_note",
+            "review_feedback",
+            "submitted_for_qualification_at",
+            "submitted_for_qualification_by",
+            "responsible_manager",
         ]
 
     def get_assigned_to_name(
@@ -131,6 +146,9 @@ class LeadSerializer(
         return get_user_display_name(
             obj.created_by,
         )
+
+    def get_responsible_manager_name(self, obj):
+        return get_user_display_name(obj.responsible_manager)
 
     def get_created_by_username(
         self,
@@ -310,6 +328,13 @@ class LeadSerializer(
             "request"
         ]
 
+        profile = getattr(request.user, "profile", None)
+        if (
+            profile is not None
+            and profile.role == UserProfile.Role.SALES_MANAGER
+        ):
+            validated_data["responsible_manager"] = request.user
+
         lead = Lead.objects.create(
             created_by=request.user,
             **validated_data,
@@ -355,6 +380,15 @@ class LeadSerializer(
                 },
             )
 
+            create_notification(
+                recipient=lead.assigned_to,
+                actor=request.user,
+                kind=Notification.Kind.ASSIGNMENT,
+                title="New lead assigned to you",
+                message=f"{lead.contact_name} at {lead.company_name} is now assigned to you.",
+                target_url=f"/leads/{lead.id}",
+            )
+
         return lead
 
     @transaction.atomic
@@ -372,6 +406,14 @@ class LeadSerializer(
             "user",
             None,
         )
+
+        profile = getattr(performed_by, "profile", None)
+        if (
+            instance.responsible_manager_id is None
+            and profile is not None
+            and profile.role == UserProfile.Role.SALES_MANAGER
+        ):
+            validated_data["responsible_manager"] = performed_by
 
         previous_status = (
             instance.status
@@ -526,6 +568,16 @@ class LeadSerializer(
                 },
             )
 
+            if updated_lead.assigned_to is not None:
+                create_notification(
+                    recipient=updated_lead.assigned_to,
+                    actor=performed_by,
+                    kind=Notification.Kind.ASSIGNMENT,
+                    title="New lead assigned to you",
+                    message=f"{updated_lead.contact_name} at {updated_lead.company_name} is now assigned to you.",
+                    target_url=f"/leads/{updated_lead.id}",
+                )
+
         if (
             "status"
             in validated_data
@@ -652,6 +704,23 @@ class LeadSerializer(
                 performed_by=performed_by,
                 metadata=metadata,
             )
+
+            if updated_lead.status in {
+                Lead.Status.QUALIFIED,
+                Lead.Status.DISQUALIFIED,
+            }:
+                create_notification(
+                    recipient=updated_lead.assigned_to,
+                    actor=performed_by,
+                    kind=Notification.Kind.REVIEW,
+                    title=(
+                        "Lead qualified"
+                        if updated_lead.status == Lead.Status.QUALIFIED
+                        else "Lead disqualified"
+                    ),
+                    message=updated_lead.qualification_notes,
+                    target_url=f"/leads/{updated_lead.id}",
+                )
 
         changed_detail_labels = []
 
@@ -1525,6 +1594,15 @@ class TechnicalAssessmentRecommendationSerializer(
             },
         )
 
+        create_notification(
+            recipient=recommendation.engineer,
+            actor=recommendation.recommended_by,
+            kind=Notification.Kind.ASSIGNMENT,
+            title="You were recommended for technical work",
+            message=f"You were added to technical assessment #{recommendation.assessment_id}.",
+            target_url=f"/technical-assessments/{recommendation.assessment_id}",
+        )
+
         return recommendation
 
 
@@ -1940,6 +2018,15 @@ class TechnicalAssessmentCreateSerializer(
                         assessment.assigned_to,
                     ),
             },
+        )
+
+        create_notification(
+            recipient=assessment.assigned_to,
+            actor=request.user,
+            kind=Notification.Kind.ASSIGNMENT,
+            title="Technical assessment assigned to you",
+            message=f"Assess {assessment.lead.contact_name} at {assessment.lead.company_name}.",
+            target_url=f"/technical-assessments/{assessment.id}",
         )
 
         return assessment

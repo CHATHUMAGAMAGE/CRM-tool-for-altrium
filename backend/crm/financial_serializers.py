@@ -10,9 +10,11 @@ from .models import (
     FinancialAssessment,
     FinancialAssessmentDocument,
     FinancialAssessmentHistory,
+    Notification,
     Lead,
     TechnicalAssessment,
 )
+from .notifications import create_notification
 
 
 User = get_user_model()
@@ -560,6 +562,15 @@ class FinancialAssessmentCreateSerializer(
                         assessment.assigned_to,
                     ),
             },
+        )
+
+        create_notification(
+            recipient=assessment.assigned_to,
+            actor=request.user,
+            kind=Notification.Kind.ASSIGNMENT,
+            title="Financial assessment assigned to you",
+            message=f"Assess {assessment.lead.contact_name} at {assessment.lead.company_name}.",
+            target_url=f"/financial-assessments/{assessment.id}",
         )
 
         return assessment

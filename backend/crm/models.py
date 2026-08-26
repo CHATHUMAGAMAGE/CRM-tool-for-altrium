@@ -8,6 +8,10 @@ class Lead(models.Model):
     class Status(models.TextChoices):
         NEW = "NEW", "New"
         CONTACTED = "CONTACTED", "Contacted"
+        SUBMITTED_FOR_QUALIFICATION = (
+            "SUBMITTED_FOR_QUALIFICATION",
+            "Submitted for Qualification",
+        )
         QUALIFIED = "QUALIFIED", "Qualified"
         PROPOSAL = "PROPOSAL", "Proposal"
         WON = "WON", "Won"
@@ -49,6 +53,23 @@ class Lead(models.Model):
         blank=True,
     )
 
+    handover_note = models.TextField(blank=True)
+
+    review_feedback = models.TextField(blank=True)
+
+    submitted_for_qualification_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    submitted_for_qualification_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="submitted_leads_for_qualification",
+    )
+
     lost_reason = models.TextField(
         blank=True,
     )
@@ -59,6 +80,15 @@ class Lead(models.Model):
         null=True,
         blank=True,
         related_name="assigned_leads",
+    )
+
+    responsible_manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="managed_leads",
+        limit_choices_to={"profile__role": "SALES_MANAGER"},
     )
 
     created_by = models.ForeignKey(
@@ -167,6 +197,16 @@ class LeadHistory(models.Model):
             "Disqualified",
         )
 
+        SUBMITTED_FOR_QUALIFICATION = (
+            "SUBMITTED_FOR_QUALIFICATION",
+            "Submitted for Qualification",
+        )
+
+        RETURNED_FOR_MORE_INFORMATION = (
+            "RETURNED_FOR_MORE_INFORMATION",
+            "Returned for More Information",
+        )
+
         WON = "WON", "Won"
         LOST = "LOST", "Lost"
 
@@ -212,6 +252,37 @@ class LeadHistory(models.Model):
             f"{self.get_event_type_display()} - "
             f"{self.lead}"
         )
+
+
+class Notification(models.Model):
+    class Kind(models.TextChoices):
+        ASSIGNMENT = "ASSIGNMENT", "Assignment"
+        SUBMISSION = "SUBMISSION", "Submission"
+        REVIEW = "REVIEW", "Review"
+        RETURNED = "RETURNED", "Returned"
+
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="crm_notifications",
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_crm_notifications",
+    )
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    title = models.CharField(max_length=255)
+    message = models.TextField(blank=True)
+    target_url = models.CharField(max_length=500)
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["recipient", "read_at", "created_at"])]
 
 
 class Communication(models.Model):

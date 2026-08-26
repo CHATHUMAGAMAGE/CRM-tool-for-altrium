@@ -37,8 +37,10 @@ from .models import (
     TechnicalAssessment,
     TechnicalAssessmentDocument,
     TechnicalAssessmentHistory,
+    Notification,
     TechnicalAssessmentRecommendation,
 )
+from .notifications import create_notification
 
 from .serializers import (
     TechnicalAssessmentCreateSerializer,
@@ -445,6 +447,15 @@ class TechnicalAssessmentSubmitView(
             performed_by=request.user,
         )
 
+        create_notification(
+            recipient=(assessment.lead.responsible_manager or assessment.requested_by),
+            actor=request.user,
+            kind=Notification.Kind.SUBMISSION,
+            title="Technical assessment submitted",
+            message=f"The technical assessment for {assessment.lead.company_name} is ready for review.",
+            target_url=f"/technical-assessments/{assessment.id}",
+        )
+
         return Response(
             TechnicalAssessmentSerializer(
                 assessment,
@@ -522,6 +533,15 @@ class TechnicalAssessmentReviewView(
                 "review_notes":
                     reviewed.review_notes,
             },
+        )
+
+        create_notification(
+            recipient=reviewed.assigned_to,
+            actor=request.user,
+            kind=Notification.Kind.REVIEW,
+            title="Technical assessment reviewed",
+            message=reviewed.review_notes,
+            target_url=f"/technical-assessments/{reviewed.id}",
         )
 
         return Response(

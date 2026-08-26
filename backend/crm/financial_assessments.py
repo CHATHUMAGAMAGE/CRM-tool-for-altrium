@@ -48,7 +48,9 @@ from .models import (
     FinancialAssessmentHistory,
     Lead,
     TechnicalAssessment,
+    Notification,
 )
+from .notifications import create_notification
 
 
 User = get_user_model()
@@ -467,6 +469,15 @@ class FinancialAssessmentSubmitView(
             performed_by=request.user,
         )
 
+        create_notification(
+            recipient=(assessment.lead.responsible_manager or assessment.requested_by),
+            actor=request.user,
+            kind=Notification.Kind.SUBMISSION,
+            title="Financial assessment submitted",
+            message=f"The financial assessment for {assessment.lead.company_name} is ready for review.",
+            target_url=f"/financial-assessments/{assessment.id}",
+        )
+
         return Response(
             FinancialAssessmentSerializer(
                 assessment,
@@ -544,6 +555,15 @@ class FinancialAssessmentReviewView(
                 "review_notes":
                     reviewed.review_notes,
             },
+        )
+
+        create_notification(
+            recipient=reviewed.assigned_to,
+            actor=request.user,
+            kind=Notification.Kind.REVIEW,
+            title="Financial assessment reviewed",
+            message=reviewed.review_notes,
+            target_url=f"/financial-assessments/{reviewed.id}",
         )
 
         return Response(

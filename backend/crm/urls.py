@@ -1,5 +1,11 @@
 from django.urls import path
 
+from .notification_api import (
+    NotificationListView,
+    NotificationReadAllView,
+    NotificationReadView,
+)
+
 from .financial_assessments import (
     FinancialAssessmentDetailView,
     FinancialAssessmentDocumentDownloadView,
@@ -42,6 +48,7 @@ from .technical_assessments import (
 
 from .views import (
     CommunicationListCreateView,
+    CommunicationDetailView,
     DashboardStatsView,
     FollowUpDetailView,
     FollowUpListCreateView,
@@ -49,6 +56,8 @@ from .views import (
     LeadHistoryListView,
     LeadListCreateView,
     LeadRescueRadarView,
+    LeadReturnForInformationView,
+    LeadSubmitForQualificationView,
 )
 
 
@@ -56,6 +65,9 @@ app_name = "crm"
 
 
 urlpatterns = [
+    path("notifications/", NotificationListView.as_view(), name="notification-list"),
+    path("notifications/read-all/", NotificationReadAllView.as_view(), name="notification-read-all"),
+    path("notifications/<int:pk>/read/", NotificationReadView.as_view(), name="notification-read"),
     path(
         "dashboard/",
         DashboardStatsView.as_view(),
@@ -72,6 +84,18 @@ urlpatterns = [
         "leads/<int:pk>/",
         LeadDetailView.as_view(),
         name="lead-detail",
+    ),
+
+    path(
+        "leads/<int:pk>/submit-for-qualification/",
+        LeadSubmitForQualificationView.as_view(),
+        name="lead-submit-for-qualification",
+    ),
+
+    path(
+        "leads/<int:pk>/return-for-information/",
+        LeadReturnForInformationView.as_view(),
+        name="lead-return-for-information",
     ),
 
     path(
@@ -102,6 +126,12 @@ urlpatterns = [
         "leads/<int:lead_id>/communications/",
         CommunicationListCreateView.as_view(),
         name="communication-list-create",
+    ),
+
+    path(
+        "communications/<int:pk>/",
+        CommunicationDetailView.as_view(),
+        name="communication-detail",
     ),
 
     path(
