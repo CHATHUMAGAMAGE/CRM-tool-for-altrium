@@ -66,6 +66,7 @@ import {
 
 import {
   createLeadCommunication,
+  deleteCommunication,
   createLeadFollowUp,
   createTechnicalAssessment,
   getLead,
@@ -77,6 +78,9 @@ import {
   getTechLeads,
   getTechnicalAssessments,
   reviewTechnicalAssessment,
+  returnLeadForInformation,
+  submitLeadForQualification,
+  updateCommunication,
   updateLead,
   type Communication,
   type CommunicationType,
@@ -1245,6 +1249,12 @@ function LeadWorkspacePage() {
       '',
     )
 
+  const [handoverDialogOpen, setHandoverDialogOpen] = useState(false)
+  const [handoverAction, setHandoverAction] = useState<'SUBMIT' | 'RETURN'>('SUBMIT')
+  const [handoverText, setHandoverText] = useState('')
+  const [handoverError, setHandoverError] = useState('')
+  const [isSavingHandover, setIsSavingHandover] = useState(false)
+
   const [
     isSavingQualification,
     setIsSavingQualification,
@@ -1286,6 +1296,11 @@ function LeadWorkspacePage() {
     useState(
       '',
     )
+
+  const [
+    editingCommunication,
+    setEditingCommunication,
+  ] = useState<Communication | null>(null)
 
   const [
     communicationFilter,
@@ -2166,8 +2181,12 @@ function LeadWorkspacePage() {
   const canReviewLead =
     canManageLead &&
     !isClosedLead &&
-    lead.status !==
-      'PROPOSAL'
+    lead.status === 'SUBMITTED_FOR_QUALIFICATION'
+
+  const canSubmitForQualification =
+    isSalesRep &&
+    lead.assigned_to === currentUser?.id &&
+    (lead.status === 'NEW' || lead.status === 'CONTACTED')
 
 
   const hasPassedQualification =
@@ -2697,6 +2716,51 @@ function LeadWorkspacePage() {
     }
 
 
+  const openHandoverDialog = (action: 'SUBMIT' | 'RETURN') => {
+    setHandoverAction(action)
+    setHandoverText('')
+    setHandoverError('')
+    setHandoverDialogOpen(true)
+  }
+
+
+  const handleHandover = async () => {
+    const note = handoverText.trim()
+    if (!note) {
+      setHandoverError(
+        handoverAction === 'SUBMIT'
+          ? 'Please provide a handover summary.'
+          : 'Please explain what additional information is required.',
+      )
+      return
+    }
+
+    setIsSavingHandover(true)
+    setHandoverError('')
+    try {
+      const updated = handoverAction === 'SUBMIT'
+        ? await submitLeadForQualification(numericLeadId, note)
+        : await returnLeadForInformation(numericLeadId, note)
+      setLead(updated)
+      await refreshHistory()
+      setHandoverDialogOpen(false)
+      setSuccessMessage(
+        handoverAction === 'SUBMIT'
+          ? 'Lead submitted to the Sales Manager for review.'
+          : 'Lead returned to the Sales Representative.',
+      )
+    } catch (requestError) {
+      setHandoverError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to update the qualification review.',
+      )
+    } finally {
+      setIsSavingHandover(false)
+    }
+  }
+
+
   const closeQualificationDialog =
     () => {
       if (
@@ -2808,6 +2872,8 @@ function LeadWorkspacePage() {
         '',
       )
 
+      setEditingCommunication(null)
+
       setCommunicationForm(
         createEmptyCommunicationForm(),
       )
@@ -2816,6 +2882,27 @@ function LeadWorkspacePage() {
         true,
       )
     }
+
+
+  const openEditCommunicationDialog = (
+    communication: Communication,
+  ) => {
+    const date = new Date(communication.communication_date)
+    const localDate = new Date(
+      date.getTime() - date.getTimezoneOffset() * 60_000,
+    ).toISOString()
+
+    setEditingCommunication(communication)
+    setCommunicationError('')
+    setCommunicationForm({
+      communicationType: communication.communication_type,
+      communicationDate: localDate.slice(0, 10),
+      communicationTime: localDate.slice(11, 16),
+      summary: communication.summary,
+      notes: communication.notes || '',
+    })
+    setCommunicationDialogOpen(true)
+  }
 
 
   const closeCommunicationDialog =
@@ -2829,6 +2916,8 @@ function LeadWorkspacePage() {
       setCommunicationDialogOpen(
         false,
       )
+
+      setEditingCommunication(null)
     }
 
 
@@ -2856,10 +2945,7 @@ function LeadWorkspacePage() {
       )
 
       try {
-        const createdCommunication =
-          await createLeadCommunication(
-            numericLeadId,
-            {
+        const payload = {
               communication_type:
                 communicationForm
                   .communicationType,
@@ -2878,21 +2964,27 @@ function LeadWorkspacePage() {
                 communicationForm
                   .notes
                   .trim(),
-            },
-          )
+            }
+
+        const savedCommunication = editingCommunication
+          ? await updateCommunication(editingCommunication.id, payload)
+          : await createLeadCommunication(numericLeadId, payload)
 
         setCommunications(
-          (
-            current,
-          ) => [
-            createdCommunication,
-            ...current,
-          ],
+          (current) => editingCommunication
+            ? current.map((item) =>
+                item.id === savedCommunication.id
+                  ? savedCommunication
+                  : item,
+              )
+            : [savedCommunication, ...current],
         )
 
         setCommunicationDialogOpen(
           false,
         )
+
+        setEditingCommunication(null)
 
         setCommunicationForm(
           createEmptyCommunicationForm(),
@@ -2903,7 +2995,9 @@ function LeadWorkspacePage() {
         )
 
         setSuccessMessage(
-          'Communication recorded successfully.',
+          editingCommunication
+            ? 'Communication updated successfully.'
+            : 'Communication recorded successfully.',
         )
       } catch (
         requestError
@@ -2920,6 +3014,30 @@ function LeadWorkspacePage() {
         )
       }
     }
+
+
+  const handleDeleteCommunication = async (
+    communication: Communication,
+  ) => {
+    if (!window.confirm(
+      `Delete “${communication.summary}”? This cannot be undone.`,
+    )) return
+
+    try {
+      await deleteCommunication(communication.id)
+      setCommunications((current) =>
+        current.filter((item) => item.id !== communication.id),
+      )
+      setSuccessMessage('Communication deleted successfully.')
+    } catch (requestError) {
+      setSuccessMessage('')
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to delete the communication.',
+      )
+    }
+  }
 
 
   const openFollowUpDialog =
@@ -4398,6 +4516,8 @@ function LeadWorkspacePage() {
                         lead.status ===
                           'DISQUALIFIED'
                           ? 'Disqualified'
+                          : lead.status === 'SUBMITTED_FOR_QUALIFICATION'
+                            ? 'Awaiting Manager Review'
                           : hasPassedQualification
                             ? 'Qualified'
                             : isClosedLead
@@ -4427,6 +4547,17 @@ function LeadWorkspacePage() {
                       1.75,
                   }}
                 >
+                  {lead.handover_note && (
+                    <Alert severity="info" sx={{ mb: 1.5 }}>
+                      <strong>Sales handover:</strong> {lead.handover_note}
+                    </Alert>
+                  )}
+
+                  {lead.review_feedback && lead.status === 'CONTACTED' && (
+                    <Alert severity="warning" sx={{ mb: 1.5 }}>
+                      <strong>Manager feedback:</strong> {lead.review_feedback}
+                    </Alert>
+                  )}
                   {lead.qualification_notes ? (
                     <Box
                       sx={{
@@ -4565,7 +4696,26 @@ function LeadWorkspacePage() {
                       >
                         Disqualify Lead
                       </Button>
+
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="warning"
+                        onClick={() => openHandoverDialog('RETURN')}
+                      >
+                        Return for More Information
+                      </Button>
                     </Stack>
+                  )}
+
+                  {canSubmitForQualification && (
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => openHandoverDialog('SUBMIT')}
+                    >
+                      Submit for Manager Review
+                    </Button>
                   )}
                 </Box>
               </Card>
@@ -6585,6 +6735,29 @@ function LeadWorkspacePage() {
                               communication.communication_date,
                             )}
                           </Typography>
+
+                          {(currentUser?.role === 'ADMIN' ||
+                            currentUser?.role === 'SALES_MANAGER' ||
+                            currentUser?.role === 'PROJECT_MANAGER' ||
+                            (currentUser?.role === 'SALES_REP' &&
+                              communication.created_by === currentUser.id)) && (
+                            <Stack direction="row" spacing={0.5} sx={{ mt: 1 }}>
+                              <Button
+                                size="small"
+                                startIcon={<EditRounded />}
+                                onClick={() => openEditCommunicationDialog(communication)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                size="small"
+                                color="error"
+                                onClick={() => void handleDeleteCommunication(communication)}
+                              >
+                                Delete
+                              </Button>
+                            </Stack>
+                          )}
                         </Box>
                       </Stack>
                     </Card>
@@ -7954,6 +8127,49 @@ function LeadWorkspacePage() {
         */}
 
         <Dialog
+          open={handoverDialogOpen}
+          onClose={() => !isSavingHandover && setHandoverDialogOpen(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>
+            {handoverAction === 'SUBMIT'
+              ? 'Submit for Manager Review'
+              : 'Return for More Information'}
+          </DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              {handoverError && <Alert severity="error">{handoverError}</Alert>}
+              <TextField
+                autoFocus
+                multiline
+                minRows={5}
+                label={handoverAction === 'SUBMIT' ? 'Handover summary' : 'Feedback for Sales Representative'}
+                value={handoverText}
+                onChange={(event) => setHandoverText(event.target.value)}
+                placeholder={handoverAction === 'SUBMIT'
+                  ? 'Summarize requirements, budget, decision-maker, timeline, completed work, and recommended next step.'
+                  : 'Explain what information or activity is still required.'}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setHandoverDialogOpen(false)} disabled={isSavingHandover}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => void handleHandover()}
+              disabled={isSavingHandover || !handoverText.trim()}
+            >
+              {isSavingHandover
+                ? <CircularProgress size={21} color="inherit" />
+                : handoverAction === 'SUBMIT' ? 'Submit' : 'Return Lead'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
           open={
             qualificationDialogOpen
           }
@@ -8095,7 +8311,9 @@ function LeadWorkspacePage() {
                     700,
                 }}
               >
-                Add Communication
+                {editingCommunication
+                  ? 'Edit Communication'
+                  : 'Add Communication'}
               </Typography>
 
               <IconButton
@@ -8404,7 +8622,9 @@ function LeadWorkspacePage() {
                       color="inherit"
                     />
                   )
-                : 'Save Communication'}
+                : editingCommunication
+                  ? 'Save Changes'
+                  : 'Save Communication'}
             </Button>
           </DialogActions>
         </Dialog>

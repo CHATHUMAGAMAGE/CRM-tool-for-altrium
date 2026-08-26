@@ -36,6 +36,16 @@ class LeadPermission(BasePermission):
 
         role = profile.role
 
+        if getattr(view, "is_qualification_submission", False):
+            return role == UserProfile.Role.SALES_REP
+
+        if getattr(view, "is_qualification_return", False):
+            return role in {
+                UserProfile.Role.ADMIN,
+                UserProfile.Role.SALES_MANAGER,
+                UserProfile.Role.PROJECT_MANAGER,
+            }
+
         if role in {
             UserProfile.Role.SOFTWARE_ENGINEER,
             UserProfile.Role.TECH_LEAD,
@@ -207,7 +217,12 @@ class CommunicationPermission(
                 UserProfile.Role.DIRECTOR,
             }
 
-        if request.method == "POST":
+        if request.method in {
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+        }:
             return role in {
                 UserProfile.Role.ADMIN,
                 UserProfile.Role.SALES_REP,
@@ -216,6 +231,29 @@ class CommunicationPermission(
             }
 
         return False
+
+    def has_object_permission(
+        self,
+        request,
+        view,
+        obj,
+    ):
+        if request.method in SAFE_METHODS:
+            return True
+
+        role = request.user.profile.role
+
+        if role in {
+            UserProfile.Role.ADMIN,
+            UserProfile.Role.SALES_MANAGER,
+            UserProfile.Role.PROJECT_MANAGER,
+        }:
+            return True
+
+        return (
+            role == UserProfile.Role.SALES_REP
+            and obj.created_by_id == request.user.id
+        )
 
 
 class FollowUpPermission(
@@ -278,6 +316,7 @@ class FollowUpPermission(
         if request.method in {
             "PUT",
             "PATCH",
+            "DELETE",
         }:
             return role in {
                 UserProfile.Role.ADMIN,
@@ -287,6 +326,29 @@ class FollowUpPermission(
             }
 
         return False
+
+    def has_object_permission(
+        self,
+        request,
+        view,
+        obj,
+    ):
+        if request.method in SAFE_METHODS:
+            return True
+
+        role = request.user.profile.role
+
+        if role in {
+            UserProfile.Role.ADMIN,
+            UserProfile.Role.SALES_MANAGER,
+            UserProfile.Role.PROJECT_MANAGER,
+        }:
+            return True
+
+        return (
+            role == UserProfile.Role.SALES_REP
+            and obj.created_by_id == request.user.id
+        )
 
 
 class LeadInsightPermission(
@@ -374,4 +436,3 @@ class LeadInsightPermission(
             )
 
         return True
-

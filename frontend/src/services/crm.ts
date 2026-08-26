@@ -11,6 +11,7 @@ const API_BASE_URL =
 export type LeadStatus =
   | 'NEW'
   | 'CONTACTED'
+  | 'SUBMITTED_FOR_QUALIFICATION'
   | 'QUALIFIED'
   | 'PROPOSAL'
   | 'WON'
@@ -30,6 +31,10 @@ export type Lead = {
   status_display: string
 
   qualification_notes: string
+  handover_note: string
+  review_feedback: string
+  submitted_for_qualification_at: string | null
+  submitted_for_qualification_by: number | null
   lost_reason: string
 
   assigned_to: number | null
@@ -90,6 +95,8 @@ export type LeadHistoryEventType =
   | 'STATUS_CHANGED'
   | 'QUALIFIED'
   | 'DISQUALIFIED'
+  | 'SUBMITTED_FOR_QUALIFICATION'
+  | 'RETURNED_FOR_MORE_INFORMATION'
   | 'WON'
   | 'LOST'
 
@@ -125,6 +132,35 @@ export type RescueRadarRiskLevel =
   | 'MEDIUM'
   | 'HIGH'
   | 'CLOSED'
+
+export type WorkflowNotification = {
+  id: number
+  kind: 'ASSIGNMENT' | 'SUBMISSION' | 'REVIEW' | 'RETURNED'
+  title: string
+  message: string
+  target_url: string
+  actor: number | null
+  actor_name: string | null
+  read_at: string | null
+  created_at: string
+}
+
+export async function getNotifications(): Promise<WorkflowNotification[]> {
+  const response = await authenticatedRequest('/api/v1/crm/notifications/')
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+  const data = await response.json() as WorkflowNotification[] | PaginatedResponse<WorkflowNotification>
+  return isPaginatedResponse(data) ? data.results : data
+}
+
+export async function markNotificationRead(id: number): Promise<void> {
+  const response = await authenticatedRequest(`/api/v1/crm/notifications/${id}/read/`, { method: 'POST' })
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  const response = await authenticatedRequest('/api/v1/crm/notifications/read-all/', { method: 'POST' })
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+}
 
 
 export type LeadRescueRadarAnalysis = {
@@ -194,6 +230,10 @@ export type CreateCommunicationInput = {
 
   notes?: string
 }
+
+export type UpdateCommunicationInput = Partial<
+  CreateCommunicationInput
+>
 
 
 /*
@@ -731,6 +771,38 @@ export async function updateLead(
 }
 
 
+export async function submitLeadForQualification(
+  leadId: number,
+  handoverNote: string,
+): Promise<Lead> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/leads/${leadId}/submit-for-qualification/`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ handover_note: handoverNote }),
+    },
+  )
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+  return (await response.json()) as Lead
+}
+
+
+export async function returnLeadForInformation(
+  leadId: number,
+  reviewFeedback: string,
+): Promise<Lead> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/leads/${leadId}/return-for-information/`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ review_feedback: reviewFeedback }),
+    },
+  )
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+  return (await response.json()) as Lead
+}
+
+
 /*
  * HISTORY
  */
@@ -903,6 +975,40 @@ export async function createLeadCommunication(
 }
 
 
+export async function updateCommunication(
+  communicationId: number,
+  updates: UpdateCommunicationInput,
+): Promise<Communication> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/communications/${communicationId}/`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response))
+  }
+
+  return (await response.json()) as Communication
+}
+
+
+export async function deleteCommunication(
+  communicationId: number,
+): Promise<void> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/communications/${communicationId}/`,
+    { method: 'DELETE' },
+  )
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response))
+  }
+}
+
+
 /*
  * FOLLOW-UPS
  */
@@ -1057,6 +1163,20 @@ export async function updateFollowUp(
   return (
     await response.json()
   ) as FollowUp
+}
+
+
+export async function deleteFollowUp(
+  followUpId: number,
+): Promise<void> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/follow-ups/${followUpId}/`,
+    { method: 'DELETE' },
+  )
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response))
+  }
 }
 
 

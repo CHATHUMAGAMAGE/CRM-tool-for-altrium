@@ -28,6 +28,7 @@ import {
   CheckCircleRounded,
   CloseRounded,
   DescriptionRounded,
+  DeleteOutlineRounded,
   EditRounded,
   EventAvailableRounded,
   PersonOutlineRounded,
@@ -44,6 +45,7 @@ import {
 } from '../services/auth'
 
 import {
+  deleteFollowUp,
   getFollowUp,
   getLead,
   updateFollowUp,
@@ -351,6 +353,10 @@ function FollowUpDetailPage() {
   ] =
     useState('')
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
 
   useEffect(
     () => {
@@ -593,6 +599,15 @@ function FollowUpDetailPage() {
     followUp.status ===
       'PENDING' &&
     canUpdate
+
+  const canDelete =
+    currentUser?.role === 'ADMIN' ||
+    currentUser?.role === 'SALES_MANAGER' ||
+    currentUser?.role === 'PROJECT_MANAGER' ||
+    (
+      currentUser?.role === 'SALES_REP' &&
+      followUp.created_by === currentUser.id
+    )
 
 
   const openEditDialog =
@@ -840,6 +855,27 @@ function FollowUpDetailPage() {
     }
 
 
+  const handleDelete = async () => {
+    if (!canDelete) return
+
+    setIsDeleting(true)
+    setDeleteError('')
+
+    try {
+      await deleteFollowUp(followUp.id)
+      navigate(`/leads/${lead.id}?tab=follow-ups`)
+    } catch (requestError) {
+      setDeleteError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to delete this follow-up.',
+      )
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+
   const isOverdue =
     followUp.status ===
       'PENDING' &&
@@ -1036,9 +1072,7 @@ function FollowUpDetailPage() {
           </Box>
 
 
-          {canUpdate &&
-            followUp.status ===
-              'PENDING' && (
+          {(canDelete || (canUpdate && followUp.status === 'PENDING')) && (
               <Stack
                 direction="row"
                 spacing={1}
@@ -1084,6 +1118,20 @@ function FollowUpDetailPage() {
                     }}
                   >
                     Mark Completed
+                  </Button>
+                )}
+
+                {canDelete && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteOutlineRounded />}
+                    onClick={() => {
+                      setDeleteError('')
+                      setDeleteDialogOpen(true)
+                    }}
+                  >
+                    Delete
                   </Button>
                 )}
               </Stack>
@@ -2018,6 +2066,34 @@ function FollowUpDetailPage() {
             ) : (
               'Mark Completed'
             )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => !isDeleting && setDeleteDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Delete follow-up?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            This permanently removes “{followUp.title}”. This action cannot be undone.
+          </Typography>
+          {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => void handleDelete()}
+            disabled={isDeleting}
+          >
+            {isDeleting ? <CircularProgress size={21} color="inherit" /> : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>

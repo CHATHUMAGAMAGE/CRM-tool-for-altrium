@@ -332,3 +332,22 @@ class FollowUpApiTests(APITestCase):
             ),
             str(response.data["detail"][0]),
         )
+
+    def test_sales_rep_can_delete_own_follow_up(self):
+        self.client.force_authenticate(self.sales_rep)
+        response = self.client.delete(self.detail_url(self.follow_up))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(FollowUp.objects.filter(pk=self.follow_up.pk).exists())
+
+    def test_sales_rep_cannot_change_follow_up_created_by_manager(self):
+        self.follow_up.created_by = self.sales_manager
+        self.follow_up.save(update_fields=["created_by"])
+        self.client.force_authenticate(self.sales_rep)
+        patch_response = self.client.patch(
+            self.detail_url(self.follow_up),
+            {"title": "Changed"},
+            format="json",
+        )
+        delete_response = self.client.delete(self.detail_url(self.follow_up))
+        self.assertEqual(patch_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(delete_response.status_code, status.HTTP_403_FORBIDDEN)

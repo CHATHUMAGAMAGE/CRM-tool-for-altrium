@@ -6,7 +6,7 @@ from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 
-from .models import Lead
+from .models import Lead, Notification
 
 
 class LeadApiTests(APITestCase):
@@ -93,6 +93,7 @@ class LeadApiTests(APITestCase):
             phone="0771234567",
             source="Website",
             assigned_to=self.sales_rep,
+            responsible_manager=self.sales_manager,
             created_by=self.marketing,
         )
 
@@ -103,6 +104,7 @@ class LeadApiTests(APITestCase):
             phone="0777654321",
             source="Referral",
             assigned_to=self.other_sales_rep,
+            responsible_manager=self.sales_manager,
             created_by=self.marketing,
         )
 
@@ -687,3 +689,117 @@ class LeadApiTests(APITestCase):
             status.HTTP_403_FORBIDDEN,
         )
 
+    def test_sales_rep_can_submit_assigned_lead_for_qualification(self):
+        self.client.force_authenticate(user=self.sales_rep)
+        url = reverse(
+            "crm:lead-submit-for-qualification",
+            kwargs={"pk": self.lead.pk},
+        )
+        response = self.client.post(
+            url,
+            {"handover_note": "Requirements, budget, timeline, and next steps confirmed."},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.lead.refresh_from_db()
+        self.assertEqual(
+            self.lead.status,
+            Lead.Status.SUBMITTED_FOR_QUALIFICATION,
+        )
+        self.assertEqual(
+            self.lead.submitted_for_qualification_by,
+            self.sales_rep,
+        )
+        self.assertTrue(
+            self.lead.history.filter(
+                event_type="SUBMITTED_FOR_QUALIFICATION",
+            ).exists()
+        )
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.sales_manager,
+                kind=Notification.Kind.SUBMISSION,
+                target_url=f"/leads/{self.lead.id}",
+            ).exists()
+        )
+
+    def test_submission_requires_handover_note(self):
+        self.client.force_authenticate(user=self.sales_rep)
+        response = self.client.post(
+            reverse(
+                "crm:lead-submit-for-qualification",
+                kwargs={"pk": self.lead.pk},
+            ),
+            {"handover_note": ""},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_sales_manager_can_return_submitted_lead_with_feedback(self):
+        self.lead.status = Lead.Status.SUBMITTED_FOR_QUALIFICATION
+        self.lead.handover_note = "Ready for review."
+        self.lead.save(update_fields=["status", "handover_note"])
+        self.client.force_authenticate(user=self.sales_manager)
+        response = self.client.post(
+            reverse(
+                "crm:lead-return-for-information",
+                kwargs={"pk": self.lead.pk},
+            ),
+            {"review_feedback": "Please confirm the decision-maker."},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.status, Lead.Status.CONTACTED)
+        self.assertEqual(
+            self.lead.review_feedback,
+            "Please confirm the decision-maker.",
+        )
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.sales_rep,
+                kind=Notification.Kind.RETURNED,
+            ).exists()
+        )
+
+    def test_user_can_only_read_own_notifications(self):
+        own = Notification.objects.create(
+            recipient=self.sales_rep,
+            actor=self.sales_manager,
+            kind=Notification.Kind.ASSIGNMENT,
+            title="Assigned",
+            target_url=f"/leads/{self.lead.id}",
+        )
+        Notification.objects.create(
+            recipient=self.other_sales_rep,
+            actor=self.sales_manager,
+            kind=Notification.Kind.ASSIGNMENT,
+            title="Other assignment",
+            target_url=f"/leads/{self.other_lead.id}",
+        )
+        self.client.force_authenticate(user=self.sales_rep)
+        response = self.client.get(reverse("crm:notification-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item["id"] for item in response.data], [own.id])
+        read_response = self.client.post(
+            reverse("crm:notification-read", kwargs={"pk": own.id}),
+            {},
+            format="json",
+        )
+        self.assertEqual(read_response.status_code, status.HTTP_200_OK)
+        own.refresh_from_db()
+        self.assertIsNotNone(own.read_at)
+
+    def test_sales_rep_cannot_return_submitted_lead(self):
+        self.lead.status = Lead.Status.SUBMITTED_FOR_QUALIFICATION
+        self.lead.save(update_fields=["status"])
+        self.client.force_authenticate(user=self.sales_rep)
+        response = self.client.post(
+            reverse(
+                "crm:lead-return-for-information",
+                kwargs={"pk": self.lead.pk},
+            ),
+            {"review_feedback": "Unauthorized return."},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
