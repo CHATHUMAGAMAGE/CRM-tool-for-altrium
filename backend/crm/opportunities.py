@@ -64,7 +64,6 @@ class OpportunityManagementPermission(
             return False
 
         return profile.role in {
-            UserProfile.Role.ADMIN,
             UserProfile.Role.SALES_MANAGER,
         }
 

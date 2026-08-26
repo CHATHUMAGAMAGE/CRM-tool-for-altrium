@@ -18,6 +18,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import PublicOnlyRoute from './components/PublicOnlyRoute'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
 import AppShell from './layouts/AppShell'
+import AdministratorAreaBoundary from './components/AdministratorAreaBoundary'
 
 import ActivityPage from './pages/ActivityPage'
 import AdminPage from './pages/AdminPage'
@@ -214,11 +215,8 @@ function App() {
           <ProtectedRoute />
         }
       >
-        <Route
-          element={
-            <AppShell />
-          }
-        >
+        <Route element={<AdministratorAreaBoundary />}>
+          <Route element={<AppShell />}>
           <Route
             path="/dashboard"
             element={
@@ -331,6 +329,7 @@ function App() {
                 <AdminPage />
               }
             />
+          </Route>
           </Route>
         </Route>
       </Route>

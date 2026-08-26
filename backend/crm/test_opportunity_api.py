@@ -351,7 +351,7 @@ class OpportunityApiTests(APITestCase):
             self.financial_assessment,
         )
 
-    def test_admin_can_approve_opportunity(
+    def test_admin_cannot_approve_opportunity(
         self,
     ):
         response = self.approve_lead(
@@ -360,20 +360,13 @@ class OpportunityApiTests(APITestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_201_CREATED,
+            status.HTTP_403_FORBIDDEN,
         )
 
-        decision = (
-            LeadOpportunityDecision
-            .objects
-            .get(
+        self.assertFalse(
+            LeadOpportunityDecision.objects.filter(
                 lead=self.lead,
-            )
-        )
-
-        self.assertEqual(
-            decision.decided_by,
-            self.admin,
+            ).exists()
         )
 
     def test_opportunity_decision_requires_qualified_lead(

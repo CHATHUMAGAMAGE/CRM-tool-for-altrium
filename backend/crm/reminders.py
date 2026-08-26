@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from accounts.models import UserProfile
 
 from .models import FollowUp
+from .permissions import OperationalCrmPermission
 from .serializers import FollowUpSerializer
 
 
@@ -32,6 +33,7 @@ class FollowUpReminderListView(
 
     permission_classes = [
         IsAuthenticated,
+        OperationalCrmPermission,
     ]
 
     def get_queryset(self):

@@ -38,11 +38,8 @@ class FinancialAssessmentPermission(
 
         role = profile.role
 
-        if (
-            role
-            == UserProfile.Role.ADMIN
-        ):
-            return True
+        if role == UserProfile.Role.ADMIN:
+            return False
 
         if request.method in SAFE_METHODS:
             return role in {

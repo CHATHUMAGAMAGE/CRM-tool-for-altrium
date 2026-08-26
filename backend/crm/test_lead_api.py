@@ -124,7 +124,7 @@ class LeadApiTests(APITestCase):
             status.HTTP_401_UNAUTHORIZED,
         )
 
-    def test_admin_can_list_all_leads(
+    def test_admin_cannot_access_operational_leads(
         self,
     ):
         self.client.force_authenticate(
@@ -137,12 +137,15 @@ class LeadApiTests(APITestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_200_OK,
+            status.HTTP_403_FORBIDDEN,
         )
 
+        dashboard_response = self.client.get(
+            reverse("crm:dashboard-stats"),
+        )
         self.assertEqual(
-            len(response.data),
-            2,
+            dashboard_response.status_code,
+            status.HTTP_403_FORBIDDEN,
         )
 
     def test_sales_rep_only_sees_assigned_leads(
