@@ -316,6 +316,7 @@ function LeadsPage() {
       email: '',
       phone: '',
       source: '',
+      requirement: '',
     })
 
 
@@ -808,6 +809,7 @@ function LeadsPage() {
         email: '',
         phone: '',
         source: '',
+        requirement: '',
       })
     }
 
@@ -823,7 +825,8 @@ function LeadsPage() {
       if (
         !form.contactName.trim() ||
         !form.companyName.trim() ||
-        !form.phone.trim()
+        !form.phone.trim() ||
+        !form.requirement.trim()
       ) {
         return
       }
@@ -857,6 +860,9 @@ function LeadsPage() {
 
             source:
               form.source.trim(),
+
+            requirement:
+              form.requirement.trim(),
           })
 
 
@@ -2421,6 +2427,28 @@ function LeadsPage() {
                 />
 
 
+                <TextField
+                  required
+                  multiline
+                  minRows={3}
+                  label="Requirement"
+                  placeholder="Describe what the client needs..."
+                  value={
+                    form.requirement
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setForm({
+                      ...form,
+
+                      requirement:
+                        event.target.value,
+                    })
+                  }
+                />
+
+
                 <Alert
                   severity="info"
                   variant="outlined"
@@ -2470,7 +2498,8 @@ function LeadsPage() {
                   isCreating ||
                   !form.contactName.trim() ||
                   !form.companyName.trim() ||
-                  !form.phone.trim()
+                  !form.phone.trim() ||
+                  !form.requirement.trim()
                 }
               >
                 {isCreating ? (

@@ -26,6 +26,7 @@ export type Lead = {
   email: string
   phone: string
   source: string
+  requirement: string
 
   status: LeadStatus
   status_display: string
@@ -57,6 +58,7 @@ export type CreateLeadInput = {
   email?: string
   phone: string
   source?: string
+  requirement: string
 }
 
 
@@ -66,6 +68,7 @@ export type UpdateLeadInput = Partial<{
   email: string
   phone: string
   source: string
+  requirement: string
   status: LeadStatus
   qualification_notes: string
   lost_reason: string

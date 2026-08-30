@@ -88,6 +88,7 @@ class LeadSerializer(
             "email",
             "phone",
             "source",
+            "requirement",
             "status",
             "status_display",
             "qualification_notes",
