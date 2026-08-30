@@ -43,6 +43,10 @@ class Lead(models.Model):
         blank=True,
     )
 
+    requirement = models.TextField(
+        blank=True,
+    )
+
     status = models.CharField(
         max_length=30,
         choices=Status.choices,

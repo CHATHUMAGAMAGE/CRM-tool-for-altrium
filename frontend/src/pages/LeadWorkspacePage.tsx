@@ -165,6 +165,9 @@ type EditLeadForm = {
 
   source:
     string
+
+  requirement:
+    string
 }
 
 
@@ -866,6 +869,10 @@ function getEditLeadForm(
     source:
       lead.source ||
       '',
+
+    requirement:
+      lead.requirement ||
+      '',
   }
 }
 
@@ -1196,6 +1203,9 @@ function LeadWorkspacePage() {
         '',
 
       source:
+        '',
+
+      requirement:
         '',
     })
 
@@ -2608,10 +2618,13 @@ function LeadWorkspacePage() {
           .trim() ||
         !editLeadForm
           .phone
+          .trim() ||
+        !editLeadForm
+          .requirement
           .trim()
       ) {
         setEditLeadError(
-          'Contact name, company name and phone number are required.',
+          'Contact name, company name, phone number and requirement are required.',
         )
 
         return
@@ -2653,6 +2666,11 @@ function LeadWorkspacePage() {
               source:
                 editLeadForm
                   .source
+                  .trim(),
+
+              requirement:
+                editLeadForm
+                  .requirement
                   .trim(),
             },
           )
@@ -4349,6 +4367,14 @@ function LeadWorkspacePage() {
                     label="Company"
                     value={
                       lead.company_name
+                    }
+                  />
+
+                  <InformationItem
+                    label="Requirement"
+                    value={
+                      lead.requirement ||
+                      '—'
                     }
                   />
 
@@ -8074,6 +8100,30 @@ function LeadWorkspacePage() {
                       ...current,
 
                       source:
+                        event.target.value,
+                    }),
+                  )
+                }
+              />
+
+              <TextField
+                required
+                multiline
+                minRows={3}
+                label="Requirement"
+                value={
+                  editLeadForm.requirement
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setEditLeadForm(
+                    (
+                      current,
+                    ) => ({
+                      ...current,
+
+                      requirement:
                         event.target.value,
                     }),
                   )
