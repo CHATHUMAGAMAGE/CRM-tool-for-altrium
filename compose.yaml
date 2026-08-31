@@ -23,7 +23,6 @@ services:
       dockerfile: Dockerfile
     container_name: eleven_backend
     restart: unless-stopped
-    command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./backend:/app
     ports:
