@@ -32,6 +32,7 @@ from .permissions import (
     FollowUpPermission,
     LeadInsightPermission,
     LeadPermission,
+    OperationalCrmPermission,
 )
 
 from .serializers import (
@@ -1927,6 +1928,7 @@ class DashboardStatsView(
 ):
     permission_classes = [
         IsAuthenticated,
+        OperationalCrmPermission,
     ]
 
     def get(
