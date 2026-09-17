@@ -89,6 +89,7 @@ import {
   type Lead,
   type LeadHistory,
   type LeadHistoryEventType,
+  type LeadSource,
   type LeadStatus,
   type SalesRepresentative,
   type TechLead,
@@ -113,6 +114,14 @@ type WorkspaceTab =
   | 'follow-ups'
   | 'activity'
   | 'history'
+
+const leadSourceLabels: Record<LeadSource, string> = {
+  WEBSITE: 'Website',
+  SOCIAL_MEDIA: 'Social media',
+  REFERRAL: 'Referral',
+  DIRECT: 'Direct',
+  OTHER: 'Other',
+}
 
 
 type CommunicationFilter =
@@ -166,7 +175,31 @@ type EditLeadForm = {
   source:
     string
 
+  sourceDetails:
+    string
+
+  projectName:
+    string
+
+  projectNature:
+    string
+
   requirement:
+    string
+
+  projectScope:
+    string
+
+  budgetMin:
+    string
+
+  budgetMax:
+    string
+
+  budgetCurrency:
+    string
+
+  expectedTimeline:
     string
 }
 
@@ -870,8 +903,40 @@ function getEditLeadForm(
       lead.source ||
       '',
 
+    sourceDetails:
+      lead.source_details ||
+      '',
+
+    projectName:
+      lead.project_name ||
+      '',
+
+    projectNature:
+      lead.project_nature ||
+      '',
+
     requirement:
       lead.requirement ||
+      '',
+
+    projectScope:
+      lead.project_scope ||
+      '',
+
+    budgetMin:
+      lead.budget_min ||
+      '',
+
+    budgetMax:
+      lead.budget_max ||
+      '',
+
+    budgetCurrency:
+      lead.budget_currency ||
+      '',
+
+    expectedTimeline:
+      lead.expected_timeline ||
       '',
   }
 }
@@ -1205,7 +1270,31 @@ function LeadWorkspacePage() {
       source:
         '',
 
+      sourceDetails:
+        '',
+
+      projectName:
+        '',
+
+      projectNature:
+        '',
+
       requirement:
+        '',
+
+      projectScope:
+        '',
+
+      budgetMin:
+        '',
+
+      budgetMax:
+        '',
+
+      budgetCurrency:
+        '',
+
+      expectedTimeline:
         '',
     })
 
@@ -2621,7 +2710,11 @@ function LeadWorkspacePage() {
           .trim() ||
         !editLeadForm
           .requirement
-          .trim()
+          .trim() ||
+        (
+          editLeadForm.source === 'OTHER' &&
+          !editLeadForm.sourceDetails.trim()
+        )
       ) {
         setEditLeadError(
           'Contact name, company name, phone number and requirement are required.',
@@ -2664,14 +2757,38 @@ function LeadWorkspacePage() {
                   .trim(),
 
               source:
-                editLeadForm
-                  .source
-                  .trim(),
+                editLeadForm.source as Lead['source'],
+
+              source_details:
+                editLeadForm.source === 'OTHER'
+                  ? editLeadForm.sourceDetails.trim()
+                  : '',
+
+              project_name:
+                editLeadForm.projectName.trim(),
+
+              project_nature:
+                editLeadForm.projectNature.trim(),
 
               requirement:
                 editLeadForm
                   .requirement
                   .trim(),
+
+              project_scope:
+                editLeadForm.projectScope.trim(),
+
+              budget_min:
+                editLeadForm.budgetMin || null,
+
+              budget_max:
+                editLeadForm.budgetMax || null,
+
+              budget_currency:
+                editLeadForm.budgetCurrency.trim().toUpperCase(),
+
+              expected_timeline:
+                editLeadForm.expectedTimeline.trim(),
             },
           )
 
@@ -4357,6 +4474,11 @@ function LeadWorkspacePage() {
                   }}
                 >
                   <InformationItem
+                    label="Lead / Project Name"
+                    value={lead.project_name || 'Not provided'}
+                  />
+
+                  <InformationItem
                     label="Contact Name"
                     value={
                       lead.contact_name
@@ -4371,11 +4493,35 @@ function LeadWorkspacePage() {
                   />
 
                   <InformationItem
+                    label="Project / Service Type"
+                    value={lead.project_nature || 'Not provided'}
+                  />
+
+                  <InformationItem
                     label="Requirement"
                     value={
                       lead.requirement ||
                       '—'
                     }
+                  />
+
+                  <InformationItem
+                    label="Project Scope"
+                    value={lead.project_scope || 'Not provided'}
+                  />
+
+                  <InformationItem
+                    label="Client Budget"
+                    value={
+                      lead.budget_min || lead.budget_max
+                        ? `${lead.budget_currency || ''} ${lead.budget_min || '—'} – ${lead.budget_max || '—'}`.trim()
+                        : 'Not discussed'
+                    }
+                  />
+
+                  <InformationItem
+                    label="Expected Timeline"
+                    value={lead.expected_timeline || 'Not provided'}
                   />
 
                   <InformationItem
@@ -4414,8 +4560,11 @@ function LeadWorkspacePage() {
                   <InformationItem
                     label="Lead Source"
                     value={
-                      lead.source ||
-                      'Not provided'
+                      lead.source === 'OTHER' && lead.source_details
+                        ? `Other — ${lead.source_details}`
+                        : lead.source
+                          ? leadSourceLabels[lead.source]
+                          : 'Not provided'
                     }
                   />
 
@@ -7998,6 +8147,15 @@ function LeadWorkspacePage() {
               )}
 
               <TextField
+                label="Lead / project name"
+                value={editLeadForm.projectName}
+                onChange={(event) => setEditLeadForm((current) => ({
+                  ...current,
+                  projectName: event.target.value,
+                }))}
+              />
+
+              <TextField
                 required
                 label="Contact name"
                 value={
@@ -8087,6 +8245,7 @@ function LeadWorkspacePage() {
 
               <TextField
                 label="Lead source"
+                select
                 value={
                   editLeadForm.source
                 }
@@ -8099,18 +8258,45 @@ function LeadWorkspacePage() {
                     ) => ({
                       ...current,
 
-                      source:
-                        event.target.value,
+                      source: event.target.value,
                     }),
                   )
                 }
+              >
+                <MenuItem value="">Not specified</MenuItem>
+                <MenuItem value="WEBSITE">Website</MenuItem>
+                <MenuItem value="SOCIAL_MEDIA">Social media</MenuItem>
+                <MenuItem value="REFERRAL">Referral</MenuItem>
+                <MenuItem value="DIRECT">Direct</MenuItem>
+                <MenuItem value="OTHER">Other</MenuItem>
+              </TextField>
+
+              {editLeadForm.source === 'OTHER' && (
+                <TextField
+                  required
+                  label="Other lead source"
+                  value={editLeadForm.sourceDetails}
+                  onChange={(event) => setEditLeadForm((current) => ({
+                    ...current,
+                    sourceDetails: event.target.value,
+                  }))}
+                />
+              )}
+
+              <TextField
+                label="Project / Service Type"
+                value={editLeadForm.projectNature}
+                onChange={(event) => setEditLeadForm((current) => ({
+                  ...current,
+                  projectNature: event.target.value,
+                }))}
               />
 
               <TextField
                 required
                 multiline
                 minRows={3}
-                label="Requirement"
+                label="Customer / business requirement"
                 value={
                   editLeadForm.requirement
                 }
@@ -8128,6 +8314,52 @@ function LeadWorkspacePage() {
                     }),
                   )
                 }
+              />
+
+              <TextField
+                multiline
+                minRows={3}
+                label="Project scope / requirement details"
+                value={editLeadForm.projectScope}
+                onChange={(event) => setEditLeadForm((current) => ({
+                  ...current,
+                  projectScope: event.target.value,
+                }))}
+              />
+
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <TextField
+                  type="number"
+                  label="Budget minimum"
+                  slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
+                  value={editLeadForm.budgetMin}
+                  onChange={(event) => setEditLeadForm((current) => ({ ...current, budgetMin: event.target.value }))}
+                  fullWidth
+                />
+                <TextField
+                  type="number"
+                  label="Budget maximum"
+                  slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
+                  value={editLeadForm.budgetMax}
+                  onChange={(event) => setEditLeadForm((current) => ({ ...current, budgetMax: event.target.value }))}
+                  fullWidth
+                />
+                <TextField
+                  label="Currency"
+                  slotProps={{ htmlInput: { maxLength: 3 } }}
+                  value={editLeadForm.budgetCurrency}
+                  onChange={(event) => setEditLeadForm((current) => ({ ...current, budgetCurrency: event.target.value }))}
+                  fullWidth
+                />
+              </Stack>
+
+              <TextField
+                label="Expected timeline"
+                value={editLeadForm.expectedTimeline}
+                onChange={(event) => setEditLeadForm((current) => ({
+                  ...current,
+                  expectedTimeline: event.target.value,
+                }))}
               />
             </Stack>
           </DialogContent>

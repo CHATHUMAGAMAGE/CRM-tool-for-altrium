@@ -88,7 +88,15 @@ class LeadSerializer(
             "email",
             "phone",
             "source",
+            "source_details",
+            "project_name",
+            "project_nature",
             "requirement",
+            "project_scope",
+            "budget_min",
+            "budget_max",
+            "budget_currency",
+            "expected_timeline",
             "status",
             "status_display",
             "qualification_notes",
@@ -205,6 +213,70 @@ class LeadSerializer(
                 else ""
             ),
         )
+
+        budget_min = attrs.get(
+            "budget_min",
+            self.instance.budget_min if self.instance is not None else None,
+        )
+
+        source = attrs.get(
+            "source",
+            self.instance.source if self.instance is not None else "",
+        )
+        source_details = attrs.get(
+            "source_details",
+            self.instance.source_details if self.instance is not None else "",
+        )
+
+        if source == Lead.Source.OTHER and not (source_details or "").strip():
+            raise serializers.ValidationError(
+                {"source_details": "Describe the lead source when Other is selected."}
+            )
+
+        if source != Lead.Source.OTHER and "source_details" in attrs:
+            attrs["source_details"] = ""
+        budget_max = attrs.get(
+            "budget_max",
+            self.instance.budget_max if self.instance is not None else None,
+        )
+        budget_currency = attrs.get(
+            "budget_currency",
+            self.instance.budget_currency if self.instance is not None else "",
+        )
+
+        if budget_min is not None and budget_min < 0:
+            raise serializers.ValidationError(
+                {"budget_min": "Minimum budget cannot be negative."}
+            )
+
+        if budget_max is not None and budget_max < 0:
+            raise serializers.ValidationError(
+                {"budget_max": "Maximum budget cannot be negative."}
+            )
+
+        if (
+            budget_min is not None
+            and budget_max is not None
+            and budget_max < budget_min
+        ):
+            raise serializers.ValidationError(
+                {"budget_max": "Maximum budget must be greater than or equal to minimum budget."}
+            )
+
+        if (budget_min is not None or budget_max is not None) and not (
+            budget_currency or ""
+        ).strip():
+            raise serializers.ValidationError(
+                {"budget_currency": "Currency is required when a client budget is provided."}
+            )
+
+        if budget_currency:
+            normalized_currency = budget_currency.strip().upper()
+            if len(normalized_currency) != 3 or not normalized_currency.isalpha():
+                raise serializers.ValidationError(
+                    {"budget_currency": "Enter a three-letter currency code such as LKR or USD."}
+                )
+            attrs["budget_currency"] = normalized_currency
 
         if (
             profile is not None

@@ -245,6 +245,9 @@ class LeadApiTests(APITestCase):
                 "0712345678",
 
             "source":
+                Lead.Source.OTHER,
+
+            "source_details":
                 "Campaign",
         }
 
@@ -360,7 +363,7 @@ class LeadApiTests(APITestCase):
                 "0722222222",
 
             "source":
-                "Referral",
+                Lead.Source.REFERRAL,
 
             "assigned_to":
                 self.sales_rep.id,
@@ -389,6 +392,90 @@ class LeadApiTests(APITestCase):
             created_lead.assigned_to,
             self.sales_rep,
         )
+
+    def test_sales_manager_can_capture_assessment_ready_lead_information(self):
+        self.client.force_authenticate(user=self.sales_manager)
+
+        payload = {
+            "company_name": "Assessment Ready Company",
+            "contact_name": "Assessment Contact",
+            "phone": "0712345678",
+            "source": Lead.Source.WEBSITE,
+            "project_name": "Customer Service Platform",
+            "project_nature": "CRM implementation",
+            "requirement": "Centralize customer enquiries and case handling.",
+            "project_scope": "Discovery, implementation, migration and training.",
+            "budget_min": "2500000.00",
+            "budget_max": "4000000.00",
+            "budget_currency": "lkr",
+            "expected_timeline": "Within six months",
+        }
+
+        response = self.client.post(self.list_url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created_lead = Lead.objects.get(pk=response.data["id"])
+        self.assertEqual(created_lead.project_name, payload["project_name"])
+        self.assertEqual(created_lead.project_nature, payload["project_nature"])
+        self.assertEqual(created_lead.project_scope, payload["project_scope"])
+        self.assertEqual(str(created_lead.budget_min), payload["budget_min"])
+        self.assertEqual(str(created_lead.budget_max), payload["budget_max"])
+        self.assertEqual(created_lead.budget_currency, "LKR")
+        self.assertEqual(response.data["expected_timeline"], payload["expected_timeline"])
+        self.assertEqual(response.data["requirement"], payload["requirement"])
+
+    def test_lead_rejects_invalid_structured_source(self):
+        self.client.force_authenticate(user=self.sales_manager)
+
+        response = self.client.post(
+            self.list_url,
+            {
+                "company_name": "Invalid Source Company",
+                "contact_name": "Source Contact",
+                "phone": "0712345678",
+                "source": "Trade show",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("source", response.data)
+
+    def test_other_lead_source_requires_details(self):
+        self.client.force_authenticate(user=self.sales_manager)
+
+        response = self.client.post(
+            self.list_url,
+            {
+                "company_name": "Other Source Company",
+                "contact_name": "Source Contact",
+                "phone": "0712345678",
+                "source": Lead.Source.OTHER,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("source_details", response.data)
+
+    def test_lead_rejects_invalid_budget_range(self):
+        self.client.force_authenticate(user=self.sales_manager)
+
+        response = self.client.post(
+            self.list_url,
+            {
+                "company_name": "Invalid Budget Company",
+                "contact_name": "Budget Contact",
+                "phone": "0712345678",
+                "budget_min": "5000.00",
+                "budget_max": "1000.00",
+                "budget_currency": "USD",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("budget_max", response.data)
 
     def test_sales_rep_can_retrieve_assigned_lead(
         self,

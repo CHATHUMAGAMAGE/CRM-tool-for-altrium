@@ -5,6 +5,13 @@ from django.utils import timezone
 
 
 class Lead(models.Model):
+    class Source(models.TextChoices):
+        WEBSITE = "WEBSITE", "Website"
+        SOCIAL_MEDIA = "SOCIAL_MEDIA", "Social media"
+        REFERRAL = "REFERRAL", "Referral"
+        DIRECT = "DIRECT", "Direct"
+        OTHER = "OTHER", "Other"
+
     class Status(models.TextChoices):
         NEW = "NEW", "New"
         CONTACTED = "CONTACTED", "Contacted"
@@ -39,11 +46,55 @@ class Lead(models.Model):
     )
 
     source = models.CharField(
-        max_length=100,
+        max_length=20,
+        choices=Source.choices,
+        blank=True,
+    )
+
+    source_details = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    project_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    project_nature = models.CharField(
+        max_length=255,
         blank=True,
     )
 
     requirement = models.TextField(
+        blank=True,
+    )
+
+    project_scope = models.TextField(
+        blank=True,
+    )
+
+    budget_min = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    budget_max = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    budget_currency = models.CharField(
+        max_length=3,
+        blank=True,
+    )
+
+    expected_timeline = models.CharField(
+        max_length=255,
         blank=True,
     )
 

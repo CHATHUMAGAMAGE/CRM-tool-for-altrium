@@ -18,6 +18,13 @@ export type LeadStatus =
   | 'LOST'
   | 'DISQUALIFIED'
 
+export type LeadSource =
+  | 'WEBSITE'
+  | 'SOCIAL_MEDIA'
+  | 'REFERRAL'
+  | 'DIRECT'
+  | 'OTHER'
+
 
 export type Lead = {
   id: number
@@ -25,8 +32,16 @@ export type Lead = {
   contact_name: string
   email: string
   phone: string
-  source: string
+  source: LeadSource | ''
+  source_details: string
+  project_name: string
+  project_nature: string
   requirement: string
+  project_scope: string
+  budget_min: string | null
+  budget_max: string | null
+  budget_currency: string
+  expected_timeline: string
 
   status: LeadStatus
   status_display: string
@@ -57,8 +72,16 @@ export type CreateLeadInput = {
   contact_name: string
   email?: string
   phone: string
-  source?: string
+  source?: LeadSource | ''
+  source_details?: string
+  project_name?: string
+  project_nature?: string
   requirement: string
+  project_scope?: string
+  budget_min?: string | null
+  budget_max?: string | null
+  budget_currency?: string
+  expected_timeline?: string
 }
 
 
@@ -67,8 +90,16 @@ export type UpdateLeadInput = Partial<{
   contact_name: string
   email: string
   phone: string
-  source: string
+  source: LeadSource | ''
+  source_details: string
+  project_name: string
+  project_nature: string
   requirement: string
+  project_scope: string
+  budget_min: string | null
+  budget_max: string | null
+  budget_currency: string
+  expected_timeline: string
   status: LeadStatus
   qualification_notes: string
   lost_reason: string

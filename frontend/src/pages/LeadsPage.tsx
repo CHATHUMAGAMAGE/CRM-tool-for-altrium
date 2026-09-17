@@ -57,6 +57,7 @@ import {
   createLead,
   getLeads,
   type Lead,
+  type LeadSource,
   type LeadStatus,
 } from '../services/crm'
 
@@ -98,6 +99,18 @@ UserRole[] = [
   'SALES_MANAGER',
   'PROJECT_MANAGER',
 ]
+
+const leadSourceLabels: Record<LeadSource, string> = {
+  WEBSITE: 'Website',
+  SOCIAL_MEDIA: 'Social media',
+  REFERRAL: 'Referral',
+  DIRECT: 'Direct',
+  OTHER: 'Other',
+}
+
+function getLeadSourceLabel(source: Lead['source']) {
+  return source ? leadSourceLabels[source] : 'Not provided'
+}
 
 
 function getStatusColor(
@@ -316,7 +329,15 @@ function LeadsPage() {
       email: '',
       phone: '',
       source: '',
+      sourceDetails: '',
+      projectName: '',
+      projectNature: '',
       requirement: '',
+      projectScope: '',
+      budgetMin: '',
+      budgetMax: '',
+      budgetCurrency: '',
+      expectedTimeline: '',
     })
 
 
@@ -809,7 +830,15 @@ function LeadsPage() {
         email: '',
         phone: '',
         source: '',
+        sourceDetails: '',
+        projectName: '',
+        projectNature: '',
         requirement: '',
+        projectScope: '',
+        budgetMin: '',
+        budgetMax: '',
+        budgetCurrency: '',
+        expectedTimeline: '',
       })
     }
 
@@ -826,7 +855,8 @@ function LeadsPage() {
         !form.contactName.trim() ||
         !form.companyName.trim() ||
         !form.phone.trim() ||
-        !form.requirement.trim()
+        !form.requirement.trim() ||
+        (form.source === 'OTHER' && !form.sourceDetails.trim())
       ) {
         return
       }
@@ -859,10 +889,34 @@ function LeadsPage() {
               form.phone.trim(),
 
             source:
-              form.source.trim(),
+              form.source as Lead['source'],
+
+            source_details:
+              form.source === 'OTHER' ? form.sourceDetails.trim() : '',
+
+            project_name:
+              form.projectName.trim(),
+
+            project_nature:
+              form.projectNature.trim(),
 
             requirement:
               form.requirement.trim(),
+
+            project_scope:
+              form.projectScope.trim(),
+
+            budget_min:
+              form.budgetMin || null,
+
+            budget_max:
+              form.budgetMax || null,
+
+            budget_currency:
+              form.budgetCurrency.trim().toUpperCase(),
+
+            expected_timeline:
+              form.expectedTimeline.trim(),
           })
 
 
@@ -1598,7 +1652,7 @@ function LeadsPage() {
                           source
                         }
                       >
-                        {source}
+                        {getLeadSourceLabel(source as LeadSource)}
                       </MenuItem>
                     ),
                   )}
@@ -2048,8 +2102,9 @@ function LeadsPage() {
                                 13,
                             }}
                           >
-                            {lead.source ||
-                              '—'}
+                            {lead.source
+                              ? getLeadSourceLabel(lead.source)
+                              : '—'}
                           </Typography>
                         </TableCell>
 
@@ -2266,10 +2321,15 @@ function LeadsPage() {
               }
             }}
             fullWidth
-            maxWidth="sm"
+            maxWidth="md"
             slotProps={{
               paper: {
                 sx: {
+                  width: {
+                    xs: 'calc(100% - 24px)',
+                    sm: 'calc(100% - 64px)',
+                  },
+
                   borderRadius:
                     '12px',
 
@@ -2311,6 +2371,9 @@ function LeadsPage() {
               sx={{
                 px:
                   3,
+
+                overflowX:
+                  'hidden',
               }}
             >
               <Typography
@@ -2409,8 +2472,18 @@ function LeadsPage() {
 
 
                 <TextField
+                  label="Lead / project name"
+                  placeholder="A clear name for this opportunity"
+                  value={form.projectName}
+                  onChange={(event) => setForm({
+                    ...form,
+                    projectName: event.target.value,
+                  })}
+                />
+
+                <TextField
                   label="Lead source"
-                  placeholder="Website, referral, campaign..."
+                  select
                   value={
                     form.source
                   }
@@ -2420,10 +2493,38 @@ function LeadsPage() {
                     setForm({
                       ...form,
 
-                      source:
-                        event.target.value,
+                      source: event.target.value as typeof form.source,
                     })
                   }
+                >
+                  <MenuItem value="">Not specified</MenuItem>
+                  <MenuItem value="WEBSITE">Website</MenuItem>
+                  <MenuItem value="SOCIAL_MEDIA">Social media</MenuItem>
+                  <MenuItem value="REFERRAL">Referral</MenuItem>
+                  <MenuItem value="DIRECT">Direct</MenuItem>
+                  <MenuItem value="OTHER">Other</MenuItem>
+                </TextField>
+
+                {form.source === 'OTHER' && (
+                  <TextField
+                    required
+                    label="Other lead source"
+                    value={form.sourceDetails}
+                    onChange={(event) => setForm({
+                      ...form,
+                      sourceDetails: event.target.value,
+                    })}
+                  />
+                )}
+
+                <TextField
+                  label="Project / Service Type"
+                  placeholder="For example, CRM implementation or support engagement"
+                  value={form.projectNature}
+                  onChange={(event) => setForm({
+                    ...form,
+                    projectNature: event.target.value,
+                  })}
                 />
 
 
@@ -2431,7 +2532,7 @@ function LeadsPage() {
                   required
                   multiline
                   minRows={3}
-                  label="Requirement"
+                  label="Customer / business requirement"
                   placeholder="Describe what the client needs..."
                   value={
                     form.requirement
@@ -2446,6 +2547,59 @@ function LeadsPage() {
                         event.target.value,
                     })
                   }
+                />
+
+                <TextField
+                  multiline
+                  minRows={3}
+                  label="Project scope / requirement details"
+                  placeholder="Describe expected deliverables, boundaries and important constraints..."
+                  value={form.projectScope}
+                  onChange={(event) => setForm({
+                    ...form,
+                    projectScope: event.target.value,
+                  })}
+                />
+
+                <Stack
+                  direction={{ xs: 'column', md: 'row' }}
+                  spacing={2}
+                  sx={{ '& > *': { minWidth: 0, flex: 1 } }}
+                >
+                  <TextField
+                    type="number"
+                    label="Budget minimum"
+                    slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
+                    value={form.budgetMin}
+                    onChange={(event) => setForm({ ...form, budgetMin: event.target.value })}
+                    fullWidth
+                  />
+                  <TextField
+                    type="number"
+                    label="Budget maximum"
+                    slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
+                    value={form.budgetMax}
+                    onChange={(event) => setForm({ ...form, budgetMax: event.target.value })}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Currency"
+                    placeholder="LKR"
+                    slotProps={{ htmlInput: { maxLength: 3 } }}
+                    value={form.budgetCurrency}
+                    onChange={(event) => setForm({ ...form, budgetCurrency: event.target.value })}
+                    fullWidth
+                  />
+                </Stack>
+
+                <TextField
+                  label="Expected timeline"
+                  placeholder="For example, Q1 2027 or within six months"
+                  value={form.expectedTimeline}
+                  onChange={(event) => setForm({
+                    ...form,
+                    expectedTimeline: event.target.value,
+                  })}
                 />
 
 
@@ -2499,7 +2653,8 @@ function LeadsPage() {
                   !form.contactName.trim() ||
                   !form.companyName.trim() ||
                   !form.phone.trim() ||
-                  !form.requirement.trim()
+                  !form.requirement.trim() ||
+                  (form.source === 'OTHER' && !form.sourceDetails.trim())
                 }
               >
                 {isCreating ? (
