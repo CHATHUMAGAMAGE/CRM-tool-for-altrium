@@ -12,7 +12,6 @@ from .models import (
     FinancialAssessmentHistory,
     Notification,
     Lead,
-    TechnicalAssessment,
 )
 from .notifications import create_notification
 
@@ -236,6 +235,40 @@ class FinancialAssessmentSerializer(
         read_only=True,
     )
 
+    lead_project_name = serializers.CharField(
+        source="lead.project_name",
+        read_only=True,
+    )
+
+    lead_budget_min = serializers.DecimalField(
+        source="lead.budget_min",
+        max_digits=14,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    lead_budget_max = serializers.DecimalField(
+        source="lead.budget_max",
+        max_digits=14,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    lead_budget_currency = serializers.CharField(
+        source="lead.budget_currency",
+        read_only=True,
+    )
+
+    lead_requirement = serializers.CharField(
+        source="lead.requirement",
+        read_only=True,
+    )
+
+    lead_expected_timeline = serializers.CharField(
+        source="lead.expected_timeline",
+        read_only=True,
+    )
+
     technical_assessment_status = (
         serializers.CharField(
             source=(
@@ -311,6 +344,12 @@ class FinancialAssessmentSerializer(
             "lead_contact_name",
             "lead_status",
             "lead_status_display",
+            "lead_project_name",
+            "lead_budget_min",
+            "lead_budget_max",
+            "lead_budget_currency",
+            "lead_requirement",
+            "lead_expected_timeline",
             "technical_assessment",
             "technical_assessment_status",
             "technical_assessment_status_display",
@@ -325,6 +364,7 @@ class FinancialAssessmentSerializer(
             "status",
             "status_display",
             "financial_comments",
+            "outcome",
             "submitted_at",
             "reviewed_at",
             "reviewed_by",
@@ -391,7 +431,6 @@ class FinancialAssessmentCreateSerializer(
         fields = [
             "id",
             "lead",
-            "technical_assessment",
             "assigned_to",
             "requirements",
         ]
@@ -430,6 +469,25 @@ class FinancialAssessmentCreateSerializer(
                 "be requested for a closed lead."
             )
 
+        missing_fields = []
+        if not (lead.company_name or "").strip():
+            missing_fields.append("client/company")
+        if not (lead.project_name or "").strip():
+            missing_fields.append("lead/project name")
+        if not (lead.requirement or "").strip():
+            missing_fields.append("business requirement")
+        if lead.budget_min is None and lead.budget_max is None:
+            missing_fields.append("client budget")
+        if not (lead.budget_currency or "").strip():
+            missing_fields.append("budget currency")
+
+        if missing_fields:
+            raise serializers.ValidationError(
+                "The Lead is not ready for Financial Assessment. Missing: "
+                + ", ".join(missing_fields)
+                + "."
+            )
+
         return lead
 
     def validate(
@@ -439,43 +497,6 @@ class FinancialAssessmentCreateSerializer(
         lead = attrs.get(
             "lead"
         )
-
-        technical_assessment = attrs.get(
-            "technical_assessment"
-        )
-
-        if (
-            lead is not None
-            and technical_assessment is not None
-            and technical_assessment.lead_id
-            != lead.id
-        ):
-            raise serializers.ValidationError(
-                {
-                    "technical_assessment": (
-                        "The technical assessment "
-                        "must belong to the same lead."
-                    )
-                }
-            )
-
-        if (
-            technical_assessment is not None
-            and technical_assessment.status
-            != TechnicalAssessment
-            .Status
-            .REVIEWED
-        ):
-            raise serializers.ValidationError(
-                {
-                    "technical_assessment": (
-                        "The technical assessment "
-                        "must be reviewed before a "
-                        "financial assessment can "
-                        "be requested."
-                    )
-                }
-            )
 
         if (
             lead is not None
@@ -549,10 +570,6 @@ class FinancialAssessmentCreateSerializer(
             metadata={
                 "lead_id":
                     assessment.lead_id,
-
-                "technical_assessment_id":
-                    assessment
-                    .technical_assessment_id,
 
                 "assigned_to_id":
                     assessment.assigned_to_id,
@@ -720,6 +737,7 @@ class FinancialAssessmentWorkSerializer(
 
         fields = [
             "financial_comments",
+            "outcome",
         ]
 
     def validate_financial_comments(
@@ -727,6 +745,9 @@ class FinancialAssessmentWorkSerializer(
         value,
     ):
         return value.strip()
+
+    def validate_outcome(self, value):
+        return value
 
     def validate(
         self,
@@ -763,6 +784,7 @@ class FinancialAssessmentWorkSerializer(
         previous_comments = (
             instance.financial_comments
         )
+        previous_outcome = instance.outcome
 
         updated = (
             super().update(
@@ -774,6 +796,7 @@ class FinancialAssessmentWorkSerializer(
         if (
             previous_comments
             != updated.financial_comments
+            or previous_outcome != updated.outcome
         ):
             FinancialAssessmentHistory.objects.create(
                 assessment=updated,
@@ -784,13 +807,16 @@ class FinancialAssessmentWorkSerializer(
                 ),
                 description=(
                     "Financial assessment "
-                    "comments updated."
+                    "findings updated."
                 ),
                 performed_by=getattr(
                     request,
                     "user",
                     None,
                 ),
+                metadata={
+                    "outcome": updated.outcome,
+                },
             )
 
         return updated

@@ -12,7 +12,11 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  FormControl,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   TextField,
   Typography,
 } from '@mui/material'
@@ -49,6 +53,7 @@ import {
   type FinancialAssessment,
   type FinancialAssessmentDocument,
   type FinancialAssessmentHistory,
+  type FinancialAssessmentOutcome,
   type FinancialAssessmentStatus,
 } from '../services/financialCrm'
 
@@ -210,6 +215,8 @@ function FinancialAssessmentWorkspacePage() {
     useState(
       '',
     )
+
+  const [outcome, setOutcome] = useState<FinancialAssessmentOutcome | ''>('')
 
 
   const [
@@ -401,6 +408,8 @@ function FinancialAssessmentWorkspacePage() {
               '',
           )
 
+          setOutcome(assessmentData.outcome)
+
           setDocuments(
             documentData,
           )
@@ -537,6 +546,7 @@ function FinancialAssessmentWorkspacePage() {
             financial_comments:
               financialComments
                 .trim(),
+            outcome,
           },
         )
 
@@ -685,6 +695,11 @@ function FinancialAssessmentWorkspacePage() {
         return
       }
 
+      if (!outcome) {
+        setError('Select a financial suitability outcome before submission.')
+        return
+      }
+
       setIsSubmitting(
         true,
       )
@@ -704,7 +719,8 @@ function FinancialAssessmentWorkspacePage() {
             assessment
               .financial_comments ??
             ''
-          ).trim()
+          ).trim() ||
+          outcome !== assessment.outcome
         ) {
           await updateFinancialAssessmentWork(
             assessment.id,
@@ -712,6 +728,7 @@ function FinancialAssessmentWorkspacePage() {
               financial_comments:
                 financialComments
                   .trim(),
+              outcome,
             },
           )
         }
@@ -1206,6 +1223,11 @@ function FinancialAssessmentWorkspacePage() {
               }}
             >
               <LabelValue
+                label="PROJECT / LEAD"
+                value={assessment.lead_project_name || 'Not provided'}
+              />
+
+              <LabelValue
                 label="CONTACT"
                 value={
                   assessment
@@ -1222,12 +1244,35 @@ function FinancialAssessmentWorkspacePage() {
               />
 
               <LabelValue
+                label="CLIENT BUDGET"
+                value={
+                  assessment.lead_budget_min || assessment.lead_budget_max
+                    ? `${assessment.lead_budget_currency || ''} ${assessment.lead_budget_min || '—'} – ${assessment.lead_budget_max || '—'}`.trim()
+                    : 'Not discussed'
+                }
+              />
+
+              <LabelValue
+                label="EXPECTED TIMELINE"
+                value={assessment.lead_expected_timeline || 'Not provided'}
+              />
+
+              <LabelValue
                 label="REQUESTED BY"
                 value={
                   assessment
                     .requested_by_name
                 }
               />
+            </Box>
+
+            <Box sx={{ mt: 2.2 }}>
+              <Typography sx={{ fontSize: 11.5, fontWeight: 600, color: 'var(--eleven-text-secondary)' }}>
+                CUSTOMER / BUSINESS REQUIREMENT
+              </Typography>
+              <Typography sx={{ mt: 0.7, whiteSpace: 'pre-wrap', fontSize: 13.5, lineHeight: 1.65, color: 'var(--eleven-text-secondary)' }}>
+                {assessment.lead_requirement || 'Not provided'}
+              </Typography>
             </Box>
 
             <Box
@@ -1278,6 +1323,7 @@ function FinancialAssessmentWorkspacePage() {
           </Paper>
 
 
+          {assessment.technical_assessment && (
           <Paper
             variant="outlined"
             sx={{
@@ -1321,7 +1367,7 @@ function FinancialAssessmentWorkspacePage() {
                   'var(--eleven-text-secondary)',
               }}
             >
-              Review the completed technical assessment before preparing the financial assessment.
+              Review the Lead budget and commercial context before recording financial suitability.
             </Typography>
 
             <Divider
@@ -1335,7 +1381,7 @@ function FinancialAssessmentWorkspacePage() {
               label="TECHNICAL ASSESSMENT STATUS"
               value={
                 assessment
-                  .technical_assessment_status_display
+                  .technical_assessment_status_display || '—'
               }
             />
 
@@ -1465,6 +1511,7 @@ function FinancialAssessmentWorkspacePage() {
               </Box>
             </Box>
           </Paper>
+          )}
 
 
           <Paper
@@ -1606,6 +1653,18 @@ function FinancialAssessmentWorkspacePage() {
                   2,
               }}
             />
+
+            <FormControl fullWidth sx={{ mt: 2 }} disabled={!canEdit}>
+              <InputLabel>Financial suitability outcome</InputLabel>
+              <Select
+                value={outcome}
+                label="Financial suitability outcome"
+                onChange={(event) => setOutcome(event.target.value as FinancialAssessmentOutcome)}
+              >
+                <MenuItem value="FINANCIALLY_SUITABLE">Financially suitable</MenuItem>
+                <MenuItem value="FINANCIALLY_UNSUITABLE">Financially unsuitable</MenuItem>
+              </Select>
+            </FormControl>
           </Paper>
 
 
@@ -2106,7 +2165,8 @@ function FinancialAssessmentWorkspacePage() {
                   disabled={
                     isSubmitting ||
                     !financialComments
-                      .trim()
+                      .trim() ||
+                    !outcome
                   }
                   onClick={() =>
                     void handleSubmit()
@@ -2215,9 +2275,13 @@ function FinancialAssessmentWorkspacePage() {
               />
 
               <LabelValue
-                label="TECHNICAL ASSESSMENT"
+                label="FINANCIAL OUTCOME"
                 value={
-                  `#${assessment.technical_assessment}`
+                  assessment.outcome === 'FINANCIALLY_SUITABLE'
+                    ? 'Financially suitable'
+                    : assessment.outcome === 'FINANCIALLY_UNSUITABLE'
+                      ? 'Financially unsuitable'
+                      : 'Not recorded'
                 }
               />
 

@@ -36,8 +36,10 @@ class OpportunityDecisionInputSerializer(
     )
 
     decision_notes = serializers.CharField(
-        allow_blank=False,
+        required=False,
+        allow_blank=True,
         trim_whitespace=True,
+        default="",
     )
 
     def validate_decision_notes(
@@ -48,9 +50,13 @@ class OpportunityDecisionInputSerializer(
             value.strip()
         )
 
-        if not cleaned_value:
+        decision = self.initial_data.get("decision")
+        if (
+            decision == LeadOpportunityDecision.Decision.DO_NOT_PROCEED
+            and not cleaned_value
+        ):
             raise serializers.ValidationError(
-                "Decision notes are required."
+                "A reason is required when choosing Do Not Proceed."
             )
 
         return cleaned_value

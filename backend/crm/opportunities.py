@@ -68,7 +68,7 @@ class OpportunityManagementPermission(
         }
 
 
-def get_latest_reviewed_financial_assessment(
+def get_latest_completed_financial_assessment(
     lead,
 ):
     return (
@@ -82,14 +82,13 @@ def get_latest_reviewed_financial_assessment(
         )
         .filter(
             lead=lead,
-            status=(
-                FinancialAssessment
-                .Status
-                .REVIEWED
-            ),
+            status__in=[
+                FinancialAssessment.Status.SUBMITTED,
+                FinancialAssessment.Status.REVIEWED,
+            ],
         )
         .order_by(
-            "-reviewed_at",
+            "-submitted_at",
             "-id",
         )
         .first()
@@ -194,11 +193,12 @@ class LeadOpportunityDecisionView(
                         == (
                             LeadOpportunityDecision
                             .Decision
-                            .APPROVED
+                            .PROCEED
                         )
+                        and decision.financial_assessment.outcome
+                        == FinancialAssessment.Outcome.FINANCIALLY_SUITABLE
+                        and decision.technical_assessment_id is not None
                         and deal is None
-                        and lead.status
-                        == Lead.Status.QUALIFIED
                     ),
 
                 "deal":
@@ -272,26 +272,8 @@ class LeadOpportunityDecisionView(
                 ),
             )
 
-        if (
-            lead.status
-            != Lead.Status.QUALIFIED
-        ):
-            return Response(
-                {
-                    "detail": (
-                        "Only a qualified lead "
-                        "can be submitted for "
-                        "opportunity approval."
-                    )
-                },
-                status=(
-                    status
-                    .HTTP_400_BAD_REQUEST
-                ),
-            )
-
         financial_assessment = (
-            get_latest_reviewed_financial_assessment(
+            get_latest_completed_financial_assessment(
                 lead,
             )
         )
@@ -303,7 +285,7 @@ class LeadOpportunityDecisionView(
             return Response(
                 {
                     "detail": (
-                        "A reviewed financial "
+                        "A completed financial "
                         "assessment is required "
                         "before the opportunity "
                         "decision can be made."
@@ -315,29 +297,44 @@ class LeadOpportunityDecisionView(
                 ),
             )
 
+        requested_decision = input_serializer.validated_data["decision"]
+        financially_suitable = (
+            financial_assessment.outcome
+            == FinancialAssessment.Outcome.FINANCIALLY_SUITABLE
+        )
         technical_assessment = (
-            financial_assessment
-            .technical_assessment
+            TechnicalAssessment.objects.filter(
+                lead=lead,
+                status__in=[
+                    TechnicalAssessment.Status.SUBMITTED,
+                    TechnicalAssessment.Status.REVIEWED,
+                ],
+            )
+            .order_by("-submitted_at", "-id")
+            .first()
         )
 
-        if (
-            technical_assessment.status
-            != TechnicalAssessment
-            .Status
-            .REVIEWED
-        ):
+        if financially_suitable and technical_assessment is None:
             return Response(
                 {
                     "detail": (
-                        "The technical assessment "
-                        "linked to the financial "
-                        "assessment must be reviewed."
+                        "A completed Technical Assessment is required "
+                        "after a financially suitable result."
                     )
                 },
                 status=(
                     status
                     .HTTP_400_BAD_REQUEST
                 ),
+            )
+
+        if (
+            requested_decision == LeadOpportunityDecision.Decision.PROCEED
+            and not financially_suitable
+        ):
+            return Response(
+                {"detail": "Proceed requires a financially suitable result."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         decision = (
@@ -354,9 +351,7 @@ class LeadOpportunityDecisionView(
 
                 decision=(
                     input_serializer
-                    .validated_data[
-                        "decision"
-                    ]
+                        .validated_data["decision"]
                 ),
 
                 decision_notes=(
@@ -382,25 +377,25 @@ class LeadOpportunityDecisionView(
             == (
                 LeadOpportunityDecision
                 .Decision
-                .APPROVED
+                .PROCEED
             )
         ):
             description = (
-                "Opportunity approved "
+                "Proceed decision recorded "
                 "for Deal conversion."
             )
 
             workflow_event = (
-                "OPPORTUNITY_APPROVED"
+                "OPPORTUNITY_PROCEED"
             )
 
         else:
             description = (
-                "Opportunity rejected."
+                "Do Not Proceed decision recorded."
             )
 
             workflow_event = (
-                "OPPORTUNITY_REJECTED"
+                "OPPORTUNITY_DO_NOT_PROCEED"
             )
 
         LeadHistory.objects.create(
@@ -435,7 +430,7 @@ class LeadOpportunityDecisionView(
                     .decision_notes,
 
                 "technical_assessment_id":
-                    technical_assessment.id,
+                    technical_assessment.id if technical_assessment else None,
 
                 "financial_assessment_id":
                     financial_assessment.id,
@@ -532,7 +527,7 @@ class LeadConvertToDealView(
             return Response(
                 {
                     "detail": (
-                        "The lead must be approved "
+                        "The Lead must have a Proceed decision "
                         "before it can be converted "
                         "to a Deal."
                     )
@@ -548,13 +543,13 @@ class LeadConvertToDealView(
             != (
                 LeadOpportunityDecision
                 .Decision
-                .APPROVED
+                .PROCEED
             )
         ):
             return Response(
                 {
                     "detail": (
-                        "A rejected opportunity "
+                        "A Do Not Proceed opportunity "
                         "cannot be converted "
                         "to a Deal."
                     )
@@ -566,34 +561,18 @@ class LeadConvertToDealView(
             )
 
         if (
-            lead.status
-            != Lead.Status.QUALIFIED
-        ):
-            return Response(
-                {
-                    "detail": (
-                        "Only an approved qualified "
-                        "lead can be converted "
-                        "to a Deal."
-                    )
-                },
-                status=(
-                    status
-                    .HTTP_400_BAD_REQUEST
-                ),
-            )
-
-        if (
-            decision.technical_assessment.status
-            != TechnicalAssessment
-            .Status
-            .REVIEWED
+            decision.technical_assessment is None
+            or decision.technical_assessment.status
+            not in {
+                TechnicalAssessment.Status.SUBMITTED,
+                TechnicalAssessment.Status.REVIEWED,
+            }
         ):
             return Response(
                 {
                     "detail": (
                         "The technical assessment "
-                        "must remain reviewed before "
+                        "must remain completed before "
                         "Deal conversion."
                     )
                 },
@@ -605,15 +584,16 @@ class LeadConvertToDealView(
 
         if (
             decision.financial_assessment.status
-            != FinancialAssessment
-            .Status
-            .REVIEWED
+            not in {
+                FinancialAssessment.Status.SUBMITTED,
+                FinancialAssessment.Status.REVIEWED,
+            }
         ):
             return Response(
                 {
                     "detail": (
                         "The financial assessment "
-                        "must remain reviewed before "
+                        "must remain completed before "
                         "Deal conversion."
                     )
                 },
@@ -621,6 +601,20 @@ class LeadConvertToDealView(
                     status
                     .HTTP_400_BAD_REQUEST
                 ),
+            )
+
+        if (
+            decision.financial_assessment.outcome
+            != FinancialAssessment.Outcome.FINANCIALLY_SUITABLE
+        ):
+            return Response(
+                {
+                    "detail": (
+                        "Deal conversion requires a financially suitable "
+                        "assessment outcome."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         deal = Deal(
@@ -688,7 +682,7 @@ class LeadConvertToDealView(
             ),
 
             description=(
-                "Approved lead converted "
+                "Proceeding Lead converted "
                 f"to Deal #{deal.id} and "
                 "moved to Proposal."
             ),

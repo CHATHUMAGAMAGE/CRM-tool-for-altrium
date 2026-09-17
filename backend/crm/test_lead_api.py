@@ -176,6 +176,30 @@ class LeadApiTests(APITestCase):
             },
         )
 
+    def test_sales_manager_can_filter_leads_by_structured_source_and_date(self):
+        self.client.force_authenticate(user=self.sales_manager)
+        created_date = self.lead.created_at.date().isoformat()
+
+        response = self.client.get(
+            self.list_url,
+            {
+                "source": Lead.Source.WEBSITE,
+                "created_from": created_date,
+                "created_to": created_date,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item["id"] for item in response.data], [self.lead.id])
+
+    def test_invalid_lead_created_date_filter_returns_validation_error(self):
+        self.client.force_authenticate(user=self.sales_manager)
+
+        response = self.client.get(self.list_url, {"created_from": "not-a-date"})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("created_from", response.data)
+
     def test_software_engineer_cannot_access_leads(
         self,
     ):
@@ -458,6 +482,105 @@ class LeadApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("source_details", response.data)
 
+    def test_standard_sources_accept_missing_or_null_source_details(self):
+        self.client.force_authenticate(user=self.sales_manager)
+
+        cases = [
+            (Lead.Source.WEBSITE, {}),
+            (Lead.Source.SOCIAL_MEDIA, {"source_details": None}),
+            (Lead.Source.REFERRAL, {}),
+            (Lead.Source.DIRECT, {"source_details": None}),
+        ]
+
+        for index, (lead_source, extra_payload) in enumerate(cases):
+            with self.subTest(source=lead_source):
+                response = self.client.post(
+                    self.list_url,
+                    {
+                        "company_name": f"Source Company {index}",
+                        "contact_name": f"Source Contact {index}",
+                        "phone": f"07123456{index:02d}",
+                        "source": lead_source,
+                        **extra_payload,
+                    },
+                    format="json",
+                )
+
+                self.assertEqual(
+                    response.status_code,
+                    status.HTTP_201_CREATED,
+                    response.data,
+                )
+                lead = Lead.objects.get(pk=response.data["id"])
+                self.assertEqual(lead.source_details, "")
+                self.assertEqual(response.data["source_details"], "")
+
+    def test_model_normalizes_null_source_details_before_persistence(self):
+        lead = Lead.objects.create(
+            company_name="Persistence Boundary Company",
+            contact_name="Persistence Boundary Contact",
+            phone="0712345678",
+            source=Lead.Source.WEBSITE,
+            source_details=None,
+            created_by=self.sales_manager,
+        )
+
+        lead.refresh_from_db()
+        self.assertEqual(lead.source_details, "")
+
+    def test_other_source_with_details_creates_successfully(self):
+        self.client.force_authenticate(user=self.sales_manager)
+
+        response = self.client.post(
+            self.list_url,
+            {
+                "company_name": "Event Lead Company",
+                "contact_name": "Event Contact",
+                "phone": "0712345678",
+                "source": Lead.Source.OTHER,
+                "source_details": "Industry conference",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["source_details"], "Industry conference")
+
+    def test_updating_other_source_to_standard_source_clears_details(self):
+        lead = Lead.objects.create(
+            company_name="Update Source Company",
+            contact_name="Update Contact",
+            phone="0712345678",
+            source=Lead.Source.OTHER,
+            source_details="Industry conference",
+            created_by=self.sales_manager,
+            responsible_manager=self.sales_manager,
+        )
+        self.client.force_authenticate(user=self.sales_manager)
+
+        response = self.client.patch(
+            reverse("crm:lead-detail", kwargs={"pk": lead.pk}),
+            {"source": Lead.Source.WEBSITE, "source_details": None},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        lead.refresh_from_db()
+        self.assertEqual(lead.source, Lead.Source.WEBSITE)
+        self.assertEqual(lead.source_details, "")
+
+    def test_updating_standard_source_to_other_requires_details(self):
+        self.client.force_authenticate(user=self.sales_manager)
+
+        response = self.client.patch(
+            reverse("crm:lead-detail", kwargs={"pk": self.lead.pk}),
+            {"source": Lead.Source.OTHER, "source_details": None},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("source_details", response.data)
+
     def test_lead_rejects_invalid_budget_range(self):
         self.client.force_authenticate(user=self.sales_manager)
 
@@ -669,57 +792,47 @@ class LeadApiTests(APITestCase):
             status.HTTP_403_FORBIDDEN,
         )
 
-    def test_financial_officer_cannot_use_rescue_radar(
-        self,
-    ):
-        self.client.force_authenticate(
-            user=self.financial_officer,
-        )
-
-        radar_url = reverse(
-            "crm:lead-rescue-radar",
-            kwargs={
-                "pk":
-                    self.lead.pk,
-            },
+    def test_sales_rep_can_add_internal_note_to_assigned_lead(self):
+        self.client.force_authenticate(user=self.sales_rep)
+        history_url = reverse(
+            "crm:lead-history",
+            kwargs={"lead_id": self.lead.pk},
         )
 
         response = self.client.post(
-            radar_url,
+            history_url,
+            {"note": "Client confirmed hosting is outside the stated budget."},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["metadata"]["kind"], "INTERNAL_NOTE")
+        self.assertEqual(response.data["performed_by"], self.sales_rep.id)
+
+    def test_sales_rep_cannot_add_note_to_another_reps_lead(self):
+        self.client.force_authenticate(user=self.sales_rep)
+
+        response = self.client.post(
+            reverse(
+                "crm:lead-history",
+                kwargs={"lead_id": self.other_lead.pk},
+            ),
+            {"note": "Unauthorized note."},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_rescue_radar_endpoint_is_removed(self):
+        self.client.force_authenticate(user=self.sales_manager)
+
+        response = self.client.post(
+            f"/api/v1/crm/leads/{self.lead.pk}/rescue-radar/",
             {},
             format="json",
         )
 
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_403_FORBIDDEN,
-        )
-
-    def test_sales_rep_cannot_use_rescue_radar_on_another_reps_lead(
-        self,
-    ):
-        self.client.force_authenticate(
-            user=self.sales_rep,
-        )
-
-        radar_url = reverse(
-            "crm:lead-rescue-radar",
-            kwargs={
-                "pk":
-                    self.other_lead.pk,
-            },
-        )
-
-        response = self.client.post(
-            radar_url,
-            {},
-            format="json",
-        )
-
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_404_NOT_FOUND,
-        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_sales_rep_cannot_record_opportunity_decision(
         self,
@@ -740,7 +853,7 @@ class LeadApiTests(APITestCase):
             decision_url,
             {
                 "decision":
-                    "APPROVED",
+                    "PROCEED",
 
                 "decision_notes":
                     "Attempted authorization bypass.",
@@ -779,78 +892,22 @@ class LeadApiTests(APITestCase):
             status.HTTP_403_FORBIDDEN,
         )
 
-    def test_sales_rep_can_submit_assigned_lead_for_qualification(self):
+    def test_legacy_qualification_handover_endpoints_are_removed(self):
         self.client.force_authenticate(user=self.sales_rep)
-        url = reverse(
-            "crm:lead-submit-for-qualification",
-            kwargs={"pk": self.lead.pk},
-        )
-        response = self.client.post(
-            url,
-            {"handover_note": "Requirements, budget, timeline, and next steps confirmed."},
+
+        submit_response = self.client.post(
+            f"/api/v1/crm/leads/{self.lead.pk}/submit-for-qualification/",
+            {"handover_note": "Obsolete workflow."},
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.lead.refresh_from_db()
-        self.assertEqual(
-            self.lead.status,
-            Lead.Status.SUBMITTED_FOR_QUALIFICATION,
-        )
-        self.assertEqual(
-            self.lead.submitted_for_qualification_by,
-            self.sales_rep,
-        )
-        self.assertTrue(
-            self.lead.history.filter(
-                event_type="SUBMITTED_FOR_QUALIFICATION",
-            ).exists()
-        )
-        self.assertTrue(
-            Notification.objects.filter(
-                recipient=self.sales_manager,
-                kind=Notification.Kind.SUBMISSION,
-                target_url=f"/leads/{self.lead.id}",
-            ).exists()
+        return_response = self.client.post(
+            f"/api/v1/crm/leads/{self.lead.pk}/return-for-information/",
+            {"review_feedback": "Obsolete workflow."},
+            format="json",
         )
 
-    def test_submission_requires_handover_note(self):
-        self.client.force_authenticate(user=self.sales_rep)
-        response = self.client.post(
-            reverse(
-                "crm:lead-submit-for-qualification",
-                kwargs={"pk": self.lead.pk},
-            ),
-            {"handover_note": ""},
-            format="json",
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_sales_manager_can_return_submitted_lead_with_feedback(self):
-        self.lead.status = Lead.Status.SUBMITTED_FOR_QUALIFICATION
-        self.lead.handover_note = "Ready for review."
-        self.lead.save(update_fields=["status", "handover_note"])
-        self.client.force_authenticate(user=self.sales_manager)
-        response = self.client.post(
-            reverse(
-                "crm:lead-return-for-information",
-                kwargs={"pk": self.lead.pk},
-            ),
-            {"review_feedback": "Please confirm the decision-maker."},
-            format="json",
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.lead.refresh_from_db()
-        self.assertEqual(self.lead.status, Lead.Status.CONTACTED)
-        self.assertEqual(
-            self.lead.review_feedback,
-            "Please confirm the decision-maker.",
-        )
-        self.assertTrue(
-            Notification.objects.filter(
-                recipient=self.sales_rep,
-                kind=Notification.Kind.RETURNED,
-            ).exists()
-        )
+        self.assertEqual(submit_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(return_response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_user_can_only_read_own_notifications(self):
         own = Notification.objects.create(
@@ -879,17 +936,3 @@ class LeadApiTests(APITestCase):
         self.assertEqual(read_response.status_code, status.HTTP_200_OK)
         own.refresh_from_db()
         self.assertIsNotNone(own.read_at)
-
-    def test_sales_rep_cannot_return_submitted_lead(self):
-        self.lead.status = Lead.Status.SUBMITTED_FOR_QUALIFICATION
-        self.lead.save(update_fields=["status"])
-        self.client.force_authenticate(user=self.sales_rep)
-        response = self.client.post(
-            reverse(
-                "crm:lead-return-for-information",
-                kwargs={"pk": self.lead.pk},
-            ),
-            {"review_feedback": "Unauthorized return."},
-            format="json",
-        )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

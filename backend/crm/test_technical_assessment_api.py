@@ -7,6 +7,7 @@ from rest_framework.test import APITestCase
 from accounts.models import UserProfile
 
 from .models import (
+    FinancialAssessment,
     Lead,
     TechnicalAssessment,
     TechnicalAssessmentHistory,
@@ -126,6 +127,13 @@ class TechnicalAssessmentAPITests(
             ]
         )
 
+        cls.financial_officer = User.objects.create_user(
+            username="technical_gate_finance",
+            password="TestPassword123!",
+        )
+        cls.financial_officer.profile.role = UserProfile.Role.FINANCIAL_OFFICER
+        cls.financial_officer.profile.save(update_fields=["role"])
+
 
         cls.qualified_lead = (
             Lead.objects.create(
@@ -134,6 +142,11 @@ class TechnicalAssessmentAPITests(
                 email="qualified@example.com",
                 phone="0711111111",
                 source="Website",
+                project_name="Technical Context Project",
+                project_nature="Web Application Development",
+                requirement="Replace manual warehouse inventory tracking.",
+                project_scope="Deliver stock, transfer and reporting workflows.",
+                expected_timeline="Six months",
                 status=Lead.Status.QUALIFIED,
                 qualification_notes=(
                     "Lead meets qualification criteria."
@@ -155,6 +168,16 @@ class TechnicalAssessmentAPITests(
                 assigned_to=cls.sales_rep,
                 created_by=cls.sales_manager,
             )
+        )
+
+        cls.suitable_financial_assessment = FinancialAssessment.objects.create(
+            lead=cls.qualified_lead,
+            requested_by=cls.sales_manager,
+            assigned_to=cls.financial_officer,
+            requirements="Assess financial viability.",
+            status=FinancialAssessment.Status.SUBMITTED,
+            financial_comments="The opportunity is financially viable.",
+            outcome=FinancialAssessment.Outcome.FINANCIALLY_SUITABLE,
         )
 
 
@@ -246,8 +269,98 @@ class TechnicalAssessmentAPITests(
             .exists()
         )
 
+    def test_assigned_tech_lead_receives_lead_and_finance_context(self):
+        assessment = self.create_assessment()
+        self.client.force_authenticate(user=self.tech_lead)
 
-    def test_unqualified_lead_cannot_receive_assessment(
+        response = self.client.get(
+            reverse(
+                "crm:technical-assessment-detail",
+                kwargs={"pk": assessment.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["lead_project_name"],
+            self.qualified_lead.project_name,
+        )
+        self.assertEqual(
+            response.data["lead_project_nature"],
+            self.qualified_lead.project_nature,
+        )
+        self.assertEqual(
+            response.data["lead_requirement"],
+            self.qualified_lead.requirement,
+        )
+        self.assertEqual(
+            response.data["lead_project_scope"],
+            self.qualified_lead.project_scope,
+        )
+        self.assertEqual(
+            response.data["financial_assessment"]["outcome"],
+            FinancialAssessment.Outcome.FINANCIALLY_SUITABLE,
+        )
+
+    def test_technical_assessment_is_blocked_before_finance_completion(self):
+        lead = Lead.objects.create(
+            company_name="Finance Pending Company",
+            contact_name="Pending Contact",
+            phone="0710000000",
+            status=Lead.Status.QUALIFIED,
+            qualification_notes="Qualified.",
+            created_by=self.sales_manager,
+        )
+        self.client.force_authenticate(user=self.sales_manager)
+
+        response = self.client.post(
+            reverse("crm:technical-assessment-list-create"),
+            {
+                "lead": lead.id,
+                "assigned_to": self.tech_lead.id,
+                "requirements": "Assess technical feasibility.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("lead", response.data)
+
+    def test_financially_unsuitable_result_blocks_technical_assessment(self):
+        lead = Lead.objects.create(
+            company_name="Unsuitable Company",
+            contact_name="Unsuitable Contact",
+            phone="0710000001",
+            status=Lead.Status.QUALIFIED,
+            qualification_notes="Qualified.",
+            created_by=self.sales_manager,
+        )
+        FinancialAssessment.objects.create(
+            lead=lead,
+            requested_by=self.sales_manager,
+            assigned_to=self.financial_officer,
+            requirements="Assess financial viability.",
+            status=FinancialAssessment.Status.SUBMITTED,
+            financial_comments="The expected margin is unacceptable.",
+            outcome=FinancialAssessment.Outcome.FINANCIALLY_UNSUITABLE,
+        )
+        self.client.force_authenticate(user=self.sales_manager)
+
+        response = self.client.post(
+            reverse("crm:technical-assessment-list-create"),
+            {
+                "lead": lead.id,
+                "assigned_to": self.tech_lead.id,
+                "requirements": "Assess technical feasibility.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("lead", response.data)
+
+
+    def test_lead_without_financial_assessment_cannot_receive_technical_assessment(
         self,
     ):
         self.client.force_authenticate(

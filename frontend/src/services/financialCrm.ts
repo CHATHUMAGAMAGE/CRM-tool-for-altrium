@@ -19,6 +19,10 @@ export type FinancialAssessmentStatus =
   | 'SUBMITTED'
   | 'REVIEWED'
 
+export type FinancialAssessmentOutcome =
+  | 'FINANCIALLY_SUITABLE'
+  | 'FINANCIALLY_UNSUITABLE'
+
 
 export type FinancialAssessmentHistoryEventType =
   | 'REQUESTED'
@@ -83,14 +87,20 @@ export type FinancialAssessment = {
   lead_contact_name: string
   lead_status: LeadStatus
   lead_status_display: string
+  lead_project_name: string
+  lead_budget_min: string | null
+  lead_budget_max: string | null
+  lead_budget_currency: string
+  lead_requirement: string
+  lead_expected_timeline: string
 
-  technical_assessment: number
+  technical_assessment: number | null
 
-  technical_assessment_status: string
-  technical_assessment_status_display: string
+  technical_assessment_status: string | null
+  technical_assessment_status_display: string | null
 
-  technical_comments: string
-  technical_review_notes: string
+  technical_comments: string | null
+  technical_review_notes: string | null
 
   requested_by: number
   requested_by_name: string
@@ -107,6 +117,7 @@ export type FinancialAssessment = {
   status_display: string
 
   financial_comments: string
+  outcome: FinancialAssessmentOutcome | ''
 
   submitted_at: string | null
 
@@ -130,8 +141,6 @@ export type FinancialAssessment = {
 export type CreateFinancialAssessmentInput = {
   lead: number
 
-  technical_assessment: number
-
   assigned_to: number
 
   requirements: string
@@ -148,6 +157,7 @@ export type UpdateFinancialAssessmentRequestInput =
 
 export type UpdateFinancialAssessmentWorkInput = {
   financial_comments: string
+  outcome: FinancialAssessmentOutcome | ''
 }
 
 

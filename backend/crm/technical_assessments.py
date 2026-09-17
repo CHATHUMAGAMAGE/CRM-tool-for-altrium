@@ -33,7 +33,6 @@ from .assessment_permissions import (
 )
 
 from .models import (
-    Lead,
     TechnicalAssessment,
     TechnicalAssessmentDocument,
     TechnicalAssessmentHistory,
@@ -202,27 +201,6 @@ class TechnicalAssessmentListCreateView(
         self,
         serializer,
     ):
-        lead = (
-            serializer
-            .validated_data[
-                "lead"
-            ]
-        )
-
-        if (
-            lead.status
-            != Lead.Status.QUALIFIED
-        ):
-            raise ValidationError(
-                {
-                    "lead": (
-                        "The lead must be qualified "
-                        "before a technical assessment "
-                        "can be requested."
-                    )
-                }
-            )
-
         serializer.save()
 
 

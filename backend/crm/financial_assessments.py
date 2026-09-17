@@ -46,8 +46,6 @@ from .models import (
     FinancialAssessment,
     FinancialAssessmentDocument,
     FinancialAssessmentHistory,
-    Lead,
-    TechnicalAssessment,
     Notification,
 )
 from .notifications import create_notification
@@ -206,44 +204,6 @@ class FinancialAssessmentListCreateView(
                 "lead"
             ]
         )
-
-        technical_assessment = (
-            serializer
-            .validated_data[
-                "technical_assessment"
-            ]
-        )
-
-        if (
-            lead.status
-            != Lead.Status.QUALIFIED
-        ):
-            raise ValidationError(
-                {
-                    "lead": (
-                        "The lead must be qualified "
-                        "before a financial assessment "
-                        "can be requested."
-                    )
-                }
-            )
-
-        if (
-            technical_assessment.status
-            != TechnicalAssessment
-            .Status
-            .REVIEWED
-        ):
-            raise ValidationError(
-                {
-                    "technical_assessment": (
-                        "The technical assessment "
-                        "must be reviewed before a "
-                        "financial assessment can "
-                        "be requested."
-                    )
-                }
-            )
 
         serializer.save()
 
@@ -433,6 +393,16 @@ class FinancialAssessmentSubmitView(
                         "Financial comments are "
                         "required before submitting "
                         "the assessment."
+                    )
+                }
+            )
+
+        if not assessment.outcome:
+            raise ValidationError(
+                {
+                    "outcome": (
+                        "A financial suitability outcome is required "
+                        "before submitting the assessment."
                     )
                 }
             )
