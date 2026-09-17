@@ -15,8 +15,8 @@ const API_BASE_URL =
 
 
 export type OpportunityDecision =
-  | 'APPROVED'
-  | 'REJECTED'
+  | 'PROCEED'
+  | 'DO_NOT_PROCEED'
 
 
 export type DealStatus =

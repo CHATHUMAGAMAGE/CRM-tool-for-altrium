@@ -355,13 +355,12 @@ class LeadInsightPermission(
     BasePermission,
 ):
     """
-    Read/analysis permission for lead-adjacent endpoints whose HTTP
+    Permission for lead-adjacent endpoints whose HTTP
     method does not map neatly to LeadPermission's CRUD rules.
 
-    Lead history is a read operation and Rescue Radar is an advisory
-    analysis operation even though it uses POST. Both must obey the same
-    lead visibility boundary and must never become an alternate route
-    around LeadPermission.
+    method does not map neatly to LeadPermission's CRUD rules. Lead history
+    and internal notes must obey the same visibility boundary and must never
+    become an alternate route around LeadPermission.
     """
 
     message = (

@@ -56,9 +56,6 @@ import {
   useSearchParams,
 } from 'react-router'
 
-import LeadRescueRadarCard
-  from '../components/leads/LeadRescueRadarCard'
-
 import {
   getCurrentUser,
   type CurrentUser,
@@ -66,6 +63,7 @@ import {
 
 import {
   createLeadCommunication,
+  createLeadInternalNote,
   deleteCommunication,
   createLeadFollowUp,
   createTechnicalAssessment,
@@ -89,6 +87,7 @@ import {
   type Lead,
   type LeadHistory,
   type LeadHistoryEventType,
+  type LeadSource,
   type LeadStatus,
   type SalesRepresentative,
   type TechLead,
@@ -113,6 +112,14 @@ type WorkspaceTab =
   | 'follow-ups'
   | 'activity'
   | 'history'
+
+const leadSourceLabels: Record<LeadSource, string> = {
+  WEBSITE: 'Website',
+  SOCIAL_MEDIA: 'Social media',
+  REFERRAL: 'Referral',
+  DIRECT: 'Direct',
+  OTHER: 'Other',
+}
 
 
 type CommunicationFilter =
@@ -166,7 +173,31 @@ type EditLeadForm = {
   source:
     string
 
+  sourceDetails:
+    string
+
+  projectName:
+    string
+
+  projectNature:
+    string
+
   requirement:
+    string
+
+  projectScope:
+    string
+
+  budgetMin:
+    string
+
+  budgetMax:
+    string
+
+  budgetCurrency:
+    string
+
+  expectedTimeline:
     string
 }
 
@@ -565,6 +596,15 @@ function getHistorySupportingText(
   const metadata =
     historyItem.metadata
 
+  const internalNote = metadata.note
+  if (
+    metadata.kind === 'INTERNAL_NOTE' &&
+    typeof internalNote === 'string' &&
+    internalNote.trim()
+  ) {
+    return internalNote
+  }
+
   const qualificationNotes =
     metadata.qualification_notes
 
@@ -870,8 +910,40 @@ function getEditLeadForm(
       lead.source ||
       '',
 
+    sourceDetails:
+      lead.source_details ||
+      '',
+
+    projectName:
+      lead.project_name ||
+      '',
+
+    projectNature:
+      lead.project_nature ||
+      '',
+
     requirement:
       lead.requirement ||
+      '',
+
+    projectScope:
+      lead.project_scope ||
+      '',
+
+    budgetMin:
+      lead.budget_min ||
+      '',
+
+    budgetMax:
+      lead.budget_max ||
+      '',
+
+    budgetCurrency:
+      lead.budget_currency ||
+      '',
+
+    expectedTimeline:
+      lead.expected_timeline ||
       '',
   }
 }
@@ -1121,6 +1193,10 @@ function LeadWorkspacePage() {
       [],
     )
 
+  const [internalNote, setInternalNote] = useState('')
+  const [isAddingInternalNote, setIsAddingInternalNote] = useState(false)
+  const [internalNoteError, setInternalNoteError] = useState('')
+
   const [
     activeTab,
     setActiveTab,
@@ -1205,7 +1281,31 @@ function LeadWorkspacePage() {
       source:
         '',
 
+      sourceDetails:
+        '',
+
+      projectName:
+        '',
+
+      projectNature:
+        '',
+
       requirement:
+        '',
+
+      projectScope:
+        '',
+
+      budgetMin:
+        '',
+
+      budgetMax:
+        '',
+
+      budgetCurrency:
+        '',
+
+      expectedTimeline:
         '',
     })
 
@@ -2184,7 +2284,7 @@ function LeadWorkspacePage() {
 
 
   const canEditLead =
-    canManageLead &&
+    canWorkLead &&
     !isClosedLead
 
 
@@ -2293,14 +2393,6 @@ function LeadWorkspacePage() {
       'ADMIN'
 
 
-  const canRequestTechnicalAssessment =
-    canManageTechnicalAssessment &&
-    lead.status ===
-      'QUALIFIED' &&
-    !isClosedLead &&
-    !hasActiveTechnicalAssessment
-
-
   const canReviewTechnicalAssessment =
     canManageTechnicalAssessment &&
     latestTechnicalAssessment?.status ===
@@ -2362,14 +2454,36 @@ function LeadWorkspacePage() {
       'ADMIN'
 
 
+  const financeReadinessMissing = [
+    !lead.company_name.trim() ? 'Client / company' : null,
+    !lead.project_name.trim() ? 'Lead / project name' : null,
+    !lead.requirement.trim() ? 'Business requirement' : null,
+    lead.budget_min === null && lead.budget_max === null ? 'Client budget' : null,
+    !lead.budget_currency.trim() ? 'Budget currency' : null,
+  ].filter((item): item is string => item !== null)
+
+
   const canRequestFinancialAssessment =
     canManageFinancialAssessment &&
-    lead.status ===
-      'QUALIFIED' &&
     !isClosedLead &&
-    latestTechnicalAssessment?.status ===
-      'REVIEWED' &&
+    financeReadinessMissing.length === 0 &&
     !hasActiveFinancialAssessment
+
+
+  const financeAllowsTechnicalAssessment =
+    latestFinancialAssessment !== null &&
+    (
+      latestFinancialAssessment.status === 'SUBMITTED' ||
+      latestFinancialAssessment.status === 'REVIEWED'
+    ) &&
+    latestFinancialAssessment.outcome === 'FINANCIALLY_SUITABLE'
+
+
+  const canRequestTechnicalAssessment =
+    canManageTechnicalAssessment &&
+    !isClosedLead &&
+    financeAllowsTechnicalAssessment &&
+    !hasActiveTechnicalAssessment
 
 
   const canReviewFinancialAssessment =
@@ -2393,6 +2507,30 @@ function LeadWorkspacePage() {
         // Keep current history if refresh fails.
       }
     }
+
+  const handleAddInternalNote = async () => {
+    const note = internalNote.trim()
+    if (!note || !lead || !canWorkLead) {
+      return
+    }
+
+    setIsAddingInternalNote(true)
+    setInternalNoteError('')
+    try {
+      const created = await createLeadInternalNote(lead.id, note)
+      setHistory((current) => [created, ...current])
+      setInternalNote('')
+      setSuccessMessage('Internal note added.')
+    } catch (requestError) {
+      setInternalNoteError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to add the internal note.',
+      )
+    } finally {
+      setIsAddingInternalNote(false)
+    }
+  }
 
 
   const handleAssignLead =
@@ -2621,7 +2759,11 @@ function LeadWorkspacePage() {
           .trim() ||
         !editLeadForm
           .requirement
-          .trim()
+          .trim() ||
+        (
+          editLeadForm.source === 'OTHER' &&
+          !editLeadForm.sourceDetails.trim()
+        )
       ) {
         setEditLeadError(
           'Contact name, company name, phone number and requirement are required.',
@@ -2664,14 +2806,38 @@ function LeadWorkspacePage() {
                   .trim(),
 
               source:
-                editLeadForm
-                  .source
-                  .trim(),
+                editLeadForm.source as Lead['source'],
+
+              source_details:
+                editLeadForm.source === 'OTHER'
+                  ? editLeadForm.sourceDetails.trim()
+                  : '',
+
+              project_name:
+                editLeadForm.projectName.trim(),
+
+              project_nature:
+                editLeadForm.projectNature.trim(),
 
               requirement:
                 editLeadForm
                   .requirement
                   .trim(),
+
+              project_scope:
+                editLeadForm.projectScope.trim(),
+
+              budget_min:
+                editLeadForm.budgetMin || null,
+
+              budget_max:
+                editLeadForm.budgetMax || null,
+
+              budget_currency:
+                editLeadForm.budgetCurrency.trim().toUpperCase(),
+
+              expected_timeline:
+                editLeadForm.expectedTimeline.trim(),
             },
           )
 
@@ -3518,8 +3684,7 @@ function LeadWorkspacePage() {
   const handleCreateFinancialAssessment =
     async () => {
       if (
-        !canRequestFinancialAssessment ||
-        !latestTechnicalAssessment
+        !canRequestFinancialAssessment
       ) {
         return
       }
@@ -3559,9 +3724,6 @@ function LeadWorkspacePage() {
             {
               lead:
                 numericLeadId,
-
-              technical_assessment:
-                latestTechnicalAssessment.id,
 
               assigned_to:
                 Number(
@@ -4357,6 +4519,11 @@ function LeadWorkspacePage() {
                   }}
                 >
                   <InformationItem
+                    label="Lead / Project Name"
+                    value={lead.project_name || 'Not provided'}
+                  />
+
+                  <InformationItem
                     label="Contact Name"
                     value={
                       lead.contact_name
@@ -4371,11 +4538,35 @@ function LeadWorkspacePage() {
                   />
 
                   <InformationItem
+                    label="Project / Service Type"
+                    value={lead.project_nature || 'Not provided'}
+                  />
+
+                  <InformationItem
                     label="Requirement"
                     value={
                       lead.requirement ||
                       '—'
                     }
+                  />
+
+                  <InformationItem
+                    label="Project Scope"
+                    value={lead.project_scope || 'Not provided'}
+                  />
+
+                  <InformationItem
+                    label="Client Budget"
+                    value={
+                      lead.budget_min || lead.budget_max
+                        ? `${lead.budget_currency || ''} ${lead.budget_min || '—'} – ${lead.budget_max || '—'}`.trim()
+                        : 'Not discussed'
+                    }
+                  />
+
+                  <InformationItem
+                    label="Expected Timeline"
+                    value={lead.expected_timeline || 'Not provided'}
                   />
 
                   <InformationItem
@@ -4414,8 +4605,11 @@ function LeadWorkspacePage() {
                   <InformationItem
                     label="Lead Source"
                     value={
-                      lead.source ||
-                      'Not provided'
+                      lead.source === 'OTHER' && lead.source_details
+                        ? `Other — ${lead.source_details}`
+                        : lead.source
+                          ? leadSourceLabels[lead.source]
+                          : 'Not provided'
                     }
                   />
 
@@ -4452,7 +4646,7 @@ function LeadWorkspacePage() {
                 QUALIFICATION REVIEW
               */}
 
-              <Card
+              {lead ? false && (<Card
                 variant="outlined"
                 sx={{
                   gridColumn: {
@@ -4539,19 +4733,19 @@ function LeadWorkspacePage() {
                     <Chip
                       size="small"
                       label={
-                        lead.status ===
+                        lead!.status ===
                           'DISQUALIFIED'
                           ? 'Disqualified'
-                          : lead.status === 'SUBMITTED_FOR_QUALIFICATION'
+                          : lead!.status === 'SUBMITTED_FOR_QUALIFICATION'
                             ? 'Awaiting Manager Review'
                           : hasPassedQualification
                             ? 'Qualified'
                             : isClosedLead
-                              ? lead.status_display
+                              ? lead!.status_display
                               : 'Qualification Pending'
                       }
                       color={
-                        lead.status ===
+                        lead!.status ===
                           'DISQUALIFIED'
                           ? 'error'
                           : hasPassedQualification
@@ -4573,18 +4767,18 @@ function LeadWorkspacePage() {
                       1.75,
                   }}
                 >
-                  {lead.handover_note && (
+                  {lead!.handover_note && (
                     <Alert severity="info" sx={{ mb: 1.5 }}>
-                      <strong>Sales handover:</strong> {lead.handover_note}
+                      <strong>Sales handover:</strong> {lead!.handover_note}
                     </Alert>
                   )}
 
-                  {lead.review_feedback && lead.status === 'CONTACTED' && (
+                  {lead!.review_feedback && lead!.status === 'CONTACTED' && (
                     <Alert severity="warning" sx={{ mb: 1.5 }}>
-                      <strong>Manager feedback:</strong> {lead.review_feedback}
+                      <strong>Manager feedback:</strong> {lead!.review_feedback}
                     </Alert>
                   )}
-                  {lead.qualification_notes ? (
+                  {lead!.qualification_notes ? (
                     <Box
                       sx={{
                         mb:
@@ -4611,7 +4805,7 @@ function LeadWorkspacePage() {
                             '0.04em',
                         }}
                       >
-                        {lead.status ===
+                        {lead!.status ===
                         'DISQUALIFIED'
                           ? 'Disqualification Reason'
                           : 'Qualification Notes'}
@@ -4651,7 +4845,7 @@ function LeadWorkspacePage() {
                               'pre-wrap',
                           }}
                         >
-                          {lead.qualification_notes}
+                          {lead!.qualification_notes}
                         </Typography>
                       </Box>
                     </Box>
@@ -4687,7 +4881,7 @@ function LeadWorkspacePage() {
                           1,
                       }}
                     >
-                      {lead.status !==
+                      {lead!.status !==
                         'QUALIFIED' && (
                         <Button
                           size="small"
@@ -4744,7 +4938,7 @@ function LeadWorkspacePage() {
                     </Button>
                   )}
                 </Box>
-              </Card>
+              </Card>) : null}
 
 
               </Stack>
@@ -4923,14 +5117,6 @@ function LeadWorkspacePage() {
               </Card>
 
 
-              <LeadRescueRadarCard
-                leadId={
-                  lead.id
-                }
-                isClosed={
-                  isClosedLead
-                }
-              />
             </Stack>
 
 
@@ -5399,7 +5585,7 @@ function LeadWorkspacePage() {
                               12,
                           }}
                         >
-                          Technical feasibility review for this qualified lead
+                          Technical feasibility review after a suitable Finance outcome
                         </Typography>
                       </Box>
 
@@ -5448,15 +5634,6 @@ function LeadWorkspacePage() {
 
                     {!latestTechnicalAssessment ? (
                       <>
-                        {lead.status !==
-                        'QUALIFIED' ? (
-                          <Alert
-                            severity="info"
-                            variant="outlined"
-                          >
-                            The lead must be qualified before a technical assessment can be requested.
-                          </Alert>
-                        ) : (
                           <>
                             <Typography
                               sx={{
@@ -5470,8 +5647,20 @@ function LeadWorkspacePage() {
                                   1.55,
                               }}
                             >
-                              No technical assessment has been requested for this lead yet.
+                              Technical assessment becomes available after Finance submits a financially suitable outcome.
                             </Typography>
+
+                            {!financeAllowsTechnicalAssessment && (
+                              <Alert severity="info" variant="outlined" sx={{ mt: 2 }}>
+                                {!latestFinancialAssessment
+                                  ? 'Financial Assessment must be completed first.'
+                                  : latestFinancialAssessment.status === 'REQUESTED' || latestFinancialAssessment.status === 'IN_PROGRESS'
+                                    ? 'Finance is still assessing this lead.'
+                                    : latestFinancialAssessment.outcome === 'FINANCIALLY_UNSUITABLE'
+                                      ? 'Technical Assessment is unavailable because Finance marked this lead as financially unsuitable.'
+                                      : 'A submitted financially suitable result is required before Technical Assessment.'}
+                              </Alert>
+                            )}
 
 
                             <Button
@@ -5484,6 +5673,7 @@ function LeadWorkspacePage() {
                                 openAssessmentDialog
                               }
                               disabled={
+                                !financeAllowsTechnicalAssessment ||
                                 techLeads.length ===
                                 0
                               }
@@ -5510,7 +5700,6 @@ function LeadWorkspacePage() {
                               </Alert>
                             )}
                           </>
-                        )}
                       </>
                     ) : (
                       <Stack
@@ -6002,21 +6191,12 @@ function LeadWorkspacePage() {
 
                     {!latestFinancialAssessment ? (
                       <>
-                        {!latestTechnicalAssessment ? (
+                        {financeReadinessMissing.length > 0 ? (
                           <Alert
                             severity="info"
                             variant="outlined"
                           >
-                            A technical assessment must be completed and reviewed before a financial assessment can be requested.
-                          </Alert>
-                        ) : latestTechnicalAssessment
-                            .status !==
-                          'REVIEWED' ? (
-                          <Alert
-                            severity="info"
-                            variant="outlined"
-                          >
-                            The latest technical assessment must be reviewed before requesting a financial assessment.
+                            Financial Assessment is not ready. Add: {financeReadinessMissing.join(', ')}.
                           </Alert>
                         ) : (
                           <>
@@ -6032,7 +6212,7 @@ function LeadWorkspacePage() {
                                   1.55,
                               }}
                             >
-                              The technical assessment has been reviewed. This lead is ready for financial feasibility assessment.
+                              This lead is ready for the first specialist stage: Financial Assessment.
                             </Typography>
 
 
@@ -6112,9 +6292,13 @@ function LeadWorkspacePage() {
                           />
 
                           <InformationItem
-                            label="Technical Assessment"
+                            label="Financial Outcome"
                             value={
-                              `#${latestFinancialAssessment.technical_assessment}`
+                              latestFinancialAssessment.outcome === 'FINANCIALLY_SUITABLE'
+                                ? 'Financially suitable'
+                                : latestFinancialAssessment.outcome === 'FINANCIALLY_UNSUITABLE'
+                                  ? 'Financially unsuitable'
+                                  : 'Not recorded'
                             }
                           />
 
@@ -7334,9 +7518,44 @@ function LeadWorkspacePage() {
                     13,
                 }}
               >
-                Permanent record of assignment, status, qualification and lead information changes.
+                Permanent record of assignment, status, internal notes and Lead information changes.
               </Typography>
             </Box>
+
+
+            {canWorkLead && !isClosedLead && (
+              <Card variant="outlined" sx={{ p: 2.25, borderRadius: '12px' }}>
+                <Stack spacing={1.5}>
+                  <Box>
+                    <Typography sx={{ fontSize: 15, fontWeight: 700 }}>
+                      Add Internal Note
+                    </Typography>
+                    <Typography sx={{ mt: 0.25, color: 'text.secondary', fontSize: 12 }}>
+                      Record client clarifications or internal context for the shared Lead history.
+                    </Typography>
+                  </Box>
+                  {internalNoteError && (
+                    <Alert severity="error">{internalNoteError}</Alert>
+                  )}
+                  <TextField
+                    multiline
+                    minRows={3}
+                    label="Internal note"
+                    value={internalNote}
+                    onChange={(event) => setInternalNote(event.target.value)}
+                    slotProps={{ htmlInput: { maxLength: 4000 } }}
+                  />
+                  <Button
+                    variant="contained"
+                    disabled={isAddingInternalNote || !internalNote.trim()}
+                    onClick={() => void handleAddInternalNote()}
+                    sx={{ alignSelf: 'flex-start' }}
+                  >
+                    {isAddingInternalNote ? 'Adding...' : 'Add Note'}
+                  </Button>
+                </Stack>
+              </Card>
+            )}
 
 
             {history.length ===
@@ -7998,6 +8217,15 @@ function LeadWorkspacePage() {
               )}
 
               <TextField
+                label="Lead / project name"
+                value={editLeadForm.projectName}
+                onChange={(event) => setEditLeadForm((current) => ({
+                  ...current,
+                  projectName: event.target.value,
+                }))}
+              />
+
+              <TextField
                 required
                 label="Contact name"
                 value={
@@ -8087,6 +8315,7 @@ function LeadWorkspacePage() {
 
               <TextField
                 label="Lead source"
+                select
                 value={
                   editLeadForm.source
                 }
@@ -8099,18 +8328,45 @@ function LeadWorkspacePage() {
                     ) => ({
                       ...current,
 
-                      source:
-                        event.target.value,
+                      source: event.target.value,
                     }),
                   )
                 }
+              >
+                <MenuItem value="">Not specified</MenuItem>
+                <MenuItem value="WEBSITE">Website</MenuItem>
+                <MenuItem value="SOCIAL_MEDIA">Social media</MenuItem>
+                <MenuItem value="REFERRAL">Referral</MenuItem>
+                <MenuItem value="DIRECT">Direct</MenuItem>
+                <MenuItem value="OTHER">Other</MenuItem>
+              </TextField>
+
+              {editLeadForm.source === 'OTHER' && (
+                <TextField
+                  required
+                  label="Other lead source"
+                  value={editLeadForm.sourceDetails}
+                  onChange={(event) => setEditLeadForm((current) => ({
+                    ...current,
+                    sourceDetails: event.target.value,
+                  }))}
+                />
+              )}
+
+              <TextField
+                label="Project / Service Type"
+                value={editLeadForm.projectNature}
+                onChange={(event) => setEditLeadForm((current) => ({
+                  ...current,
+                  projectNature: event.target.value,
+                }))}
               />
 
               <TextField
                 required
                 multiline
                 minRows={3}
-                label="Requirement"
+                label="Customer / business requirement"
                 value={
                   editLeadForm.requirement
                 }
@@ -8128,6 +8384,52 @@ function LeadWorkspacePage() {
                     }),
                   )
                 }
+              />
+
+              <TextField
+                multiline
+                minRows={3}
+                label="Project scope / requirement details"
+                value={editLeadForm.projectScope}
+                onChange={(event) => setEditLeadForm((current) => ({
+                  ...current,
+                  projectScope: event.target.value,
+                }))}
+              />
+
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <TextField
+                  type="number"
+                  label="Budget minimum"
+                  slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
+                  value={editLeadForm.budgetMin}
+                  onChange={(event) => setEditLeadForm((current) => ({ ...current, budgetMin: event.target.value }))}
+                  fullWidth
+                />
+                <TextField
+                  type="number"
+                  label="Budget maximum"
+                  slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
+                  value={editLeadForm.budgetMax}
+                  onChange={(event) => setEditLeadForm((current) => ({ ...current, budgetMax: event.target.value }))}
+                  fullWidth
+                />
+                <TextField
+                  label="Currency"
+                  slotProps={{ htmlInput: { maxLength: 3 } }}
+                  value={editLeadForm.budgetCurrency}
+                  onChange={(event) => setEditLeadForm((current) => ({ ...current, budgetCurrency: event.target.value }))}
+                  fullWidth
+                />
+              </Stack>
+
+              <TextField
+                label="Expected timeline"
+                value={editLeadForm.expectedTimeline}
+                onChange={(event) => setEditLeadForm((current) => ({
+                  ...current,
+                  expectedTimeline: event.target.value,
+                }))}
               />
             </Stack>
           </DialogContent>
@@ -9206,11 +9508,11 @@ function LeadWorkspacePage() {
                 severity="info"
                 variant="outlined"
               >
-                The reviewed technical assessment will be provided to the Financial Officer as context for financial feasibility assessment.
+                Finance receives the client budget and business context directly from the Lead. Technical Assessment follows only after a financially suitable result.
               </Alert>
 
 
-              {latestTechnicalAssessment && (
+              {lead && (
                 <Card
                   variant="outlined"
                   sx={{
@@ -9236,7 +9538,7 @@ function LeadWorkspacePage() {
                         600,
                     }}
                   >
-                    TECHNICAL ASSESSMENT
+                    LEAD COMMERCIAL CONTEXT
                   </Typography>
 
                   <Typography
@@ -9254,13 +9556,13 @@ function LeadWorkspacePage() {
                         600,
                     }}
                   >
-                    Assessment #{latestTechnicalAssessment.id}
+                    {lead.project_name || lead.company_name}
                     {' • '}
-                    {latestTechnicalAssessment.status_display}
+                    {lead.budget_currency || ''}{' '}
+                    {lead.budget_min || '—'} – {lead.budget_max || '—'}
                   </Typography>
 
-                  {latestTechnicalAssessment
-                    .technical_comments && (
+                  {lead.requirement && (
                     <Typography
                       sx={{
                         mt:
@@ -9280,8 +9582,7 @@ function LeadWorkspacePage() {
                       }}
                     >
                       {
-                        latestTechnicalAssessment
-                          .technical_comments
+                        lead.requirement
                       }
                     </Typography>
                   )}

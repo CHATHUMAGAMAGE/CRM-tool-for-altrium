@@ -5,11 +5,12 @@ from django.conf import settings
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from openai import OpenAI
 
 from rest_framework import generics, status
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -1084,6 +1085,19 @@ class LeadQuerysetMixin:
                 source,
             )
 
+        for parameter, lookup in (
+            ("created_from", "created_at__date__gte"),
+            ("created_to", "created_at__date__lte"),
+        ):
+            raw_date = self.request.query_params.get(parameter)
+            if raw_date:
+                parsed_date = parse_date(raw_date)
+                if parsed_date is None:
+                    raise ValidationError(
+                        {parameter: "Use a valid date in YYYY-MM-DD format."}
+                    )
+                queryset = queryset.filter(**{lookup: parsed_date})
+
         assigned_to = (
             self.request
             .query_params
@@ -1393,6 +1407,41 @@ class LeadHistoryListView(
                 "-created_at",
                 "-id",
             )
+        )
+
+    def post(self, request, lead_id):
+        lead = self.get_lead()
+        role = request.user.profile.role
+        if role not in {
+            UserProfile.Role.SALES_REP,
+            UserProfile.Role.SALES_MANAGER,
+            UserProfile.Role.PROJECT_MANAGER,
+        }:
+            raise PermissionDenied(
+                "You do not have permission to add internal notes."
+            )
+
+        note = str(request.data.get("note") or "").strip()
+        if not note:
+            raise ValidationError({"note": "An internal note is required."})
+        if len(note) > 4000:
+            raise ValidationError(
+                {"note": "Internal notes must be 4000 characters or fewer."}
+            )
+
+        history_item = LeadHistory.objects.create(
+            lead=lead,
+            event_type=LeadHistory.EventType.UPDATED,
+            description="Internal note added.",
+            performed_by=request.user,
+            metadata={
+                "kind": "INTERNAL_NOTE",
+                "note": note,
+            },
+        )
+        return Response(
+            LeadHistorySerializer(history_item).data,
+            status=status.HTTP_201_CREATED,
         )
 
 

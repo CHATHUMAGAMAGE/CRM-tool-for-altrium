@@ -56,8 +56,8 @@ import {
 
 
 type DecisionAction =
-  | 'APPROVED'
-  | 'REJECTED'
+  | 'PROCEED'
+  | 'DO_NOT_PROCEED'
 
 
 type OpportunityReviewItem = {
@@ -193,38 +193,23 @@ function getOpportunityLabel(
   if (
     state?.decision
       ?.decision ===
-    'APPROVED'
+    'PROCEED'
   ) {
-    return 'Approved'
+    return 'Proceed'
   }
 
   if (
     state?.decision
       ?.decision ===
-    'REJECTED'
+    'DO_NOT_PROCEED'
   ) {
-    return 'Rejected'
+    return 'Do Not Proceed'
   }
 
   if (
     item.readyForDecision
   ) {
     return 'Ready for Decision'
-  }
-
-  if (
-    !item.technicalAssessment
-  ) {
-    return 'Technical Assessment Required'
-  }
-
-  if (
-    item
-      .technicalAssessment
-      .status !==
-    'REVIEWED'
-  ) {
-    return 'Technical Assessment Pending'
   }
 
   if (
@@ -236,10 +221,25 @@ function getOpportunityLabel(
   if (
     item
       .financialAssessment
-      .status !==
-    'REVIEWED'
+      .status !== 'SUBMITTED' &&
+    item.financialAssessment.status !== 'REVIEWED'
   ) {
     return 'Financial Assessment Pending'
+  }
+
+  if (item.financialAssessment.outcome === 'FINANCIALLY_UNSUITABLE') {
+    return 'Ready for Do Not Proceed'
+  }
+
+  if (!item.technicalAssessment) {
+    return 'Technical Assessment Required'
+  }
+
+  if (
+    item.technicalAssessment.status !== 'SUBMITTED' &&
+    item.technicalAssessment.status !== 'REVIEWED'
+  ) {
+    return 'Technical Assessment Pending'
   }
 
   return 'Not Ready'
@@ -268,7 +268,7 @@ function getOpportunityColor(
       .opportunityState
       ?.decision
       ?.decision ===
-    'APPROVED'
+    'PROCEED'
   ) {
     return 'success'
   }
@@ -278,7 +278,7 @@ function getOpportunityColor(
       .opportunityState
       ?.decision
       ?.decision ===
-    'REJECTED'
+    'DO_NOT_PROCEED'
   ) {
     return 'error'
   }
@@ -538,7 +538,7 @@ function OpportunityReviewPage() {
     useState<
       DecisionAction
     >(
-      'APPROVED',
+      'PROCEED',
     )
 
 
@@ -624,16 +624,9 @@ function OpportunityReviewPage() {
             ])
 
 
-          const opportunityLeads =
-            leadData.filter(
-              (
-                lead,
-              ) =>
-                lead.status ===
-                  'QUALIFIED' ||
-                lead.status ===
-                  'PROPOSAL',
-            )
+          const opportunityLeads = leadData.filter(
+            (lead) => !['WON', 'LOST', 'DISQUALIFIED'].includes(lead.status),
+          )
 
 
           const stateEntries =
@@ -761,15 +754,7 @@ function OpportunityReviewPage() {
     >(
       () =>
         leads
-          .filter(
-            (
-              lead,
-            ) =>
-              lead.status ===
-                'QUALIFIED' ||
-              lead.status ===
-                'PROPOSAL',
-          )
+          .filter((lead) => !['WON', 'LOST', 'DISQUALIFIED'].includes(lead.status))
           .map(
             (
               lead,
@@ -792,17 +777,23 @@ function OpportunityReviewPage() {
                 ] ??
                 null
 
-              const readyForDecision =
-                lead.status ===
-                  'QUALIFIED' &&
-                technicalAssessment
-                  ?.status ===
-                  'REVIEWED' &&
-                financialAssessment
-                  ?.status ===
-                  'REVIEWED' &&
-                !opportunityState
-                  ?.decision
+              const financeCompleted =
+                financialAssessment?.status === 'SUBMITTED' ||
+                financialAssessment?.status === 'REVIEWED'
+              const technicalCompleted =
+                technicalAssessment?.status === 'SUBMITTED' ||
+                technicalAssessment?.status === 'REVIEWED'
+              const readyForDecision = Boolean(
+                financeCompleted &&
+                (
+                  financialAssessment?.outcome === 'FINANCIALLY_UNSUITABLE' ||
+                  (
+                    financialAssessment?.outcome === 'FINANCIALLY_SUITABLE' &&
+                    technicalCompleted
+                  )
+                ) &&
+                !opportunityState?.decision,
+              )
 
               return {
                 lead,
@@ -831,13 +822,13 @@ function OpportunityReviewPage() {
                       .opportunityState
                       ?.decision
                       ?.decision ===
-                    'REJECTED'
+                      'DO_NOT_PROCEED'
                     ? 3
                     : first
                         .opportunityState
                         ?.decision
                         ?.decision ===
-                      'APPROVED'
+                      'PROCEED'
                       ? 2
                       : first
                           .readyForDecision
@@ -853,13 +844,13 @@ function OpportunityReviewPage() {
                       .opportunityState
                       ?.decision
                       ?.decision ===
-                    'REJECTED'
+                      'DO_NOT_PROCEED'
                     ? 3
                     : second
                         .opportunityState
                         ?.decision
                         ?.decision ===
-                      'APPROVED'
+                      'PROCEED'
                       ? 2
                       : second
                           .readyForDecision
@@ -928,7 +919,7 @@ function OpportunityReviewPage() {
     ).length
 
 
-  const approvedCount =
+  const proceedCount =
     reviewItems.filter(
       (
         item,
@@ -937,7 +928,7 @@ function OpportunityReviewPage() {
           .opportunityState
           ?.decision
           ?.decision ===
-        'APPROVED',
+        'PROCEED',
     ).length
 
 
@@ -954,7 +945,7 @@ function OpportunityReviewPage() {
     ).length
 
 
-  const rejectedCount =
+  const doNotProceedCount =
     reviewItems.filter(
       (
         item,
@@ -963,7 +954,7 @@ function OpportunityReviewPage() {
           .opportunityState
           ?.decision
           ?.decision ===
-        'REJECTED',
+        'DO_NOT_PROCEED',
     ).length
 
 
@@ -1029,11 +1020,9 @@ function OpportunityReviewPage() {
         decisionNotes
           .trim()
 
-      if (
-        !notes
-      ) {
+      if (decisionAction === 'DO_NOT_PROCEED' && !notes) {
         setDecisionError(
-          'Decision notes are required.',
+          'A reason is required when choosing Do Not Proceed.',
         )
 
         return
@@ -1080,11 +1069,7 @@ function OpportunityReviewPage() {
                 can_convert:
                   decision
                     .decision ===
-                    'APPROVED' &&
-                  selectedItem
-                    .lead
-                    .status ===
-                    'QUALIFIED',
+                    'PROCEED',
 
                 deal:
                   null,
@@ -1103,9 +1088,9 @@ function OpportunityReviewPage() {
 
         setSuccessMessage(
           decisionAction ===
-            'APPROVED'
-            ? 'Opportunity approved successfully. It is now ready for Deal conversion.'
-            : 'Opportunity rejected successfully.',
+            'PROCEED'
+            ? 'Proceed decision recorded. The Lead is now ready for Deal conversion.'
+            : 'Do Not Proceed decision recorded.',
         )
       } catch (
         requestError
@@ -1373,7 +1358,7 @@ function OpportunityReviewPage() {
                   13.5,
               }}
             >
-              Review completed assessments, approve or reject qualified opportunities, and convert approved opportunities into Deals.
+              Review specialist evidence, record Proceed or Do Not Proceed, and convert proceeding Leads into Deals.
             </Typography>
           </Box>
 
@@ -1479,13 +1464,13 @@ function OpportunityReviewPage() {
               ],
 
               [
-                'Approved',
-                approvedCount,
+                'Proceed',
+                proceedCount,
               ],
 
               [
-                'Rejected',
-                rejectedCount,
+                'Do Not Proceed',
+                doNotProceedCount,
               ],
 
               [
@@ -1631,7 +1616,7 @@ function OpportunityReviewPage() {
                   13,
               }}
             >
-              Qualified leads will appear here as they progress through technical and financial assessment.
+              Active leads will appear here as they progress through financial and technical assessment.
             </Typography>
           </Card>
         ) : (
@@ -1707,7 +1692,7 @@ function OpportunityReviewPage() {
                       11.5,
                   }}
                 >
-                  Qualified and approved opportunities
+                  Evidence-reviewed opportunities ready for a final decision
                 </Typography>
               </Box>
 
@@ -2755,7 +2740,7 @@ function OpportunityReviewPage() {
                               12,
                           }}
                         >
-                          Final Sales Manager approval before Deal creation
+                          Final Sales Manager decision before Deal creation
                         </Typography>
                       </Box>
 
@@ -2897,7 +2882,7 @@ function OpportunityReviewPage() {
                               .opportunityState
                               .decision
                               .decision ===
-                            'APPROVED'
+                            'PROCEED'
                               ? 'success'
                               : 'error'
                           }
@@ -3043,12 +3028,12 @@ function OpportunityReviewPage() {
                           .opportunityState
                           .decision
                           .decision ===
-                          'REJECTED' && (
+                          'DO_NOT_PROCEED' && (
                           <Alert
                             severity="warning"
                             variant="outlined"
                           >
-                            Rejected opportunities cannot be converted into Deals.
+                            Opportunities marked Do Not Proceed cannot be converted into Deals.
                           </Alert>
                         )}
                       </Stack>
@@ -3063,7 +3048,7 @@ function OpportunityReviewPage() {
                           severity="info"
                           variant="outlined"
                         >
-                          Both Technical and Financial Assessments have been reviewed. This qualified lead is ready for the final opportunity decision.
+                          The required specialist evidence is complete. This Lead is ready for the final Sales Manager decision.
                         </Alert>
 
 
@@ -3079,7 +3064,7 @@ function OpportunityReviewPage() {
                             1
                           }
                         >
-                          <Button
+                          {selectedItem.financialAssessment?.outcome === 'FINANCIALLY_SUITABLE' && (<Button
                             variant="contained"
                             color="success"
                             startIcon={
@@ -3087,12 +3072,12 @@ function OpportunityReviewPage() {
                             }
                             onClick={() =>
                               openDecisionDialog(
-                                'APPROVED',
+                                'PROCEED',
                               )
                             }
                           >
-                            Approve Opportunity
-                          </Button>
+                            Proceed
+                          </Button>)}
 
 
                           <Button
@@ -3103,11 +3088,11 @@ function OpportunityReviewPage() {
                             }
                             onClick={() =>
                               openDecisionDialog(
-                                'REJECTED',
+                                'DO_NOT_PROCEED',
                               )
                             }
                           >
-                            Reject Opportunity
+                            Do Not Proceed
                           </Button>
                         </Stack>
                       </Stack>
@@ -3116,7 +3101,7 @@ function OpportunityReviewPage() {
                         severity="warning"
                         variant="outlined"
                       >
-                        This lead is not ready for the final opportunity decision. Technical and Financial Assessments must both be reviewed first.
+                        This Lead is not ready for a final decision. Finance must complete first; a suitable result also requires a completed Technical Assessment.
                       </Alert>
                     )}
                   </Box>
@@ -3139,9 +3124,9 @@ function OpportunityReviewPage() {
         >
           <DialogTitle>
             {decisionAction ===
-            'APPROVED'
-              ? 'Approve Opportunity'
-              : 'Reject Opportunity'}
+            'PROCEED'
+              ? 'Proceed'
+              : 'Do Not Proceed'}
           </DialogTitle>
 
 
@@ -3167,16 +3152,16 @@ function OpportunityReviewPage() {
               <Alert
                 severity={
                   decisionAction ===
-                    'APPROVED'
+                    'PROCEED'
                     ? 'success'
                     : 'warning'
                 }
                 variant="outlined"
               >
                 {decisionAction ===
-                'APPROVED'
-                  ? 'Approval confirms that the completed technical and financial assessments support proceeding with this opportunity.'
-                  : 'Rejection records that this qualified opportunity will not proceed to Deal conversion.'}
+                'PROCEED'
+                  ? 'Proceed confirms that the available specialist evidence supports Deal creation.'
+                  : 'Do Not Proceed records that this opportunity will not continue to Deal conversion.'}
               </Alert>
 
 
@@ -3228,22 +3213,22 @@ function OpportunityReviewPage() {
 
 
               <TextField
-                required
+                required={decisionAction === 'DO_NOT_PROCEED'}
                 multiline
                 minRows={
                   5
                 }
                 label={
                   decisionAction ===
-                    'APPROVED'
-                    ? 'Approval notes'
-                    : 'Rejection reason'
+                    'PROCEED'
+                    ? 'Decision notes (optional)'
+                    : 'Do Not Proceed reason'
                 }
                 placeholder={
                   decisionAction ===
-                    'APPROVED'
-                    ? 'Record why the opportunity is approved to proceed...'
-                    : 'Record why the opportunity is being rejected...'
+                    'PROCEED'
+                    ? 'Optionally record why the opportunity should proceed...'
+                    : 'Record why the opportunity should not proceed...'
                 }
                 value={
                   decisionNotes
@@ -3285,14 +3270,16 @@ function OpportunityReviewPage() {
               variant="contained"
               color={
                 decisionAction ===
-                  'APPROVED'
+                  'PROCEED'
                   ? 'success'
                   : 'error'
               }
               disabled={
                 isSavingDecision ||
-                !decisionNotes
-                  .trim()
+                (
+                  decisionAction === 'DO_NOT_PROCEED' &&
+                  !decisionNotes.trim()
+                )
               }
               onClick={() =>
                 void handleDecision()
@@ -3306,10 +3293,10 @@ function OpportunityReviewPage() {
                   color="inherit"
                 />
               ) : decisionAction ===
-                'APPROVED' ? (
-                'Confirm Approval'
+                'PROCEED' ? (
+                'Confirm Proceed'
               ) : (
-                'Confirm Rejection'
+                'Confirm Do Not Proceed'
               )}
             </Button>
           </DialogActions>

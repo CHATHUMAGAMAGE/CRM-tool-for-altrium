@@ -18,6 +18,13 @@ export type LeadStatus =
   | 'LOST'
   | 'DISQUALIFIED'
 
+export type LeadSource =
+  | 'WEBSITE'
+  | 'SOCIAL_MEDIA'
+  | 'REFERRAL'
+  | 'DIRECT'
+  | 'OTHER'
+
 
 export type Lead = {
   id: number
@@ -25,8 +32,16 @@ export type Lead = {
   contact_name: string
   email: string
   phone: string
-  source: string
+  source: LeadSource | ''
+  source_details: string
+  project_name: string
+  project_nature: string
   requirement: string
+  project_scope: string
+  budget_min: string | null
+  budget_max: string | null
+  budget_currency: string
+  expected_timeline: string
 
   status: LeadStatus
   status_display: string
@@ -57,8 +72,16 @@ export type CreateLeadInput = {
   contact_name: string
   email?: string
   phone: string
-  source?: string
+  source?: LeadSource | ''
+  source_details?: string
+  project_name?: string
+  project_nature?: string
   requirement: string
+  project_scope?: string
+  budget_min?: string | null
+  budget_max?: string | null
+  budget_currency?: string
+  expected_timeline?: string
 }
 
 
@@ -67,8 +90,16 @@ export type UpdateLeadInput = Partial<{
   contact_name: string
   email: string
   phone: string
-  source: string
+  source: LeadSource | ''
+  source_details: string
+  project_name: string
+  project_nature: string
   requirement: string
+  project_scope: string
+  budget_min: string | null
+  budget_max: string | null
+  budget_currency: string
+  expected_timeline: string
   status: LeadStatus
   qualification_notes: string
   lost_reason: string
@@ -126,16 +157,6 @@ export type LeadHistory = {
 }
 
 
-/*
- * LEAD RESCUE RADAR
- */
-
-export type RescueRadarRiskLevel =
-  | 'LOW'
-  | 'MEDIUM'
-  | 'HIGH'
-  | 'CLOSED'
-
 export type WorkflowNotification = {
   id: number
   kind: 'ASSIGNMENT' | 'SUBMISSION' | 'REVIEW' | 'RETURNED'
@@ -163,29 +184,6 @@ export async function markNotificationRead(id: number): Promise<void> {
 export async function markAllNotificationsRead(): Promise<void> {
   const response = await authenticatedRequest('/api/v1/crm/notifications/read-all/', { method: 'POST' })
   if (!response.ok) throw new Error(await getErrorMessage(response))
-}
-
-
-export type LeadRescueRadarAnalysis = {
-  analysis_available: boolean
-
-  health_score:
-    number | null
-
-  risk_level:
-    RescueRadarRiskLevel
-
-  confidence: number
-
-  reasons: string[]
-
-  recommended_action: string
-
-  summary: string
-
-  generated_at: string
-
-  model: string | null
 }
 
 
@@ -420,6 +418,19 @@ export type TechnicalAssessment = {
   lead_contact_name: string
   lead_status: LeadStatus
   lead_status_display: string
+  lead_project_name: string
+  lead_project_nature: string
+  lead_requirement: string
+  lead_project_scope: string
+  lead_expected_timeline: string
+  financial_assessment: {
+    id: number
+    status: string
+    status_display: string
+    outcome: 'FINANCIALLY_SUITABLE' | 'FINANCIALLY_UNSUITABLE' | ''
+    outcome_display: string
+    financial_comments: string
+  } | null
 
   requested_by: number
   requested_by_name: string
@@ -842,33 +853,24 @@ export async function getLeadHistory(
   return data
 }
 
-
-/*
- * AI LEAD RESCUE RADAR
- */
-
-export async function analyzeLeadRescueRadar(
+export async function createLeadInternalNote(
   leadId: number,
-): Promise<LeadRescueRadarAnalysis> {
-  const response =
-    await authenticatedRequest(
-      `/api/v1/crm/leads/${leadId}/rescue-radar/`,
-      {
-        method: 'POST',
-      },
-    )
+  note: string,
+): Promise<LeadHistory> {
+  const response = await authenticatedRequest(
+    `/api/v1/crm/leads/${leadId}/history/`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note }),
+    },
+  )
 
   if (!response.ok) {
-    throw new Error(
-      await getErrorMessage(
-        response,
-      ),
-    )
+    throw new Error(await getErrorMessage(response))
   }
 
-  return (
-    await response.json()
-  ) as LeadRescueRadarAnalysis
+  return await response.json() as LeadHistory
 }
 
 

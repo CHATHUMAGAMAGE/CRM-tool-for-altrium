@@ -55,9 +55,6 @@ from .views import (
     LeadDetailView,
     LeadHistoryListView,
     LeadListCreateView,
-    LeadRescueRadarView,
-    LeadReturnForInformationView,
-    LeadSubmitForQualificationView,
 )
 
 
@@ -87,27 +84,9 @@ urlpatterns = [
     ),
 
     path(
-        "leads/<int:pk>/submit-for-qualification/",
-        LeadSubmitForQualificationView.as_view(),
-        name="lead-submit-for-qualification",
-    ),
-
-    path(
-        "leads/<int:pk>/return-for-information/",
-        LeadReturnForInformationView.as_view(),
-        name="lead-return-for-information",
-    ),
-
-    path(
         "leads/<int:lead_id>/history/",
         LeadHistoryListView.as_view(),
         name="lead-history",
-    ),
-
-    path(
-        "leads/<int:pk>/rescue-radar/",
-        LeadRescueRadarView.as_view(),
-        name="lead-rescue-radar",
     ),
 
     path(

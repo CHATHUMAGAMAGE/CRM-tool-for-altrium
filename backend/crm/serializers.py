@@ -10,6 +10,7 @@ from accounts.models import UserProfile
 from .models import (
     Communication,
     Customer,
+    FinancialAssessment,
     FollowUp,
     Lead,
     LeadHistory,
@@ -46,6 +47,13 @@ def get_status_display(status_value):
 class LeadSerializer(
     serializers.ModelSerializer,
 ):
+    source_details = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        default="",
+    )
+
     status_display = serializers.CharField(
         source="get_status_display",
         read_only=True,
@@ -88,7 +96,15 @@ class LeadSerializer(
             "email",
             "phone",
             "source",
+            "source_details",
+            "project_name",
+            "project_nature",
             "requirement",
+            "project_scope",
+            "budget_min",
+            "budget_max",
+            "budget_currency",
+            "expected_timeline",
             "status",
             "status_display",
             "qualification_notes",
@@ -188,6 +204,23 @@ class LeadSerializer(
             current_status,
         )
 
+        if (
+            requested_status
+            in {
+                Lead.Status.QUALIFIED,
+                Lead.Status.DISQUALIFIED,
+            }
+            and requested_status != current_status
+        ):
+            raise serializers.ValidationError(
+                {
+                    "status": (
+                        "The legacy qualification decision is no longer "
+                        "part of the active Lead workflow."
+                    )
+                }
+            )
+
         lost_reason = attrs.get(
             "lost_reason",
             (
@@ -205,6 +238,80 @@ class LeadSerializer(
                 else ""
             ),
         )
+
+        budget_min = attrs.get(
+            "budget_min",
+            self.instance.budget_min if self.instance is not None else None,
+        )
+
+        source = attrs.get(
+            "source",
+            self.instance.source if self.instance is not None else "",
+        )
+        if "source_details" in attrs:
+            source_details = (attrs.get("source_details") or "").strip()
+            attrs["source_details"] = source_details
+        else:
+            source_details = (
+                (self.instance.source_details or "")
+                if self.instance is not None
+                else ""
+            )
+            if self.instance is None:
+                attrs["source_details"] = ""
+
+        if source == Lead.Source.OTHER and not (source_details or "").strip():
+            raise serializers.ValidationError(
+                {"source_details": "Describe the lead source when Other is selected."}
+            )
+
+        if (
+            source != Lead.Source.OTHER
+            and ("source" in attrs or "source_details" in attrs)
+        ):
+            attrs["source_details"] = ""
+        budget_max = attrs.get(
+            "budget_max",
+            self.instance.budget_max if self.instance is not None else None,
+        )
+        budget_currency = attrs.get(
+            "budget_currency",
+            self.instance.budget_currency if self.instance is not None else "",
+        )
+
+        if budget_min is not None and budget_min < 0:
+            raise serializers.ValidationError(
+                {"budget_min": "Minimum budget cannot be negative."}
+            )
+
+        if budget_max is not None and budget_max < 0:
+            raise serializers.ValidationError(
+                {"budget_max": "Maximum budget cannot be negative."}
+            )
+
+        if (
+            budget_min is not None
+            and budget_max is not None
+            and budget_max < budget_min
+        ):
+            raise serializers.ValidationError(
+                {"budget_max": "Maximum budget must be greater than or equal to minimum budget."}
+            )
+
+        if (budget_min is not None or budget_max is not None) and not (
+            budget_currency or ""
+        ).strip():
+            raise serializers.ValidationError(
+                {"budget_currency": "Currency is required when a client budget is provided."}
+            )
+
+        if budget_currency:
+            normalized_currency = budget_currency.strip().upper()
+            if len(normalized_currency) != 3 or not normalized_currency.isalpha():
+                raise serializers.ValidationError(
+                    {"budget_currency": "Enter a three-letter currency code such as LKR or USD."}
+                )
+            attrs["budget_currency"] = normalized_currency
 
         if (
             profile is not None
@@ -329,6 +436,10 @@ class LeadSerializer(
             "request"
         ]
 
+        validated_data["source_details"] = (
+            validated_data.get("source_details") or ""
+        ).strip()
+
         profile = getattr(request.user, "profile", None)
         if (
             profile is not None
@@ -408,6 +519,11 @@ class LeadSerializer(
             None,
         )
 
+        if "source_details" in validated_data:
+            validated_data["source_details"] = (
+                validated_data.get("source_details") or ""
+            ).strip()
+
         profile = getattr(performed_by, "profile", None)
         if (
             instance.responsible_manager_id is None
@@ -462,6 +578,51 @@ class LeadSerializer(
             "source": (
                 "Lead source",
                 instance.source,
+            ),
+
+            "source_details": (
+                "Lead source details",
+                instance.source_details,
+            ),
+
+            "project_name": (
+                "Lead / project name",
+                instance.project_name,
+            ),
+
+            "project_nature": (
+                "Project / service type",
+                instance.project_nature,
+            ),
+
+            "requirement": (
+                "Customer / business requirement",
+                instance.requirement,
+            ),
+
+            "project_scope": (
+                "Project scope",
+                instance.project_scope,
+            ),
+
+            "budget_min": (
+                "Budget minimum",
+                instance.budget_min,
+            ),
+
+            "budget_max": (
+                "Budget maximum",
+                instance.budget_max,
+            ),
+
+            "budget_currency": (
+                "Budget currency",
+                instance.budget_currency,
+            ),
+
+            "expected_timeline": (
+                "Expected timeline",
+                instance.expected_timeline,
             ),
         }
 
@@ -1767,6 +1928,33 @@ class TechnicalAssessmentSerializer(
         read_only=True,
     )
 
+    lead_project_name = serializers.CharField(
+        source="lead.project_name",
+        read_only=True,
+    )
+
+    lead_project_nature = serializers.CharField(
+        source="lead.project_nature",
+        read_only=True,
+    )
+
+    lead_requirement = serializers.CharField(
+        source="lead.requirement",
+        read_only=True,
+    )
+
+    lead_project_scope = serializers.CharField(
+        source="lead.project_scope",
+        read_only=True,
+    )
+
+    lead_expected_timeline = serializers.CharField(
+        source="lead.expected_timeline",
+        read_only=True,
+    )
+
+    financial_assessment = serializers.SerializerMethodField()
+
     requested_by_name = (
         serializers.SerializerMethodField()
     )
@@ -1814,6 +2002,12 @@ class TechnicalAssessmentSerializer(
             "lead_contact_name",
             "lead_status",
             "lead_status_display",
+            "lead_project_name",
+            "lead_project_nature",
+            "lead_requirement",
+            "lead_project_scope",
+            "lead_expected_timeline",
+            "financial_assessment",
             "requested_by",
             "requested_by_name",
             "assigned_to",
@@ -1844,6 +2038,24 @@ class TechnicalAssessmentSerializer(
         return get_user_display_name(
             obj.requested_by,
         )
+
+    def get_financial_assessment(self, obj):
+        assessment = (
+            obj.lead.financial_assessments
+            .order_by("-created_at", "-id")
+            .first()
+        )
+        if assessment is None:
+            return None
+
+        return {
+            "id": assessment.id,
+            "status": assessment.status,
+            "status_display": assessment.get_status_display(),
+            "outcome": assessment.outcome,
+            "outcome_display": assessment.get_outcome_display(),
+            "financial_comments": assessment.financial_comments,
+        }
 
     def get_assigned_to_name(
         self,
@@ -1937,6 +2149,45 @@ class TechnicalAssessmentCreateSerializer(
         lead = attrs.get(
             "lead"
         )
+
+        if lead is not None:
+            financial_assessment = (
+                FinancialAssessment.objects.filter(
+                    lead=lead,
+                )
+                .order_by("-created_at", "-id")
+                .first()
+            )
+
+            if (
+                financial_assessment is None
+                or financial_assessment.status
+                not in {
+                    FinancialAssessment.Status.SUBMITTED,
+                    FinancialAssessment.Status.REVIEWED,
+                }
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "lead": (
+                            "A submitted financial assessment is required "
+                            "before technical assessment can begin."
+                        )
+                    }
+                )
+
+            if (
+                financial_assessment.outcome
+                != FinancialAssessment.Outcome.FINANCIALLY_SUITABLE
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "lead": (
+                            "Technical assessment is only available when "
+                            "Finance marks the lead as financially suitable."
+                        )
+                    }
+                )
 
         if (
             lead is not None

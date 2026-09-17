@@ -73,12 +73,8 @@ class OpportunityApiTests(APITestCase):
             contact_name="Tharindu",
             email="tharindu@example.com",
             phone="0771002003",
-            source="Referral",
-            status=Lead.Status.QUALIFIED,
-            qualification_notes=(
-                "Lead satisfies qualification "
-                "requirements."
-            ),
+            source=Lead.Source.REFERRAL,
+            status=Lead.Status.CONTACTED,
             assigned_to=self.sales_rep,
             created_by=self.sales_manager,
         )
@@ -164,6 +160,12 @@ class OpportunityApiTests(APITestCase):
                     "financially viable."
                 ),
 
+                outcome=(
+                    FinancialAssessment
+                    .Outcome
+                    .FINANCIALLY_SUITABLE
+                ),
+
                 submitted_at=(
                     timezone.now()
                 ),
@@ -199,7 +201,7 @@ class OpportunityApiTests(APITestCase):
             },
         )
 
-    def approve_lead(
+    def proceed_with_lead(
         self,
         user=None,
     ):
@@ -217,7 +219,7 @@ class OpportunityApiTests(APITestCase):
                     (
                         LeadOpportunityDecision
                         .Decision
-                        .APPROVED
+                        .PROCEED
                     ),
 
                 "decision_notes":
@@ -231,7 +233,7 @@ class OpportunityApiTests(APITestCase):
             format="json",
         )
 
-    def reject_lead(
+    def do_not_proceed_with_lead(
         self,
     ):
         self.client.force_authenticate(
@@ -245,7 +247,7 @@ class OpportunityApiTests(APITestCase):
                     (
                         LeadOpportunityDecision
                         .Decision
-                        .REJECTED
+                        .DO_NOT_PROCEED
                     ),
 
                 "decision_notes":
@@ -267,7 +269,7 @@ class OpportunityApiTests(APITestCase):
                     (
                         LeadOpportunityDecision
                         .Decision
-                        .APPROVED
+                        .PROCEED
                     ),
 
                 "decision_notes":
@@ -295,7 +297,7 @@ class OpportunityApiTests(APITestCase):
                     (
                         LeadOpportunityDecision
                         .Decision
-                        .APPROVED
+                        .PROCEED
                     ),
 
                 "decision_notes":
@@ -309,10 +311,10 @@ class OpportunityApiTests(APITestCase):
             status.HTTP_403_FORBIDDEN,
         )
 
-    def test_sales_manager_can_approve_opportunity(
+    def test_sales_manager_can_record_proceed_decision(
         self,
     ):
-        response = self.approve_lead()
+        response = self.proceed_with_lead()
 
         self.assertEqual(
             response.status_code,
@@ -332,7 +334,7 @@ class OpportunityApiTests(APITestCase):
             (
                 LeadOpportunityDecision
                 .Decision
-                .APPROVED
+                .PROCEED
             ),
         )
 
@@ -351,10 +353,10 @@ class OpportunityApiTests(APITestCase):
             self.financial_assessment,
         )
 
-    def test_admin_cannot_approve_opportunity(
+    def test_admin_cannot_make_opportunity_decision(
         self,
     ):
-        response = self.approve_lead(
+        response = self.proceed_with_lead(
             user=self.admin,
         )
 
@@ -369,7 +371,7 @@ class OpportunityApiTests(APITestCase):
             ).exists()
         )
 
-    def test_opportunity_decision_requires_qualified_lead(
+    def test_opportunity_decision_does_not_require_legacy_qualified_status(
         self,
     ):
         self.lead.status = (
@@ -382,14 +384,14 @@ class OpportunityApiTests(APITestCase):
             ]
         )
 
-        response = self.approve_lead()
+        response = self.proceed_with_lead()
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_400_BAD_REQUEST,
+            status.HTTP_201_CREATED,
         )
 
-        self.assertFalse(
+        self.assertTrue(
             LeadOpportunityDecision
             .objects
             .filter(
@@ -398,7 +400,7 @@ class OpportunityApiTests(APITestCase):
             .exists()
         )
 
-    def test_opportunity_decision_requires_reviewed_financial_assessment(
+    def test_opportunity_decision_accepts_submitted_financial_assessment(
         self,
     ):
         self.financial_assessment.status = (
@@ -413,14 +415,14 @@ class OpportunityApiTests(APITestCase):
             ]
         )
 
-        response = self.approve_lead()
+        response = self.proceed_with_lead()
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_400_BAD_REQUEST,
+            status.HTTP_201_CREATED,
         )
 
-        self.assertFalse(
+        self.assertTrue(
             LeadOpportunityDecision
             .objects
             .filter(
@@ -429,10 +431,10 @@ class OpportunityApiTests(APITestCase):
             .exists()
         )
 
-    def test_sales_manager_can_reject_opportunity(
+    def test_sales_manager_can_record_do_not_proceed(
         self,
     ):
-        response = self.reject_lead()
+        response = self.do_not_proceed_with_lead()
 
         self.assertEqual(
             response.status_code,
@@ -452,7 +454,7 @@ class OpportunityApiTests(APITestCase):
             (
                 LeadOpportunityDecision
                 .Decision
-                .REJECTED
+                .DO_NOT_PROCEED
             ),
         )
 
@@ -460,7 +462,7 @@ class OpportunityApiTests(APITestCase):
 
         self.assertEqual(
             self.lead.status,
-            Lead.Status.QUALIFIED,
+            Lead.Status.CONTACTED,
         )
 
         self.assertFalse(
@@ -471,11 +473,55 @@ class OpportunityApiTests(APITestCase):
             .exists()
         )
 
+    def test_financially_unsuitable_lead_can_be_stopped_without_technical(self):
+        self.financial_assessment.outcome = (
+            FinancialAssessment.Outcome.FINANCIALLY_UNSUITABLE
+        )
+        self.financial_assessment.technical_assessment = None
+        self.financial_assessment.save(
+            update_fields=["outcome", "technical_assessment"]
+        )
+        self.technical_assessment.delete()
+
+        response = self.do_not_proceed_with_lead()
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        decision = LeadOpportunityDecision.objects.get(lead=self.lead)
+        self.assertEqual(
+            decision.decision,
+            LeadOpportunityDecision.Decision.DO_NOT_PROCEED,
+        )
+        self.assertIsNone(decision.technical_assessment)
+
+    def test_financially_unsuitable_lead_cannot_proceed(self):
+        self.financial_assessment.outcome = (
+            FinancialAssessment.Outcome.FINANCIALLY_UNSUITABLE
+        )
+        self.financial_assessment.save(update_fields=["outcome"])
+
+        response = self.proceed_with_lead()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(
+            LeadOpportunityDecision.objects.filter(lead=self.lead).exists()
+        )
+
+    def test_financially_suitable_lead_requires_completed_technical_assessment(self):
+        self.technical_assessment.status = TechnicalAssessment.Status.IN_PROGRESS
+        self.technical_assessment.save(update_fields=["status"])
+
+        response = self.proceed_with_lead()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(
+            LeadOpportunityDecision.objects.filter(lead=self.lead).exists()
+        )
+
     def test_duplicate_opportunity_decision_is_rejected(
         self,
     ):
         first_response = (
-            self.approve_lead()
+            self.proceed_with_lead()
         )
 
         self.assertEqual(
@@ -491,7 +537,7 @@ class OpportunityApiTests(APITestCase):
                         (
                             LeadOpportunityDecision
                             .Decision
-                            .REJECTED
+                            .DO_NOT_PROCEED
                         ),
 
                     "decision_notes":
@@ -550,10 +596,10 @@ class OpportunityApiTests(APITestCase):
             ]
         )
 
-    def test_get_approved_decision_allows_conversion(
+    def test_get_proceed_decision_allows_conversion(
         self,
     ):
-        self.approve_lead()
+        self.proceed_with_lead()
 
         response = self.client.get(
             self.decision_url,
@@ -573,7 +619,7 @@ class OpportunityApiTests(APITestCase):
             (
                 LeadOpportunityDecision
                 .Decision
-                .APPROVED
+                .PROCEED
             ),
         )
 
@@ -583,11 +629,11 @@ class OpportunityApiTests(APITestCase):
             ]
         )
 
-    def test_approved_lead_can_be_converted_to_deal(
+    def test_proceeding_lead_can_be_converted_to_deal(
         self,
     ):
         approval_response = (
-            self.approve_lead()
+            self.proceed_with_lead()
         )
 
         self.assertEqual(
@@ -654,7 +700,7 @@ class OpportunityApiTests(APITestCase):
             (
                 LeadOpportunityDecision
                 .Decision
-                .APPROVED
+                .PROCEED
             ),
         )
 
@@ -684,7 +730,7 @@ class OpportunityApiTests(APITestCase):
     def test_conversion_creates_history_event(
         self,
     ):
-        self.approve_lead()
+        self.proceed_with_lead()
 
         response = self.client.post(
             self.convert_url,
@@ -716,7 +762,7 @@ class OpportunityApiTests(APITestCase):
             self.sales_manager,
         )
 
-    def test_lead_cannot_convert_without_approval(
+    def test_lead_cannot_convert_without_proceed_decision(
         self,
     ):
         self.client.force_authenticate(
@@ -738,11 +784,11 @@ class OpportunityApiTests(APITestCase):
             0,
         )
 
-    def test_rejected_opportunity_cannot_be_converted(
+    def test_do_not_proceed_opportunity_cannot_be_converted(
         self,
     ):
         rejection_response = (
-            self.reject_lead()
+            self.do_not_proceed_with_lead()
         )
 
         self.assertEqual(
@@ -765,11 +811,11 @@ class OpportunityApiTests(APITestCase):
             0,
         )
 
-    def test_sales_rep_cannot_convert_approved_opportunity(
+    def test_sales_rep_cannot_convert_proceeding_opportunity(
         self,
     ):
         approval_response = (
-            self.approve_lead()
+            self.proceed_with_lead()
         )
 
         self.assertEqual(
@@ -799,7 +845,7 @@ class OpportunityApiTests(APITestCase):
     def test_lead_cannot_be_converted_to_deal_twice(
         self,
     ):
-        self.approve_lead()
+        self.proceed_with_lead()
 
         first_response = (
             self.client.post(

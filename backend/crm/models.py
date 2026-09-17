@@ -5,6 +5,13 @@ from django.utils import timezone
 
 
 class Lead(models.Model):
+    class Source(models.TextChoices):
+        WEBSITE = "WEBSITE", "Website"
+        SOCIAL_MEDIA = "SOCIAL_MEDIA", "Social media"
+        REFERRAL = "REFERRAL", "Referral"
+        DIRECT = "DIRECT", "Direct"
+        OTHER = "OTHER", "Other"
+
     class Status(models.TextChoices):
         NEW = "NEW", "New"
         CONTACTED = "CONTACTED", "Contacted"
@@ -39,11 +46,55 @@ class Lead(models.Model):
     )
 
     source = models.CharField(
-        max_length=100,
+        max_length=20,
+        choices=Source.choices,
+        blank=True,
+    )
+
+    source_details = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    project_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    project_nature = models.CharField(
+        max_length=255,
         blank=True,
     )
 
     requirement = models.TextField(
+        blank=True,
+    )
+
+    project_scope = models.TextField(
+        blank=True,
+    )
+
+    budget_min = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    budget_max = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    budget_currency = models.CharField(
+        max_length=3,
+        blank=True,
+    )
+
+    expected_timeline = models.CharField(
+        max_length=255,
         blank=True,
     )
 
@@ -171,6 +222,12 @@ class Lead(models.Model):
                     )
                 }
             )
+
+    def save(self, *args, **kwargs):
+        # The database column is intentionally non-nullable. Normalize legacy
+        # clients and non-serializer callers at the persistence boundary too.
+        self.source_details = (self.source_details or "").strip()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return (
@@ -998,6 +1055,16 @@ class TechnicalAssessmentHistory(
 
 
 class FinancialAssessment(models.Model):
+    class Outcome(models.TextChoices):
+        FINANCIALLY_SUITABLE = (
+            "FINANCIALLY_SUITABLE",
+            "Financially suitable",
+        )
+        FINANCIALLY_UNSUITABLE = (
+            "FINANCIALLY_UNSUITABLE",
+            "Financially unsuitable",
+        )
+
     class Status(models.TextChoices):
         REQUESTED = (
             "REQUESTED",
@@ -1029,6 +1096,8 @@ class FinancialAssessment(models.Model):
         TechnicalAssessment,
         on_delete=models.PROTECT,
         related_name="financial_assessments",
+        null=True,
+        blank=True,
     )
 
     requested_by = models.ForeignKey(
@@ -1060,6 +1129,12 @@ class FinancialAssessment(models.Model):
     )
 
     financial_comments = models.TextField(
+        blank=True,
+    )
+
+    outcome = models.CharField(
+        max_length=30,
+        choices=Outcome.choices,
         blank=True,
     )
 
@@ -1155,10 +1230,7 @@ class FinancialAssessment(models.Model):
                     }
                 )
 
-        if (
-            self.technical_assessment_id
-            and self.lead_id
-        ):
+        if self.technical_assessment_id and self.lead_id:
             if (
                 self.technical_assessment
                 .lead_id
@@ -1174,23 +1246,6 @@ class FinancialAssessment(models.Model):
                     }
                 )
 
-            if (
-                self.technical_assessment
-                .status
-                != TechnicalAssessment
-                .Status
-                .REVIEWED
-            ):
-                raise ValidationError(
-                    {
-                        "technical_assessment": (
-                            "The technical assessment "
-                            "must be reviewed before a "
-                            "financial assessment can "
-                            "be requested."
-                        )
-                    }
-                )
 
     def __str__(self):
         return (
@@ -1353,14 +1408,14 @@ class LeadOpportunityDecision(
     models.Model,
 ):
     class Decision(models.TextChoices):
-        APPROVED = (
-            "APPROVED",
-            "Approved",
+        PROCEED = (
+            "PROCEED",
+            "Proceed",
         )
 
-        REJECTED = (
-            "REJECTED",
-            "Rejected",
+        DO_NOT_PROCEED = (
+            "DO_NOT_PROCEED",
+            "Do Not Proceed",
         )
 
     lead = models.OneToOneField(
@@ -1373,6 +1428,8 @@ class LeadOpportunityDecision(
         TechnicalAssessment,
         on_delete=models.PROTECT,
         related_name="opportunity_decisions",
+        null=True,
+        blank=True,
     )
 
     financial_assessment = models.ForeignKey(
@@ -1415,14 +1472,14 @@ class LeadOpportunityDecision(
     def clean(self):
         super().clean()
 
-        if not (
-            self.decision_notes
-            or ""
-        ).strip():
+        if (
+            self.decision == self.Decision.DO_NOT_PROCEED
+            and not (self.decision_notes or "").strip()
+        ):
             raise ValidationError(
                 {
                     "decision_notes":
-                        "Decision notes are required."
+                        "A reason is required when choosing Do Not Proceed."
                 }
             )
 
@@ -1444,18 +1501,15 @@ class LeadOpportunityDecision(
                     }
                 )
 
-            if (
-                self.technical_assessment
-                .status
-                != TechnicalAssessment
-                .Status
-                .REVIEWED
-            ):
+            if self.technical_assessment.status not in {
+                TechnicalAssessment.Status.SUBMITTED,
+                TechnicalAssessment.Status.REVIEWED,
+            }:
                 raise ValidationError(
                     {
                         "technical_assessment": (
                             "The technical assessment "
-                            "must be reviewed before "
+                            "must be completed before "
                             "the opportunity decision."
                         )
                     }
@@ -1479,40 +1533,33 @@ class LeadOpportunityDecision(
                     }
                 )
 
-            if (
-                self.financial_assessment
-                .status
-                != FinancialAssessment
-                .Status
-                .REVIEWED
-            ):
+            if self.financial_assessment.status not in {
+                FinancialAssessment.Status.SUBMITTED,
+                FinancialAssessment.Status.REVIEWED,
+            }:
                 raise ValidationError(
                     {
                         "financial_assessment": (
                             "The financial assessment "
-                            "must be reviewed before "
+                            "must be completed before "
                             "the opportunity decision."
                         )
                     }
                 )
 
-        if (
-            self.technical_assessment_id
-            and self.financial_assessment_id
-            and self.financial_assessment
-            .technical_assessment_id
-            != self.technical_assessment_id
-        ):
-            raise ValidationError(
-                {
-                    "financial_assessment": (
-                        "The financial assessment must "
-                        "reference the same technical "
-                        "assessment used for the "
-                        "opportunity decision."
-                    )
-                }
+        if self.financial_assessment_id:
+            financially_suitable = (
+                self.financial_assessment.outcome
+                == FinancialAssessment.Outcome.FINANCIALLY_SUITABLE
             )
+            if financially_suitable and not self.technical_assessment_id:
+                raise ValidationError(
+                    {"technical_assessment": "A completed Technical Assessment is required after a financially suitable result."}
+                )
+            if self.decision == self.Decision.PROCEED and not financially_suitable:
+                raise ValidationError(
+                    {"decision": "Proceed requires a financially suitable result."}
+                )
 
     def __str__(self):
         return (
@@ -1673,12 +1720,12 @@ class Deal(models.Model):
                 .decision
                 != LeadOpportunityDecision
                 .Decision
-                .APPROVED
+                .PROCEED
             ):
                 raise ValidationError(
                     {
                         "opportunity_decision": (
-                            "Only an approved opportunity "
+                            "Only a Proceed decision "
                             "can be converted to a deal."
                         )
                     }

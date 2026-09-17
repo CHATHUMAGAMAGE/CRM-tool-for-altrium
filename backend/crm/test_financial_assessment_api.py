@@ -126,6 +126,12 @@ class FinancialAssessmentAPITests(
             email="finance@example.com",
             phone="0711111111",
             source="Test",
+            project_name="Finance Context Project",
+            requirement="Deliver a client service platform.",
+            budget_min="1000000.00",
+            budget_max="1500000.00",
+            budget_currency="LKR",
+            expected_timeline="Within four months",
             status=Lead.Status.QUALIFIED,
             qualification_notes=(
                 "Qualified for assessment."
@@ -165,6 +171,7 @@ class FinancialAssessmentAPITests(
         assigned_to=None,
         status_value=None,
         financial_comments="",
+        outcome="",
     ):
         if assigned_to is None:
             assigned_to = (
@@ -181,9 +188,6 @@ class FinancialAssessmentAPITests(
         return (
             FinancialAssessment.objects.create(
                 lead=self.lead,
-                technical_assessment=(
-                    self.reviewed_technical_assessment
-                ),
                 requested_by=(
                     self.sales_manager
                 ),
@@ -196,6 +200,7 @@ class FinancialAssessmentAPITests(
                 financial_comments=(
                     financial_comments
                 ),
+                outcome=outcome,
             )
         )
 
@@ -247,9 +252,6 @@ class FinancialAssessmentAPITests(
                 "lead":
                     self.lead.id,
 
-                "technical_assessment":
-                    self.reviewed_technical_assessment.id,
-
                 "assigned_to":
                     self.financial_officer.id,
 
@@ -284,6 +286,28 @@ class FinancialAssessmentAPITests(
             self.financial_officer,
         )
 
+        detail_response = self.client.get(
+            reverse(
+                "crm:financial-assessment-detail",
+                kwargs={"pk": assessment.id},
+            )
+        )
+        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            detail_response.data["lead_company_name"],
+            self.lead.company_name,
+        )
+        self.assertIn("lead_budget_min", detail_response.data)
+        self.assertEqual(detail_response.data["lead_budget_min"], "1000000.00")
+        self.assertEqual(
+            detail_response.data["lead_requirement"],
+            self.lead.requirement,
+        )
+        self.assertEqual(
+            detail_response.data["lead_expected_timeline"],
+            self.lead.expected_timeline,
+        )
+
         self.assertTrue(
             FinancialAssessmentHistory
             .objects
@@ -298,24 +322,9 @@ class FinancialAssessmentAPITests(
             .exists()
         )
 
-    def test_unreviewed_technical_assessment_is_rejected(
+    def test_financial_assessment_does_not_require_technical_assessment(
         self,
     ):
-        technical_assessment = (
-            TechnicalAssessment.objects.create(
-                lead=self.lead,
-                requested_by=self.sales_manager,
-                assigned_to=self.tech_lead,
-                requirements="Assess.",
-                status=(
-                    TechnicalAssessment
-                    .Status
-                    .SUBMITTED
-                ),
-                technical_comments="Completed.",
-            )
-        )
-
         self.client.force_authenticate(
             user=self.sales_manager,
         )
@@ -328,9 +337,6 @@ class FinancialAssessmentAPITests(
                 "lead":
                     self.lead.id,
 
-                "technical_assessment":
-                    technical_assessment.id,
-
                 "assigned_to":
                     self.financial_officer.id,
 
@@ -340,17 +346,9 @@ class FinancialAssessmentAPITests(
             format="json",
         )
 
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_400_BAD_REQUEST,
-        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        self.assertIn(
-            "technical_assessment",
-            response.data,
-        )
-
-    def test_technical_assessment_must_belong_to_same_lead(
+    def test_legacy_technical_link_is_ignored_by_create_api(
         self,
     ):
         other_lead = Lead.objects.create(
@@ -404,15 +402,9 @@ class FinancialAssessmentAPITests(
             format="json",
         )
 
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_400_BAD_REQUEST,
-        )
-
-        self.assertIn(
-            "technical_assessment",
-            response.data,
-        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        assessment = FinancialAssessment.objects.get(pk=response.data["id"])
+        self.assertIsNone(assessment.technical_assessment)
 
     def test_sales_rep_cannot_request_financial_assessment(
         self,
@@ -428,9 +420,6 @@ class FinancialAssessmentAPITests(
             {
                 "lead":
                     self.lead.id,
-
-                "technical_assessment":
-                    self.reviewed_technical_assessment.id,
 
                 "assigned_to":
                     self.financial_officer.id,
@@ -574,6 +563,26 @@ class FinancialAssessmentAPITests(
             status.HTTP_404_NOT_FOUND,
         )
 
+    def test_sales_rep_cannot_perform_financial_assessment(self):
+        assessment = self.create_financial_assessment(
+            status_value=FinancialAssessment.Status.IN_PROGRESS,
+        )
+        self.client.force_authenticate(user=self.sales_rep)
+
+        response = self.client.patch(
+            reverse(
+                "crm:financial-assessment-work",
+                kwargs={"pk": assessment.id},
+            ),
+            {
+                "financial_comments": "Attempted unauthorized assessment.",
+                "outcome": FinancialAssessment.Outcome.FINANCIALLY_SUITABLE,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_financial_officer_can_update_financial_comments(
         self,
     ):
@@ -604,6 +613,7 @@ class FinancialAssessmentAPITests(
                     "Budget is viable and "
                     "projected costs are acceptable."
                 ),
+                "outcome": FinancialAssessment.Outcome.FINANCIALLY_SUITABLE,
             },
             format="json",
         )
@@ -740,6 +750,25 @@ class FinancialAssessmentAPITests(
             response.data,
         )
 
+    def test_submit_requires_financial_suitability_outcome(self):
+        assessment = self.create_financial_assessment(
+            status_value=FinancialAssessment.Status.IN_PROGRESS,
+            financial_comments="Commercial review completed.",
+        )
+        self.client.force_authenticate(user=self.financial_officer)
+
+        response = self.client.post(
+            reverse(
+                "crm:financial-assessment-submit",
+                kwargs={"pk": assessment.id},
+            ),
+            {},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("outcome", response.data)
+
     def test_complete_financial_assessment_workflow(
         self,
     ):
@@ -782,6 +811,7 @@ class FinancialAssessmentAPITests(
                     "the expected budget. "
                     "Financially viable."
                 ),
+                "outcome": FinancialAssessment.Outcome.FINANCIALLY_SUITABLE,
             },
             format="json",
         )

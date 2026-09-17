@@ -1147,6 +1147,16 @@ function TechnicalAssessmentWorkspacePage() {
               }}
             >
               <LabelValue
+                label="PROJECT / LEAD"
+                value={assessment.lead_project_name || 'Not provided'}
+              />
+
+              <LabelValue
+                label="CLIENT / COMPANY"
+                value={assessment.lead_company_name}
+              />
+
+              <LabelValue
                 label="CONTACT"
                 value={
                   assessment
@@ -1155,19 +1165,23 @@ function TechnicalAssessmentWorkspacePage() {
               />
 
               <LabelValue
+                label="PROJECT / SERVICE TYPE"
+                value={assessment.lead_project_nature || 'Not provided'}
+              />
+
+              <LabelValue
+                label="EXPECTED TIMELINE"
+                value={assessment.lead_expected_timeline || 'Not provided'}
+              />
+
+              <LabelValue
                 label="LEAD STATUS"
-                value={
-                  assessment
-                    .lead_status_display
-                }
+                value={assessment.lead_status_display}
               />
 
               <LabelValue
                 label="REQUESTED BY"
-                value={
-                  assessment
-                    .requested_by_name
-                }
+                value={assessment.requested_by_name}
               />
             </Box>
 
@@ -1183,7 +1197,7 @@ function TechnicalAssessmentWorkspacePage() {
                   color: 'var(--eleven-text-secondary)',
                 }}
               >
-                ASSESSMENT REQUIREMENTS
+                CUSTOMER / BUSINESS REQUIREMENT
               </Typography>
 
               <Typography
@@ -1197,11 +1211,87 @@ function TechnicalAssessmentWorkspacePage() {
                 }}
               >
                 {
-                  assessment
-                    .requirements
+                  assessment.lead_requirement || 'Not provided'
                 }
               </Typography>
             </Box>
+
+            <Box sx={{ mt: 2.2 }}>
+              <Typography
+                sx={{
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: 'var(--eleven-text-secondary)',
+                }}
+              >
+                PROJECT SCOPE / REQUIREMENT DETAILS
+              </Typography>
+
+              <Typography
+                sx={{
+                  mt: 0.7,
+                  whiteSpace: 'pre-wrap',
+                  fontSize: 13.5,
+                  lineHeight: 1.65,
+                  color: 'var(--eleven-text-secondary)',
+                }}
+              >
+                {assessment.lead_project_scope || 'Not provided'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ mt: 2.2 }}>
+              <Typography
+                sx={{
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: 'var(--eleven-text-secondary)',
+                }}
+              >
+                TECHNICAL ASSESSMENT BRIEF
+              </Typography>
+
+              <Typography
+                sx={{
+                  mt: 0.7,
+                  whiteSpace: 'pre-wrap',
+                  fontSize: 13.5,
+                  lineHeight: 1.65,
+                  color: 'var(--eleven-text-secondary)',
+                }}
+              >
+                {assessment.requirements}
+              </Typography>
+            </Box>
+
+            {assessment.financial_assessment && (
+              <Box sx={{ mt: 2.2 }}>
+                <Typography
+                  sx={{
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    color: 'var(--eleven-text-secondary)',
+                  }}
+                >
+                  FINANCIAL ASSESSMENT CONTEXT
+                </Typography>
+
+                <Typography
+                  sx={{
+                    mt: 0.7,
+                    whiteSpace: 'pre-wrap',
+                    fontSize: 13.5,
+                    lineHeight: 1.65,
+                    color: 'var(--eleven-text-secondary)',
+                  }}
+                >
+                  {assessment.financial_assessment.outcome_display}
+                  {assessment.financial_assessment.financial_comments
+                    ? ` — ${assessment.financial_assessment.financial_comments}`
+                    : ''}
+                </Typography>
+              </Box>
+            )}
           </Paper>
 
 
