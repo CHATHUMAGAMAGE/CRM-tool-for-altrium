@@ -13,6 +13,8 @@ from rest_framework.response import Response
 from accounts.models import UserProfile
 
 from .models import (
+    CommercialExceptionRequest,
+    CommercialReview,
     Deal,
     FinancialAssessment,
     Lead,
@@ -195,9 +197,18 @@ class LeadOpportunityDecisionView(
                             .Decision
                             .PROCEED
                         )
-                        and decision.financial_assessment.outcome
-                        == FinancialAssessment.Outcome.FINANCIALLY_SUITABLE
+                        and (
+                            decision.financial_assessment.outcome == FinancialAssessment.Outcome.FINANCIALLY_SUITABLE
+                            or CommercialExceptionRequest.objects.filter(
+                                financial_assessment=decision.financial_assessment,
+                                status=CommercialExceptionRequest.Status.APPROVED,
+                            ).exists()
+                        )
                         and decision.technical_assessment_id is not None
+                        and not FinancialAssessment.objects.filter(
+                            lead=lead,
+                            status__in=[FinancialAssessment.Status.REQUESTED, FinancialAssessment.Status.IN_PROGRESS],
+                        ).exclude(pk=decision.financial_assessment_id).exists()
                         and deal is None
                     ),
 
@@ -302,6 +313,21 @@ class LeadOpportunityDecisionView(
             financial_assessment.outcome
             == FinancialAssessment.Outcome.FINANCIALLY_SUITABLE
         )
+        approved_exception = CommercialExceptionRequest.objects.filter(
+            financial_assessment=financial_assessment,
+            status=CommercialExceptionRequest.Status.APPROVED,
+        ).exists()
+        financially_authorised = financially_suitable or approved_exception
+        reassessment_pending = FinancialAssessment.objects.filter(
+            lead=lead,
+            status__in=[FinancialAssessment.Status.REQUESTED, FinancialAssessment.Status.IN_PROGRESS],
+        ).exclude(pk=financial_assessment.pk).exists()
+
+        if requested_decision == LeadOpportunityDecision.Decision.PROCEED and reassessment_pending:
+            return Response(
+                {"detail": "Proceed is not permitted while a Financial Reassessment is pending."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         technical_assessment = (
             TechnicalAssessment.objects.filter(
                 lead=lead,
@@ -314,12 +340,12 @@ class LeadOpportunityDecisionView(
             .first()
         )
 
-        if financially_suitable and technical_assessment is None:
+        if financially_authorised and technical_assessment is None:
             return Response(
                 {
                     "detail": (
                         "A completed Technical Assessment is required "
-                        "after a financially suitable result."
+                        "after financial approval or an approved commercial exception."
                     )
                 },
                 status=(
@@ -330,10 +356,10 @@ class LeadOpportunityDecisionView(
 
         if (
             requested_decision == LeadOpportunityDecision.Decision.PROCEED
-            and not financially_suitable
+            and not financially_authorised
         ):
             return Response(
-                {"detail": "Proceed requires a financially suitable result."},
+                {"detail": "Proceed is not permitted because the latest Financial Assessment is Not Financially Viable and no approved commercial exception exists."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -397,6 +423,13 @@ class LeadOpportunityDecisionView(
             workflow_event = (
                 "OPPORTUNITY_DO_NOT_PROCEED"
             )
+            lead.status = Lead.Status.LOST
+            lead.lost_reason = decision.decision_notes
+            lead.save(update_fields=["status", "lost_reason", "updated_at"])
+            CommercialReview.objects.filter(
+                lead=lead,
+                status__in=[CommercialReview.Status.REQUIRED, CommercialReview.Status.REVISED, CommercialReview.Status.REASSESSMENT_REQUESTED],
+            ).update(status=CommercialReview.Status.CLOSED, updated_at=timezone.now())
 
         LeadHistory.objects.create(
             lead=lead,
@@ -603,15 +636,28 @@ class LeadConvertToDealView(
                 ),
             )
 
+        if FinancialAssessment.objects.filter(
+            lead=lead,
+            status__in=[FinancialAssessment.Status.REQUESTED, FinancialAssessment.Status.IN_PROGRESS],
+        ).exclude(pk=decision.financial_assessment_id).exists():
+            return Response(
+                {"detail": "Deal conversion is not permitted while a Financial Reassessment is pending."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         if (
             decision.financial_assessment.outcome
             != FinancialAssessment.Outcome.FINANCIALLY_SUITABLE
+            and not CommercialExceptionRequest.objects.filter(
+                financial_assessment=decision.financial_assessment,
+                status=CommercialExceptionRequest.Status.APPROVED,
+            ).exists()
         ):
             return Response(
                 {
                     "detail": (
-                        "Deal conversion requires a financially suitable "
-                        "assessment outcome."
+                        "Deal conversion requires a Financially Viable outcome "
+                        "or an approved commercial exception."
                     )
                 },
                 status=status.HTTP_400_BAD_REQUEST,

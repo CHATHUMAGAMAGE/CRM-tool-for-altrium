@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm 13mm 18mm;
+      @bottom-left { content: "ELEVEN CRM | CRM for Altrium"; color: #64748b; font-size: 8pt; }
+      @bottom-center { content: "Confidential"; color: #64748b; font-size: 8pt; }
+      @bottom-right { content: "Page " counter(page) " of " counter(pages); color: #64748b; font-size: 8pt; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #17213c; font-family: Arial, Helvetica, sans-serif; font-size: 9pt; line-height: 1.45; }
+    .watermark { position: fixed; top: 47%; left: 12%; width: 76%; text-align: center; transform: rotate(-28deg); color: rgba(15, 45, 92, .035); font-size: 42pt; font-weight: 800; letter-spacing: 5px; z-index: -1; }
+    .masthead { border-bottom: 3px solid #1167d8; padding-bottom: 13px; margin-bottom: 18px; }
+    .brand-logo { display: block; width: 155px; height: auto; }
+    .brand-subtitle { margin-top: -2px; color: #74819a; font-size: 7.5pt; font-weight: 700; letter-spacing: 1.6px; }
+    h1 { margin: 19px 0 2px; color: #101a35; font-size: 22pt; line-height: 1.15; }
+    .eyebrow { color: #1167d8; font-size: 8pt; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    .metadata { display: table; width: 100%; margin-top: 14px; table-layout: fixed; }
+    .metadata > div { display: table-cell; width: 33.333%; padding-right: 12px; vertical-align: top; }
+    .label { color: #718096; font-size: 7.5pt; font-weight: 700; letter-spacing: .45px; text-transform: uppercase; }
+    .value { margin-top: 3px; color: #17213c; font-size: 9.5pt; font-weight: 650; }
+    .subvalue { color: #64748b; font-size: 8pt; }
+    .section { margin-top: 18px; break-inside: avoid; }
+    .section.allow-break { break-inside: auto; }
+    h2 { margin: 0 0 9px; padding-bottom: 5px; border-bottom: 1px solid #dbe3ee; color: #13274b; font-size: 13pt; break-after: avoid; }
+    .section.allow-break h2 { break-after: avoid; }
+    .section.allow-break table { break-before: avoid; }
+    .cards { display: table; width: 100%; table-layout: fixed; border-spacing: 7px 0; margin-left: -7px; }
+    .card { display: table-cell; padding: 10px; border: 1px solid #dce5f0; border-radius: 5px; background: #f8fbff; vertical-align: top; }
+    .card-value { margin-top: 3px; color: #0b57c5; font-size: 17pt; font-weight: 800; }
+    .filter-grid { display: table; width: 100%; table-layout: fixed; }
+    .filter-row { display: table-row; }
+    .filter-name, .filter-value { display: table-cell; padding: 5px 7px; border-bottom: 1px solid #edf1f6; }
+    .filter-name { width: 32%; color: #64748b; font-weight: 700; }
+    .bar-row { display: table; width: 100%; margin: 5px 0; table-layout: fixed; }
+    .bar-label { display: table-cell; width: 28%; padding-right: 8px; color: #344563; font-weight: 650; }
+    .bar-track { display: table-cell; width: 62%; height: 8px; background: #edf2f8; vertical-align: middle; }
+    .bar-chart { display: block; width: 100%; height: 8px; }
+    .bar-background { fill: #edf2f8; }
+    .bar-fill { fill: #2780e8; }
+    .bar-value { display: table-cell; width: 10%; padding-left: 7px; text-align: right; font-weight: 700; }
+    .funnel { display: table; width: 100%; table-layout: fixed; }
+    .funnel-step { display: table-cell; padding: 11px 8px; border-right: 5px solid white; background: #e7f1ff; text-align: center; }
+    .funnel-step:first-child { color: white; background: #125ac4; }
+    .funnel-value { display: block; margin-top: 2px; font-size: 16pt; font-weight: 800; }
+    .observations { margin: 0; padding: 10px 13px 10px 28px; border: 1px solid #bcd5fa; border-radius: 5px; background: #f3f8ff; }
+    .observations li { margin: 3px 0; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 7.2pt; }
+    thead { display: table-header-group; }
+    tr { break-inside: avoid; }
+    th { padding: 6px 5px; border-bottom: 1px solid #bcc9d9; background: #eaf1fa; color: #243858; text-align: left; font-weight: 700; overflow-wrap: anywhere; }
+    td { padding: 5px; border-bottom: 1px solid #e4eaf1; color: #344563; vertical-align: top; overflow-wrap: anywhere; }
+    tbody tr:nth-child(even) td { background: #fafcff; }
+    .empty { padding: 18px; border: 1px dashed #b8c5d6; border-radius: 5px; color: #64748b; text-align: center; }
+    .details { display: table; width: 100%; table-layout: fixed; }
+    .detail { display: table-cell; width: 33.333%; padding: 6px 10px 6px 0; vertical-align: top; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <div class="watermark">ELEVEN CRM | CONFIDENTIAL</div>
+  <header class="masthead">
+    <img class="brand-logo" src="{{ logo_uri }}" alt="ELEVEN">
+    <div class="brand-subtitle">CRM FOR ALTRIUM</div>
+    <h1>{{ title }}</h1>
+    <div class="eyebrow">Sales Operations Analytics</div>
+    <div class="metadata">
+      <div><div class="label">Reporting Period</div><div class="value">{{ period }}</div></div>
+      <div><div class="label">Generated By</div><div class="value">{{ generated_by }}</div><div class="subvalue">{{ generated_role }}</div></div>
+      <div><div class="label">Generated</div><div class="value">{{ generated_at|date:"d F Y, H:i" }}</div><div class="subvalue">{{ timezone_name }}</div></div>
+    </div>
+  </header>
+
+  <section class="section">
+    <h2>Executive Summary</h2>
+    <div class="cards">
+      {% for label, value in summary_cards %}<div class="card"><div class="label">{{ label }}</div><div class="card-value">{{ value }}</div></div>{% endfor %}
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Applied Filters</h2>
+    {% for group_label, rows in filter_groups %}{% if filter_groups|length > 1 %}<div class="value">{{ group_label }}</div>{% endif %}<div class="filter-grid">{% for label, value in rows %}<div class="filter-row"><div class="filter-name">{{ label }}</div><div class="filter-value">{{ value }}</div></div>{% endfor %}</div>{% endfor %}
+  </section>
+
+  <section class="section">
+    {% if report_name == "lead-conversion" %}
+      <h2>Conversion Flow</h2>
+      <div class="funnel">{% for row in visual_rows %}<div class="funnel-step">{{ row.label }}<span class="funnel-value">{{ row.value }}</span></div>{% endfor %}</div>
+    {% elif report_name == "lead-sources" %}<h2>Source Distribution</h2>
+    {% elif report_name == "lead-status" %}<h2>Assessment Stage Distribution</h2>
+    {% elif report_name == "sales-rep-performance" %}<h2>Deals by Sales Representative</h2>
+    {% else %}<h2>Deal Status Distribution</h2>{% endif %}
+    {% if report_name != "lead-conversion" %}
+      {% for row in visual_rows %}<div class="bar-row"><div class="bar-label">{{ row.label }}</div><div class="bar-track"><svg class="bar-chart" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect class="bar-background" width="100" height="8"></rect><rect class="bar-fill" width="{{ row.width }}" height="8"></rect></svg></div><div class="bar-value">{{ row.value }}</div></div>{% empty %}<div class="empty">No records matched the selected filters.</div>{% endfor %}
+    {% endif %}
+  </section>
+
+  {% if report_name == "lead-conversion" %}<section class="section"><h2>Conversion Rates</h2><div class="filter-grid">{% for metric in summary_cards|slice:"3:" %}<div class="filter-row"><div class="filter-name">{{ metric.0 }}</div><div class="filter-value">{{ metric.1 }}</div></div>{% endfor %}</div></section>{% endif %}
+
+  {% if report_name == "lead-status" %}
+    <section class="section"><h2>Final Decision Distribution</h2>{% for label, value in final_decision_rows %}<div class="bar-row"><div class="bar-label">{{ label }}</div><div class="bar-value">{{ value }}</div></div>{% endfor %}</section>
+    <section class="section allow-break"><h2>Lead Aging / Attention Required</h2><p class="muted">Longest-running current states first. Stale means more than {{ stale_lead_days }} days.</p><table><thead><tr><th>Lead</th><th>Current Assessment Stage</th><th>Assigned Rep</th><th>Days in Current State</th></tr></thead><tbody>{% for row in aging_records %}<tr><td>{{ row.lead }}</td><td>{{ row.assessment_stage_display }}</td><td>{{ row.sales_rep_name }}</td><td>{{ row.days_in_current_state }}</td></tr>{% endfor %}</tbody></table></section>
+  {% endif %}
+
+  {% if observations %}<section class="section"><h2>Key Observations</h2><ul class="observations">{% for observation in observations %}<li>{{ observation }}</li>{% endfor %}</ul></section>{% endif %}
+
+  {% if performance_rows %}<section class="section allow-break"><h2>Source Performance</h2><table><thead><tr>{% for label in performance_columns %}<th>{{ label }}</th>{% endfor %}</tr></thead><tbody>{% for row in performance_rows %}<tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></section>{% endif %}
+
+  <section class="section allow-break">
+    <h2>{% if report_name == "lead-sources" %}Source Performance and Underlying Records{% elif report_name == "lead-conversion" %}Conversion Evidence{% elif report_name == "lead-status" %}Assessment Workflow Records{% elif report_name == "sales-rep-performance" %}Sales Representative Performance{% else %}Deal Records{% endif %}</h2>
+    {% if table_rows %}
+      <table><thead><tr>{% for key, label in columns %}<th>{{ label }}</th>{% endfor %}</tr></thead><tbody>{% for row in table_rows %}<tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
+    {% else %}<div class="empty">No records matched the selected filters.</div>{% endif %}
+  </section>
+
+  <section class="section">
+    <h2>Report Details</h2>
+    <div class="details">
+      <div class="detail"><div class="label">System</div><div>ELEVEN CRM</div><br><div class="label">Organisation</div><div>Altrium</div></div>
+      <div class="detail"><div class="label">Generated By</div><div>{{ generated_by }} - {{ generated_role }}</div><br><div class="label">Generated At</div><div>{{ generated_at|date:"d F Y, H:i" }} ({{ timezone_name }})</div></div>
+      <div class="detail"><div class="label">Report Type</div><div>{{ title }}</div><br><div class="label">Reporting Period</div><div>{{ period }}</div><br><div class="label">Data Source</div><div>ELEVEN CRM operational database</div></div>
+    </div>
+  </section>
+</body>
+</html>

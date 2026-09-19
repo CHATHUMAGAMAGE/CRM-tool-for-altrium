@@ -17,6 +17,8 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  Drawer,
+  IconButton,
   Stack,
   TextField,
   Typography,
@@ -24,7 +26,9 @@ import {
 
 import {
   CheckCircleRounded,
+  CloseRounded,
   DoNotDisturbAltRounded,
+  ExpandMoreRounded,
   GavelRounded,
   HandshakeRounded,
   OpenInNewRounded,
@@ -34,6 +38,10 @@ import {
 import {
   useNavigate,
 } from 'react-router'
+
+import FormattedNarrative from '../components/common/FormattedNarrative'
+import AssessmentNarrativeView from '../components/common/AssessmentNarrativeView'
+import CommercialReviewPanel from '../components/leads/CommercialReviewPanel'
 
 import {
   getLeads,
@@ -485,6 +493,11 @@ function OpportunityReviewPage() {
       null,
     )
 
+  const [
+    reviewQueueOpen,
+    setReviewQueueOpen,
+  ] = useState(false)
+
 
   const [
     isLoading,
@@ -786,7 +799,10 @@ function OpportunityReviewPage() {
               const readyForDecision = Boolean(
                 financeCompleted &&
                 (
-                  financialAssessment?.outcome === 'FINANCIALLY_UNSUITABLE' ||
+                  (
+                    financialAssessment?.outcome === 'FINANCIALLY_UNSUITABLE' &&
+                    (!financialAssessment.approved_commercial_exception || technicalCompleted)
+                  ) ||
                   (
                     financialAssessment?.outcome === 'FINANCIALLY_SUITABLE' &&
                     technicalCompleted
@@ -1623,15 +1639,10 @@ function OpportunityReviewPage() {
           <Box
             sx={{
               display:
-                'grid',
+                'flex',
 
-              gridTemplateColumns: {
-                xs:
-                  '1fr',
-
-                lg:
-                  '360px minmax(0, 1fr)',
-              },
+              flexDirection:
+                'column',
 
               gap:
                 2.5,
@@ -1656,54 +1667,127 @@ function OpportunityReviewPage() {
                   '0 2px 8px rgba(15, 23, 42, 0.035)',
               }}
             >
-              <Box
+              <Button
+                fullWidth
+                onClick={() => setReviewQueueOpen((open) => !open)}
                 sx={{
                   px:
                     2.25,
 
                   py:
                     1.9,
+
+                  justifyContent:
+                    'space-between',
+
+                  textAlign:
+                    'left',
+
+                  textTransform:
+                    'none',
+
+                  bgcolor:
+                    reviewQueueOpen ? 'var(--eleven-surface-soft)' : 'var(--eleven-paper)',
+
+                  '&:hover': {
+                    bgcolor: 'var(--eleven-primary-soft)',
+                  },
                 }}
               >
-                <Typography
+                <Box>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                    <Typography
+                      sx={{
+                        color: 'var(--eleven-text)',
+                        fontSize: 15,
+                        fontWeight: 700,
+                      }}
+                    >
+                      Review Queue
+                    </Typography>
+                    <Chip
+                      size="small"
+                      label={`${reviewItems.length} opportunities`}
+                      color="primary"
+                      variant="outlined"
+                      sx={{ fontWeight: 700 }}
+                    />
+                  </Stack>
+
+                  <Typography
+                    sx={{
+                      mt: 0.25,
+                      color: 'var(--eleven-text-muted)',
+                      fontSize: 11.5,
+                    }}
+                  >
+                    {selectedItem
+                      ? `Selected: ${selectedItem.lead.company_name}`
+                      : 'Choose an opportunity to review'}
+                  </Typography>
+                </Box>
+
+                <ExpandMoreRounded
                   sx={{
-                    color:
-                      'var(--eleven-text)',
+                    color: 'var(--eleven-text-secondary)',
+                    transform: reviewQueueOpen ? 'rotate(90deg)' : 'rotate(-90deg)',
+                    transition: 'transform 180ms ease',
+                  }}
+                />
+              </Button>
 
-                    fontSize:
-                      15,
 
-                    fontWeight:
-                      700,
+              <Drawer
+                anchor="right"
+                open={reviewQueueOpen}
+                onClose={() => setReviewQueueOpen(false)}
+                slotProps={{
+                  paper: {
+                    sx: {
+                      width: { xs: '100%', sm: 480 },
+                      maxWidth: '100vw',
+                      bgcolor: 'var(--eleven-surface-soft)',
+                    },
+                  },
+                }}
+              >
+                <Box
+                  sx={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 1,
+                    px: 2.5,
+                    py: 2.25,
+                    borderBottom: '1px solid var(--eleven-border)',
+                    bgcolor: 'var(--eleven-paper)',
                   }}
                 >
-                  Review Queue
-                </Typography>
+                  <Stack direction="row" sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+                    <Box>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                        <Typography sx={{ color: 'var(--eleven-text)', fontSize: 18, fontWeight: 700 }}>
+                          Review Queue
+                        </Typography>
+                        <Chip size="small" label={reviewItems.length} color="primary" />
+                      </Stack>
+                      <Typography sx={{ mt: .45, color: 'var(--eleven-text-secondary)', fontSize: 12.5 }}>
+                        Select an opportunity without leaving the current review.
+                      </Typography>
+                    </Box>
+                    <IconButton aria-label="Close review queue" onClick={() => setReviewQueueOpen(false)}>
+                      <CloseRounded />
+                    </IconButton>
+                  </Stack>
+                </Box>
 
-                <Typography
-                  sx={{
-                    mt:
-                      0.25,
-
-                    color:
-                      'var(--eleven-text-muted)',
-
-                    fontSize:
-                      11.5,
-                  }}
-                >
-                  Evidence-reviewed opportunities ready for a final decision
-                </Typography>
-              </Box>
-
-
-              <Divider />
-
-
-              <Stack
-                spacing={
-                  0
-                }
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 1fr)',
+                  gap: 1.25,
+                  p: 2,
+                  bgcolor: 'var(--eleven-surface-soft)',
+                }}
               >
                 {reviewItems.map(
                   (
@@ -1718,6 +1802,7 @@ function OpportunityReviewPage() {
                         key={
                           item.lead.id
                         }
+                        sx={{ minWidth: 0 }}
                       >
                         <Button
                           fullWidth
@@ -1725,6 +1810,8 @@ function OpportunityReviewPage() {
                             setSelectedLeadId(
                               item.lead.id,
                             )
+
+                            setReviewQueueOpen(false)
 
                             setConversionError(
                               '',
@@ -1734,14 +1821,28 @@ function OpportunityReviewPage() {
                             display:
                               'block',
 
+                            position:
+                              'relative',
+
                             px:
-                              2.25,
+                              1.75,
 
                             py:
-                              1.8,
+                              1.6,
+
+                            minHeight:
+                              126,
 
                             borderRadius:
-                              0,
+                              '10px',
+
+                            border:
+                              '1px solid',
+
+                            borderColor:
+                              active
+                                ? 'var(--eleven-primary)'
+                                : 'var(--eleven-border)',
 
                             textAlign:
                               'left',
@@ -1754,15 +1855,43 @@ function OpportunityReviewPage() {
                                 ? 'var(--eleven-primary-soft)'
                                 : 'var(--eleven-paper)',
 
+                            boxShadow:
+                              active
+                                ? '0 0 0 2px rgba(21, 93, 252, 0.08)'
+                                : '0 1px 2px rgba(15, 23, 42, 0.04)',
+
                             '&:hover':
                               {
                                 bgcolor:
                                   active
                                     ? 'var(--eleven-primary-soft)'
-                                    : 'var(--eleven-surface-soft)',
+                                    : 'var(--eleven-paper)',
+
+                                borderColor:
+                                  'var(--eleven-primary)',
+
+                                transform:
+                                  'translateY(-1px)',
+
+                                boxShadow:
+                                  '0 6px 16px rgba(15, 23, 42, 0.08)',
                               },
+
+                            transition:
+                              'border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
                           }}
                         >
+                          {active && (
+                            <CheckCircleRounded
+                              sx={{
+                                position: 'absolute',
+                                top: 12,
+                                right: 12,
+                                color: 'primary.main',
+                                fontSize: 19,
+                              }}
+                            />
+                          )}
                           <Stack
                             direction="row"
                             spacing={
@@ -1776,10 +1905,10 @@ function OpportunityReviewPage() {
                             <Box
                               sx={{
                                 width:
-                                  38,
+                                  40,
 
                                 height:
-                                  38,
+                                  40,
 
                                 flexShrink:
                                   0,
@@ -1797,10 +1926,14 @@ function OpportunityReviewPage() {
                                   '50%',
 
                                 bgcolor:
-                                  'var(--eleven-primary-soft)',
+                                  active
+                                    ? 'var(--eleven-primary)'
+                                    : 'var(--eleven-primary-soft)',
 
                                 color:
-                                  'var(--eleven-primary)',
+                                  active
+                                    ? '#fff'
+                                    : 'var(--eleven-primary)',
 
                                 fontSize:
                                   12,
@@ -1847,7 +1980,7 @@ function OpportunityReviewPage() {
                                     'nowrap',
                                 }}
                               >
-                                {item.lead.contact_name}
+                                {item.lead.project_name || item.lead.company_name}
                               </Typography>
 
                               <Typography
@@ -1874,6 +2007,19 @@ function OpportunityReviewPage() {
                                 {item.lead.company_name}
                               </Typography>
 
+                              <Typography
+                                sx={{
+                                  mt: 0.15,
+                                  overflow: 'hidden',
+                                  color: 'var(--eleven-text-muted)',
+                                  fontSize: 11.5,
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                Contact: {item.lead.contact_name}
+                              </Typography>
+
                               <Chip
                                 size="small"
                                 label={
@@ -1889,7 +2035,7 @@ function OpportunityReviewPage() {
                                 variant="outlined"
                                 sx={{
                                   mt:
-                                    1,
+                                    0.9,
 
                                   maxWidth:
                                     '100%',
@@ -1910,13 +2056,12 @@ function OpportunityReviewPage() {
                             </Box>
                           </Stack>
                         </Button>
-
-                        <Divider />
                       </Box>
                     )
                   },
                 )}
-              </Stack>
+              </Box>
+              </Drawer>
             </Card>
 
 
@@ -2173,6 +2318,9 @@ function OpportunityReviewPage() {
                   <Card
                     variant="outlined"
                     sx={{
+                      order:
+                        2,
+
                       height:
                         '100%',
 
@@ -2329,82 +2477,21 @@ function OpportunityReviewPage() {
                           {selectedItem
                             .technicalAssessment
                             .technical_comments && (
-                            <Box>
-                              <Typography
-                                sx={{
-                                  mb:
-                                    0.7,
-
-                                  color:
-                                    'var(--eleven-text-secondary)',
-
-                                  fontSize:
-                                    11,
-
-                                  fontWeight:
-                                    700,
-
-                                  textTransform:
-                                    'uppercase',
-                                }}
-                              >
-                                Technical Findings
-                              </Typography>
-
-                              <Box
-                                sx={{
-                                  p:
-                                    1.5,
-
-                                  border:
-                                    '1px solid var(--eleven-border)',
-
-                                  borderRadius:
-                                    '8px',
-
-                                  bgcolor:
-                                    'var(--eleven-surface-soft)',
-                                }}
-                              >
-                                <Typography
-                                  sx={{
-                                    color:
-                                      'var(--eleven-text-secondary)',
-
-                                    fontSize:
-                                      12.5,
-
-                                    lineHeight:
-                                      1.6,
-
-                                    whiteSpace:
-                                      'pre-wrap',
-                                  }}
-                                >
-                                  {
-                                    selectedItem
-                                      .technicalAssessment
-                                      .technical_comments
-                                  }
-                                </Typography>
-                              </Box>
-                            </Box>
+                            <AssessmentNarrativeView
+                              content={selectedItem.technicalAssessment.technical_comments}
+                              assessmentType="technical"
+                              title="Technical Findings"
+                              subtitle="Feasibility, risks, skills and delivery constraints."
+                              showRawToggle={false}
+                              singleColumn
+                            />
                           )}
 
 
                           {selectedItem
                             .technicalAssessment
                             .review_notes && (
-                            <Alert
-                              severity="success"
-                              variant="outlined"
-                            >
-                              {
-                                selectedItem
-                                  .technicalAssessment
-                                  .review_notes
-                              }
-                            </Alert>
+                            <Alert severity="success" variant="outlined"><FormattedNarrative content={selectedItem.technicalAssessment.review_notes} compact /></Alert>
                           )}
                         </Stack>
                       )}
@@ -2415,6 +2502,9 @@ function OpportunityReviewPage() {
                   <Card
                     variant="outlined"
                     sx={{
+                      order:
+                        1,
+
                       height:
                         '100%',
 
@@ -2571,87 +2661,36 @@ function OpportunityReviewPage() {
                           {selectedItem
                             .financialAssessment
                             .financial_comments && (
-                            <Box>
-                              <Typography
-                                sx={{
-                                  mb:
-                                    0.7,
-
-                                  color:
-                                    'var(--eleven-text-secondary)',
-
-                                  fontSize:
-                                    11,
-
-                                  fontWeight:
-                                    700,
-
-                                  textTransform:
-                                    'uppercase',
-                                }}
-                              >
-                                Financial Findings
-                              </Typography>
-
-                              <Box
-                                sx={{
-                                  p:
-                                    1.5,
-
-                                  border:
-                                    '1px solid var(--eleven-border)',
-
-                                  borderRadius:
-                                    '8px',
-
-                                  bgcolor:
-                                    'var(--eleven-surface-soft)',
-                                }}
-                              >
-                                <Typography
-                                  sx={{
-                                    color:
-                                      'var(--eleven-text-secondary)',
-
-                                    fontSize:
-                                      12.5,
-
-                                    lineHeight:
-                                      1.6,
-
-                                    whiteSpace:
-                                      'pre-wrap',
-                                  }}
-                                >
-                                  {
-                                    selectedItem
-                                      .financialAssessment
-                                      .financial_comments
-                                  }
-                                </Typography>
-                              </Box>
-                            </Box>
+                            <AssessmentNarrativeView
+                              content={selectedItem.financialAssessment.financial_comments}
+                              assessmentType="financial"
+                              outcome={selectedItem.financialAssessment.outcome}
+                              title="Financial Findings"
+                              subtitle="Cost, budget, risk and financial viability."
+                              showRawToggle={false}
+                              singleColumn
+                            />
                           )}
 
 
                           {selectedItem
                             .financialAssessment
                             .review_notes && (
-                            <Alert
-                              severity="success"
-                              variant="outlined"
-                            >
-                              {
-                                selectedItem
-                                  .financialAssessment
-                                  .review_notes
-                              }
-                            </Alert>
+                            <Alert severity="success" variant="outlined"><FormattedNarrative content={selectedItem.financialAssessment.review_notes} compact /></Alert>
                           )}
                         </Stack>
                       )}
                     </Box>
                   </Card>
+                  {selectedItem.financialAssessment?.outcome === 'FINANCIALLY_UNSUITABLE' && (
+                    <Box sx={{ mt: 2 }}>
+                      <CommercialReviewPanel
+                        leadId={selectedItem.lead.id}
+                        finance={selectedItem.financialAssessment}
+                        onChanged={() => void loadWorkspace()}
+                      />
+                    </Box>
+                  )}
                 </Box>
 
 
@@ -3064,7 +3103,7 @@ function OpportunityReviewPage() {
                             1
                           }
                         >
-                          {selectedItem.financialAssessment?.outcome === 'FINANCIALLY_SUITABLE' && (<Button
+                          {(selectedItem.financialAssessment?.outcome === 'FINANCIALLY_SUITABLE' || selectedItem.financialAssessment?.approved_commercial_exception) && selectedItem.technicalAssessment && (<Button
                             variant="contained"
                             color="success"
                             startIcon={

@@ -126,6 +126,14 @@ def user_requires_mfa(
             user.is_superuser
         )
 
+    if (
+        settings.DEBUG
+        and profile.role in set(
+            getattr(settings, "MFA_DEBUG_BYPASS_ROLES", [])
+        )
+    ):
+        return False
+
     if profile.mfa_enabled:
         return True
 

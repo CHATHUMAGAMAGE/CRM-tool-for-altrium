@@ -9,6 +9,7 @@ from accounts.models import UserProfile
 
 from .models import (
     Communication,
+    CommercialExceptionRequest,
     Customer,
     FinancialAssessment,
     FollowUp,
@@ -2179,12 +2180,16 @@ class TechnicalAssessmentCreateSerializer(
             if (
                 financial_assessment.outcome
                 != FinancialAssessment.Outcome.FINANCIALLY_SUITABLE
+                and not CommercialExceptionRequest.objects.filter(
+                    financial_assessment=financial_assessment,
+                    status=CommercialExceptionRequest.Status.APPROVED,
+                ).exists()
             ):
                 raise serializers.ValidationError(
                     {
                         "lead": (
-                            "Technical assessment is only available when "
-                            "Finance marks the lead as financially suitable."
+                            "Technical assessment requires a Financially Viable "
+                            "outcome or an approved commercial exception."
                         )
                     }
                 )

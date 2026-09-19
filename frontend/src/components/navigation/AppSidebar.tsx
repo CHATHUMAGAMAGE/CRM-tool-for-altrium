@@ -488,6 +488,14 @@ function AppSidebar({
       '/opportunity-review/',
     )
 
+  const canSeeReports =
+    currentUser !== null &&
+    hasRequiredRole(currentUser.role, ['SALES_MANAGER', 'DIRECTOR'])
+
+  const isReportsActive =
+    location.pathname === '/reports' ||
+    location.pathname.startsWith('/reports/')
+
 
   const assessmentStatusParam =
     new URLSearchParams(
@@ -1083,6 +1091,16 @@ function AppSidebar({
                 }
               >
                 Opportunity Review
+              </Button>
+            )}
+
+            {canSeeReports && (
+              <Button
+                startIcon={<PieChartOutlineRounded />}
+                onClick={() => handleNavigate('/reports/lead-sources')}
+                sx={navigationButtonSx(isReportsActive)}
+              >
+                Reports & Analytics
               </Button>
             )}
 

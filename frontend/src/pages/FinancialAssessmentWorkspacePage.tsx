@@ -41,6 +41,9 @@ import {
   getCurrentUser,
 } from '../services/auth'
 
+import FormattedNarrative from '../components/common/FormattedNarrative'
+import AssessmentNarrativeView from '../components/common/AssessmentNarrativeView'
+
 import {
   getFinancialAssessment,
   getFinancialAssessmentDocuments,
@@ -217,6 +220,7 @@ function FinancialAssessmentWorkspacePage() {
     )
 
   const [outcome, setOutcome] = useState<FinancialAssessmentOutcome | ''>('')
+  const [estimatedDeliveryCost, setEstimatedDeliveryCost] = useState('')
 
 
   const [
@@ -409,6 +413,7 @@ function FinancialAssessmentWorkspacePage() {
           )
 
           setOutcome(assessmentData.outcome)
+          setEstimatedDeliveryCost(assessmentData.estimated_delivery_cost ?? '')
 
           setDocuments(
             documentData,
@@ -546,6 +551,7 @@ function FinancialAssessmentWorkspacePage() {
             financial_comments:
               financialComments
                 .trim(),
+            estimated_delivery_cost: estimatedDeliveryCost || null,
             outcome,
           },
         )
@@ -700,6 +706,11 @@ function FinancialAssessmentWorkspacePage() {
         return
       }
 
+      if (!estimatedDeliveryCost || Number(estimatedDeliveryCost) < 0) {
+        setError('Enter a valid Estimated Delivery Cost before submission.')
+        return
+      }
+
       setIsSubmitting(
         true,
       )
@@ -720,7 +731,8 @@ function FinancialAssessmentWorkspacePage() {
               .financial_comments ??
             ''
           ).trim() ||
-          outcome !== assessment.outcome
+          outcome !== assessment.outcome ||
+          estimatedDeliveryCost !== (assessment.estimated_delivery_cost ?? '')
         ) {
           await updateFinancialAssessmentWork(
             assessment.id,
@@ -728,6 +740,7 @@ function FinancialAssessmentWorkspacePage() {
               financial_comments:
                 financialComments
                   .trim(),
+              estimated_delivery_cost: estimatedDeliveryCost || null,
               outcome,
             },
           )
@@ -984,9 +997,17 @@ function FinancialAssessmentWorkspacePage() {
             }}
           >
             Financial Assessment #
-            {assessment.id}
+            {assessment.assessment_number || assessment.id}
           </Typography>
         </Box>
+
+        {assessment.previous_assessment && (
+          <Alert severity="info" variant="outlined" sx={{ mt: 2 }}>
+            <Typography sx={{ fontWeight: 700 }}>Financial Reassessment</Typography>
+            <Typography variant="body2">Previous Assessment #{assessment.previous_assessment.id}: {assessment.previous_assessment.outcome === 'FINANCIALLY_UNSUITABLE' ? 'Not Financially Viable' : 'Financially Viable'}</Typography>
+            {assessment.reassessment_context && <Typography variant="body2" sx={{ mt: .5 }}>Reason: {assessment.reassessment_context.reason} · Revised scope: {assessment.reassessment_context.revised_scope}</Typography>}
+          </Alert>
+        )}
 
 
         <Box
@@ -1296,29 +1317,7 @@ function FinancialAssessmentWorkspacePage() {
                 FINANCIAL ASSESSMENT REQUIREMENTS
               </Typography>
 
-              <Typography
-                sx={{
-                  mt:
-                    0.7,
-
-                  whiteSpace:
-                    'pre-wrap',
-
-                  fontSize:
-                    13.5,
-
-                  lineHeight:
-                    1.65,
-
-                  color:
-                    'var(--eleven-text-secondary)',
-                }}
-              >
-                {
-                  assessment
-                    .requirements
-                }
-              </Typography>
+              <Box sx={{ mt: .7 }}><FormattedNarrative content={assessment.requirements} compact /></Box>
             </Box>
           </Paper>
 
@@ -1424,27 +1423,7 @@ function FinancialAssessmentWorkspacePage() {
                     'var(--eleven-surface-soft)',
                 }}
               >
-                <Typography
-                  sx={{
-                    whiteSpace:
-                      'pre-wrap',
-
-                    fontSize:
-                      13,
-
-                    lineHeight:
-                      1.6,
-
-                    color:
-                      'var(--eleven-text-secondary)',
-                  }}
-                >
-                  {
-                    assessment
-                      .technical_comments ||
-                    'No technical findings were recorded.'
-                  }
-                </Typography>
+                <FormattedNarrative content={assessment.technical_comments} compact emptyMessage="No technical findings were recorded." />
               </Box>
             </Box>
 
@@ -1487,27 +1466,7 @@ function FinancialAssessmentWorkspacePage() {
                     'var(--eleven-surface-soft)',
                 }}
               >
-                <Typography
-                  sx={{
-                    whiteSpace:
-                      'pre-wrap',
-
-                    fontSize:
-                      13,
-
-                    lineHeight:
-                      1.6,
-
-                    color:
-                      'var(--eleven-text-secondary)',
-                  }}
-                >
-                  {
-                    assessment
-                      .technical_review_notes ||
-                    'No technical review notes were provided.'
-                  }
-                </Typography>
+                <FormattedNarrative content={assessment.technical_review_notes} compact emptyMessage="No technical review notes were provided." />
               </Box>
             </Box>
           </Paper>
@@ -1571,7 +1530,7 @@ function FinancialAssessmentWorkspacePage() {
                       'var(--eleven-text)',
                   }}
                 >
-                  Financial Findings
+                  {canEdit ? 'Financial Findings' : ''}
                 </Typography>
 
                 <Typography
@@ -1586,7 +1545,7 @@ function FinancialAssessmentWorkspacePage() {
                       'var(--eleven-text-secondary)',
                   }}
                 >
-                  Record cost, budget, risk and overall financial viability.
+                  {canEdit ? 'Record cost, budget, risk and overall financial viability.' : ''}
                 </Typography>
               </Box>
 
@@ -1620,14 +1579,22 @@ function FinancialAssessmentWorkspacePage() {
               )}
             </Box>
 
-            <TextField
+            {canEdit && <TextField
+              fullWidth
+              type="number"
+              label="Estimated Delivery Cost *"
+              required
+              value={estimatedDeliveryCost}
+              onChange={(event) => setEstimatedDeliveryCost(event.target.value)}
+              helperText={`Use ${assessment.lead_budget_currency || 'the Lead currency'}; this value supports the commercial-review budget comparison.`}
+              sx={{ mt: 2 }}
+            />}
+
+            {canEdit ? <TextField
               fullWidth
               multiline
               minRows={
                 12
-              }
-              disabled={
-                !canEdit
               }
               value={
                 financialComments
@@ -1652,19 +1619,19 @@ function FinancialAssessmentWorkspacePage() {
                 mt:
                   2,
               }}
-            />
+            /> : <AssessmentNarrativeView content={financialComments} assessmentType="financial" outcome={outcome} title="Financial Findings" subtitle="Record cost, budget, risk and overall financial viability." emptyMessage="No financial findings have been recorded." />}
 
-            <FormControl fullWidth sx={{ mt: 2 }} disabled={!canEdit}>
+            {canEdit && <FormControl fullWidth sx={{ mt: 2 }}>
               <InputLabel>Financial suitability outcome</InputLabel>
               <Select
                 value={outcome}
                 label="Financial suitability outcome"
                 onChange={(event) => setOutcome(event.target.value as FinancialAssessmentOutcome)}
               >
-                <MenuItem value="FINANCIALLY_SUITABLE">Financially suitable</MenuItem>
-                <MenuItem value="FINANCIALLY_UNSUITABLE">Financially unsuitable</MenuItem>
+                <MenuItem value="FINANCIALLY_SUITABLE">Financially Viable</MenuItem>
+                <MenuItem value="FINANCIALLY_UNSUITABLE">Not Financially Viable</MenuItem>
               </Select>
-            </FormControl>
+            </FormControl>}
           </Paper>
 
 
@@ -2278,9 +2245,9 @@ function FinancialAssessmentWorkspacePage() {
                 label="FINANCIAL OUTCOME"
                 value={
                   assessment.outcome === 'FINANCIALLY_SUITABLE'
-                    ? 'Financially suitable'
+                    ? 'Financially Viable'
                     : assessment.outcome === 'FINANCIALLY_UNSUITABLE'
-                      ? 'Financially unsuitable'
+                      ? 'Not Financially Viable'
                       : 'Not recorded'
                 }
               />
@@ -2367,30 +2334,7 @@ function FinancialAssessmentWorkspacePage() {
                 }
               />
 
-              <Typography
-                sx={{
-                  mt:
-                    1.5,
-
-                  whiteSpace:
-                    'pre-wrap',
-
-                  fontSize:
-                    13,
-
-                  lineHeight:
-                    1.6,
-
-                  color:
-                    'var(--eleven-text-secondary)',
-                }}
-              >
-                {
-                  assessment
-                    .review_notes ||
-                  'No review notes provided.'
-                }
-              </Typography>
+              <Box sx={{ mt: 1.5 }}><FormattedNarrative content={assessment.review_notes} compact emptyMessage="No review notes provided." /></Box>
             </Paper>
           )}
 

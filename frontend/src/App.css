@@ -2,3 +2,41 @@
   width: 100%;
   min-height: 100vh;
 }
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 12mm;
+  }
+
+  aside,
+  .MuiAppBar-root,
+  .MuiDrawer-root,
+  .analytics-screen-header,
+  .report-builder,
+  .report-actions {
+    display: none !important;
+  }
+
+  body,
+  #root,
+  main {
+    background: #fff !important;
+    color: #111827 !important;
+  }
+
+  .generated-report {
+    margin: 0 !important;
+  }
+
+  .generated-report .MuiPaper-root,
+  .generated-report .MuiCard-root {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  .generated-report .MuiTableContainer-root {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}

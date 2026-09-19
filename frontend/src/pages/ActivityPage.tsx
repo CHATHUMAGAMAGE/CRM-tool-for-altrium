@@ -43,6 +43,8 @@ import {
   type CurrentUser,
 } from '../services/auth'
 
+import FormattedNarrative from '../components/common/FormattedNarrative'
+
 import {
   getLeadCommunications,
   getLeadFollowUps,
@@ -1358,37 +1360,7 @@ function ActivityPage() {
                               </Typography>
 
 
-                              {communication.notes && (
-                                <Typography
-                                  sx={{
-                                    mt:
-                                      0.65,
-
-                                    color:
-                                      'var(--eleven-text-secondary)',
-
-                                    fontSize:
-                                      11.5,
-
-                                    lineHeight:
-                                      1.5,
-
-                                    display:
-                                      '-webkit-box',
-
-                                    WebkitLineClamp:
-                                      2,
-
-                                    WebkitBoxOrient:
-                                      'vertical',
-
-                                    overflow:
-                                      'hidden',
-                                  }}
-                                >
-                                  {communication.notes}
-                                </Typography>
-                              )}
+                              {communication.notes && <Box sx={{ mt: .65, maxHeight: 110, overflow: 'hidden' }}><FormattedNarrative content={communication.notes} compact /></Box>}
                             </Box>
                           </Stack>
 

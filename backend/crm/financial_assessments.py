@@ -43,9 +43,11 @@ from .financial_serializers import (
 )
 
 from .models import (
+    CommercialReview,
     FinancialAssessment,
     FinancialAssessmentDocument,
     FinancialAssessmentHistory,
+    LeadHistory,
     Notification,
 )
 from .notifications import create_notification
@@ -407,6 +409,11 @@ class FinancialAssessmentSubmitView(
                 }
             )
 
+        if assessment.estimated_delivery_cost is None:
+            raise ValidationError(
+                {"estimated_delivery_cost": "Estimated Delivery Cost is required before submitting the assessment."}
+            )
+
         assessment.status = (
             FinancialAssessment
             .Status
@@ -439,12 +446,36 @@ class FinancialAssessmentSubmitView(
             performed_by=request.user,
         )
 
+        if assessment.outcome == FinancialAssessment.Outcome.FINANCIALLY_UNSUITABLE:
+            commercial_review = CommercialReview.objects.create(
+                lead=assessment.lead,
+                financial_assessment=assessment,
+                status=CommercialReview.Status.REQUIRED,
+                reason="Financial Assessment concluded that the opportunity is not financially viable.",
+                created_by=request.user,
+            )
+            LeadHistory.objects.create(
+                lead=assessment.lead,
+                event_type=LeadHistory.EventType.UPDATED,
+                description="Commercial Review Required after a Not Financially Viable outcome.",
+                performed_by=request.user,
+                metadata={"workflow_event": "COMMERCIAL_REVIEW_REQUIRED", "commercial_review_id": commercial_review.id, "financial_assessment_id": assessment.id},
+            )
+        else:
+            CommercialReview.objects.filter(
+                lead=assessment.lead,
+                status__in=[CommercialReview.Status.REQUIRED, CommercialReview.Status.REVISED, CommercialReview.Status.REASSESSMENT_REQUESTED],
+            ).update(status=CommercialReview.Status.RESOLVED, updated_at=timezone.now())
+
         create_notification(
             recipient=(assessment.lead.responsible_manager or assessment.requested_by),
             actor=request.user,
             kind=Notification.Kind.SUBMISSION,
             title="Financial assessment submitted",
-            message=f"The financial assessment for {assessment.lead.company_name} is ready for review.",
+            message=(
+                f"The financial assessment for {assessment.lead.company_name} is "
+                + ("Not Financially Viable. Commercial review is required." if assessment.outcome == FinancialAssessment.Outcome.FINANCIALLY_UNSUITABLE else "ready for review.")
+            ),
             target_url=f"/financial-assessments/{assessment.id}",
         )
 

@@ -6,6 +6,14 @@ from .notification_api import (
     NotificationReadView,
 )
 
+from .analytics import (
+    ExecutiveDashboardView,
+    ManagerDashboardView,
+    ReportCsvExportView,
+    ReportPdfExportView,
+    ReportView,
+)
+
 from .financial_assessments import (
     FinancialAssessmentDetailView,
     FinancialAssessmentDocumentDownloadView,
@@ -23,6 +31,11 @@ from .financial_assessments import (
 from .opportunities import (
     LeadConvertToDealView,
     LeadOpportunityDecisionView,
+)
+from .commercial_reviews import (
+    CommercialExceptionListView, CommercialExceptionReviewView,
+    LeadCommercialReviewView, RequestCommercialExceptionView,
+    RequestFinancialReassessmentView, ReviseCommercialTermsView,
 )
 
 from .reminders import (
@@ -62,6 +75,33 @@ app_name = "crm"
 
 
 urlpatterns = [
+    path("commercial-exceptions/", CommercialExceptionListView.as_view(), name="commercial-exception-list"),
+    path("commercial-exceptions/<int:pk>/<str:action>/", CommercialExceptionReviewView.as_view(), name="commercial-exception-review"),
+    path(
+        "analytics/manager/dashboard/",
+        ManagerDashboardView.as_view(),
+        name="manager-analytics-dashboard",
+    ),
+    path(
+        "analytics/executive/dashboard/",
+        ExecutiveDashboardView.as_view(),
+        name="executive-analytics-dashboard",
+    ),
+    path(
+        "reports/<slug:report_name>/",
+        ReportView.as_view(),
+        name="analytics-report",
+    ),
+    path(
+        "reports/<slug:report_name>/export/",
+        ReportCsvExportView.as_view(),
+        name="analytics-report-export",
+    ),
+    path(
+        "reports/<slug:report_name>/pdf/",
+        ReportPdfExportView.as_view(),
+        name="analytics-report-pdf",
+    ),
     path("notifications/", NotificationListView.as_view(), name="notification-list"),
     path("notifications/read-all/", NotificationReadAllView.as_view(), name="notification-read-all"),
     path("notifications/<int:pk>/read/", NotificationReadView.as_view(), name="notification-read"),
@@ -94,6 +134,10 @@ urlpatterns = [
         LeadOpportunityDecisionView.as_view(),
         name="lead-opportunity-decision",
     ),
+    path("leads/<int:pk>/commercial-review/", LeadCommercialReviewView.as_view(), name="lead-commercial-review"),
+    path("leads/<int:pk>/revise-commercial-terms/", ReviseCommercialTermsView.as_view(), name="revise-commercial-terms"),
+    path("leads/<int:pk>/request-financial-reassessment/", RequestFinancialReassessmentView.as_view(), name="request-financial-reassessment"),
+    path("leads/<int:pk>/request-commercial-exception/", RequestCommercialExceptionView.as_view(), name="request-commercial-exception"),
 
     path(
         "leads/<int:pk>/convert/",

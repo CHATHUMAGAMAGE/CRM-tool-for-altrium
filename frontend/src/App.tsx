@@ -36,6 +36,9 @@ import OpportunityReviewPage from './pages/OpportunityReviewPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import TechnicalAssessmentsPage from './pages/TechnicalAssessmentsPage'
 import TechnicalAssessmentWorkspacePage from './pages/TechnicalAssessmentWorkspacePage'
+import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage'
+import ReportsPage from './pages/ReportsPage'
+import CommercialExceptionsPage from './pages/CommercialExceptionsPage'
 
 import {
   getCurrentUser,
@@ -162,6 +165,14 @@ function DashboardEntry() {
     )
   }
 
+  if (currentRole === 'SALES_MANAGER') {
+    return <AnalyticsDashboardPage />
+  }
+
+  if (currentRole === 'DIRECTOR') {
+    return <AnalyticsDashboardPage executive />
+  }
+
 
   return (
     <DashboardPage />
@@ -265,6 +276,14 @@ function App() {
               <CustomersPage />
             }
           />
+
+          <Route element={<RoleProtectedRoute allowedRoles={['SALES_MANAGER', 'DIRECTOR']} />}>
+            <Route path="/reports" element={<Navigate to="/reports/lead-sources" replace />} />
+            <Route path="/reports/:reportName" element={<ReportsPage />} />
+          </Route>
+          <Route element={<RoleProtectedRoute allowedRoles={['DIRECTOR']} />}>
+            <Route path="/commercial-exceptions" element={<CommercialExceptionsPage />} />
+          </Route>
 
           <Route
             path="/technical-assessments"

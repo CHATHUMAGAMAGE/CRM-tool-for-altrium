@@ -4,6 +4,7 @@ import {
   useMemo,
   useState,
   type ChangeEvent,
+  type ReactNode,
 } from 'react'
 
 import {
@@ -24,6 +25,7 @@ import {
 
 import {
   ArrowBackRounded,
+  AccountBalanceWalletOutlined,
   AssignmentTurnedInOutlined,
   DeleteOutlineRounded,
   DescriptionOutlined,
@@ -43,6 +45,9 @@ import {
 import {
   getCurrentUser,
 } from '../services/auth'
+
+import FormattedNarrative from '../components/common/FormattedNarrative'
+import AssessmentNarrativeView from '../components/common/AssessmentNarrativeView'
 
 import {
   createTechnicalAssessmentRecommendation,
@@ -167,6 +172,55 @@ function LabelValue({
       >
         {value || '—'}
       </Typography>
+    </Box>
+  )
+}
+
+function RequirementCard({
+  title,
+  icon,
+  children,
+  fullWidth = false,
+}: {
+  title: string
+  icon: ReactNode
+  children: ReactNode
+  fullWidth?: boolean
+}) {
+  return (
+    <Box
+      component="section"
+      sx={{
+        minWidth: 0,
+        gridColumn: fullWidth ? '1 / -1' : 'auto',
+        p: { xs: 1.75, sm: 2 },
+        border: '1px solid var(--eleven-border)',
+        borderRadius: 2,
+        bgcolor: 'background.paper',
+        boxShadow: 'var(--eleven-shadow)',
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.1 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            placeItems: 'center',
+            width: 30,
+            height: 30,
+            flex: '0 0 auto',
+            borderRadius: 1.5,
+            bgcolor: 'var(--eleven-primary-soft)',
+            color: 'primary.main',
+            '& svg': { fontSize: 18 },
+          }}
+        >
+          {icon}
+        </Box>
+        <Typography component="h3" sx={{ fontSize: 14, fontWeight: 700, color: 'var(--eleven-text)' }}>
+          {title}
+        </Typography>
+      </Box>
+      {children}
     </Box>
   )
 }
@@ -1187,111 +1241,44 @@ function TechnicalAssessmentWorkspacePage() {
 
             <Box
               sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))' },
+                gap: 1.5,
                 mt: 2.2,
               }}
             >
-              <Typography
-                sx={{
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  color: 'var(--eleven-text-secondary)',
-                }}
-              >
-                CUSTOMER / BUSINESS REQUIREMENT
-              </Typography>
+              <RequirementCard title="Customer / Business Requirement" icon={<AssignmentTurnedInOutlined />}>
+                <FormattedNarrative content={assessment.lead_requirement} compact emptyMessage="Not provided" />
+              </RequirementCard>
 
-              <Typography
-                sx={{
-                  mt: 0.7,
-                  whiteSpace:
-                    'pre-wrap',
-                  fontSize: 13.5,
-                  lineHeight: 1.65,
-                  color: 'var(--eleven-text-secondary)',
-                }}
-              >
-                {
-                  assessment.lead_requirement || 'Not provided'
-                }
-              </Typography>
+              <RequirementCard title="Project Scope / Requirement Details" icon={<DescriptionOutlined />}>
+                <FormattedNarrative content={assessment.lead_project_scope} compact emptyMessage="Not provided" />
+              </RequirementCard>
+
+              <RequirementCard title="Technical Assessment Brief" icon={<EngineeringOutlined />} fullWidth>
+                <FormattedNarrative content={assessment.requirements} compact />
+              </RequirementCard>
+
+              {assessment.financial_assessment && (
+                <RequirementCard title="Financial Assessment Context" icon={<AccountBalanceWalletOutlined />} fullWidth>
+                  <Chip
+                    size="small"
+                    color={assessment.financial_assessment.outcome === 'FINANCIALLY_SUITABLE' ? 'success' : 'error'}
+                    label={assessment.financial_assessment.outcome_display}
+                    sx={{ mb: 1.5, fontWeight: 700 }}
+                  />
+                  <AssessmentNarrativeView
+                    content={assessment.financial_assessment.financial_comments}
+                    assessmentType="financial"
+                    outcome={assessment.financial_assessment.outcome}
+                    title="Financial Findings"
+                    subtitle="Cost, budget, risk and financial viability considered before technical review."
+                    emptyMessage="No financial findings were recorded."
+                    showRawToggle={false}
+                  />
+                </RequirementCard>
+              )}
             </Box>
-
-            <Box sx={{ mt: 2.2 }}>
-              <Typography
-                sx={{
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  color: 'var(--eleven-text-secondary)',
-                }}
-              >
-                PROJECT SCOPE / REQUIREMENT DETAILS
-              </Typography>
-
-              <Typography
-                sx={{
-                  mt: 0.7,
-                  whiteSpace: 'pre-wrap',
-                  fontSize: 13.5,
-                  lineHeight: 1.65,
-                  color: 'var(--eleven-text-secondary)',
-                }}
-              >
-                {assessment.lead_project_scope || 'Not provided'}
-              </Typography>
-            </Box>
-
-            <Box sx={{ mt: 2.2 }}>
-              <Typography
-                sx={{
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  color: 'var(--eleven-text-secondary)',
-                }}
-              >
-                TECHNICAL ASSESSMENT BRIEF
-              </Typography>
-
-              <Typography
-                sx={{
-                  mt: 0.7,
-                  whiteSpace: 'pre-wrap',
-                  fontSize: 13.5,
-                  lineHeight: 1.65,
-                  color: 'var(--eleven-text-secondary)',
-                }}
-              >
-                {assessment.requirements}
-              </Typography>
-            </Box>
-
-            {assessment.financial_assessment && (
-              <Box sx={{ mt: 2.2 }}>
-                <Typography
-                  sx={{
-                    fontSize: 11.5,
-                    fontWeight: 600,
-                    color: 'var(--eleven-text-secondary)',
-                  }}
-                >
-                  FINANCIAL ASSESSMENT CONTEXT
-                </Typography>
-
-                <Typography
-                  sx={{
-                    mt: 0.7,
-                    whiteSpace: 'pre-wrap',
-                    fontSize: 13.5,
-                    lineHeight: 1.65,
-                    color: 'var(--eleven-text-secondary)',
-                  }}
-                >
-                  {assessment.financial_assessment.outcome_display}
-                  {assessment.financial_assessment.financial_comments
-                    ? ` — ${assessment.financial_assessment.financial_comments}`
-                    : ''}
-                </Typography>
-              </Box>
-            )}
           </Paper>
 
 
@@ -1328,7 +1315,7 @@ function TechnicalAssessmentWorkspacePage() {
                     color: 'var(--eleven-text)',
                   }}
                 >
-                  Technical Findings
+                  {canEdit ? 'Technical Findings' : ''}
                 </Typography>
 
                 <Typography
@@ -1338,7 +1325,7 @@ function TechnicalAssessmentWorkspacePage() {
                     color: 'var(--eleven-text-secondary)',
                   }}
                 >
-                  Record technical feasibility, risks, skills, resources and integration constraints.
+                  {canEdit ? 'Record technical feasibility, risks, skills, resources and integration constraints.' : ''}
                 </Typography>
               </Box>
 
@@ -1367,11 +1354,10 @@ function TechnicalAssessmentWorkspacePage() {
               )}
             </Box>
 
-            <TextField
+            {canEdit ? <TextField
               fullWidth
               multiline
               minRows={11}
-              disabled={!canEdit}
               value={
                 technicalComments
               }
@@ -1391,7 +1377,7 @@ function TechnicalAssessmentWorkspacePage() {
               sx={{
                 mt: 2,
               }}
-            />
+            /> : <AssessmentNarrativeView content={technicalComments} assessmentType="technical" title="Technical Findings" subtitle="Technical feasibility, risks, skills, resources and integration constraints." emptyMessage="No technical findings have been recorded." />}
           </Paper>
 
 
@@ -1677,18 +1663,7 @@ function TechnicalAssessmentWorkspacePage() {
 
                           {item
                             .recommendation_notes && (
-                            <Typography
-                              sx={{
-                                mt: 0.5,
-                                fontSize: 12.5,
-                                color: 'var(--eleven-text-secondary)',
-                              }}
-                            >
-                              {
-                                item
-                                  .recommendation_notes
-                              }
-                            </Typography>
+                            <Box sx={{ mt: .5 }}><FormattedNarrative content={item.recommendation_notes} compact /></Box>
                           )}
                         </Box>
 
@@ -2195,22 +2170,7 @@ function TechnicalAssessmentWorkspacePage() {
                 }
               />
 
-              <Typography
-                sx={{
-                  mt: 1.5,
-                  whiteSpace:
-                    'pre-wrap',
-                  fontSize: 13,
-                  lineHeight: 1.6,
-                  color: 'var(--eleven-text-secondary)',
-                }}
-              >
-                {
-                  assessment
-                    .review_notes ||
-                  'No review notes provided.'
-                }
-              </Typography>
+              <Box sx={{ mt: 1.5 }}><FormattedNarrative content={assessment.review_notes} compact emptyMessage="No review notes provided." /></Box>
             </Paper>
           )}
 
