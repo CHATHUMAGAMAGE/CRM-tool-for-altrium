@@ -1058,11 +1058,11 @@ class FinancialAssessment(models.Model):
     class Outcome(models.TextChoices):
         FINANCIALLY_SUITABLE = (
             "FINANCIALLY_SUITABLE",
-            "Financially suitable",
+            "Financially Viable",
         )
         FINANCIALLY_UNSUITABLE = (
             "FINANCIALLY_UNSUITABLE",
-            "Financially unsuitable",
+            "Not Financially Viable",
         )
 
     class Status(models.TextChoices):
@@ -1130,6 +1130,9 @@ class FinancialAssessment(models.Model):
 
     financial_comments = models.TextField(
         blank=True,
+    )
+    estimated_delivery_cost = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True,
     )
 
     outcome = models.CharField(
@@ -1404,6 +1407,64 @@ class FinancialAssessmentHistory(
         )
 
 
+class CommercialReview(models.Model):
+    class Status(models.TextChoices):
+        REQUIRED = "REQUIRED", "Commercial Review Required"
+        REVISED = "REVISED", "Commercial Terms Revised"
+        REASSESSMENT_REQUESTED = "REASSESSMENT_REQUESTED", "Reassessment Requested"
+        RESOLVED = "RESOLVED", "Resolved"
+        CLOSED = "CLOSED", "Closed"
+
+    lead = models.ForeignKey(Lead, on_delete=models.PROTECT, related_name="commercial_reviews")
+    financial_assessment = models.ForeignKey(
+        FinancialAssessment, on_delete=models.PROTECT, related_name="commercial_reviews"
+    )
+    status = models.CharField(max_length=30, choices=Status.choices, default=Status.REQUIRED)
+    reason = models.TextField(blank=True)
+    revised_scope = models.TextField(blank=True)
+    revised_budget_min = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    revised_budget_max = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=3, blank=True)
+    revised_timeline = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="created_commercial_reviews"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+
+class CommercialExceptionRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Rejected"
+
+    lead = models.ForeignKey(Lead, on_delete=models.PROTECT, related_name="commercial_exceptions")
+    financial_assessment = models.ForeignKey(
+        FinancialAssessment, on_delete=models.PROTECT, related_name="commercial_exceptions"
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="requested_commercial_exceptions"
+    )
+    justification = models.TextField()
+    supporting_notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="reviewed_commercial_exceptions",
+    )
+    reviewer_comments = models.TextField(blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-requested_at", "-id"]
+
+
 class LeadOpportunityDecision(
     models.Model,
 ):
@@ -1552,14 +1613,24 @@ class LeadOpportunityDecision(
                 self.financial_assessment.outcome
                 == FinancialAssessment.Outcome.FINANCIALLY_SUITABLE
             )
-            if financially_suitable and not self.technical_assessment_id:
+            approved_exception = CommercialExceptionRequest.objects.filter(
+                financial_assessment=self.financial_assessment,
+                status=CommercialExceptionRequest.Status.APPROVED,
+            ).exists()
+            if (financially_suitable or approved_exception) and not self.technical_assessment_id:
                 raise ValidationError(
                     {"technical_assessment": "A completed Technical Assessment is required after a financially suitable result."}
                 )
             if self.decision == self.Decision.PROCEED and not financially_suitable:
-                raise ValidationError(
-                    {"decision": "Proceed requires a financially suitable result."}
-                )
+                if not approved_exception:
+                    raise ValidationError(
+                        {"decision": "Proceed requires a Financially Viable result or an approved commercial exception."}
+                    )
+            if self.decision == self.Decision.PROCEED and FinancialAssessment.objects.filter(
+                lead_id=self.lead_id,
+                status__in=[FinancialAssessment.Status.REQUESTED, FinancialAssessment.Status.IN_PROGRESS],
+            ).exclude(pk=self.financial_assessment_id).exists():
+                raise ValidationError({"decision": "Proceed is not permitted while a Financial Reassessment is pending."})
 
     def __str__(self):
         return (

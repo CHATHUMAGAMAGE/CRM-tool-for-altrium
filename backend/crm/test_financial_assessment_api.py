@@ -613,6 +613,7 @@ class FinancialAssessmentAPITests(
                     "Budget is viable and "
                     "projected costs are acceptable."
                 ),
+                "estimated_delivery_cost": "1250000.00",
                 "outcome": FinancialAssessment.Outcome.FINANCIALLY_SUITABLE,
             },
             format="json",

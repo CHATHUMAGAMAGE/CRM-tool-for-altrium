@@ -81,6 +81,10 @@ export type FinancialAssessmentHistory = {
 
 export type FinancialAssessment = {
   id: number
+  assessment_number: number
+  previous_assessment: { id: number; outcome: FinancialAssessmentOutcome | ''; status: FinancialAssessmentStatus; submitted_at: string | null } | null
+  reassessment_context: { reason: string; revised_scope: string; revised_budget_min: string | null; revised_budget_max: string | null; currency: string; revised_timeline: string; notes: string } | null
+  approved_commercial_exception: boolean
 
   lead: number
   lead_company_name: string
@@ -117,6 +121,7 @@ export type FinancialAssessment = {
   status_display: string
 
   financial_comments: string
+  estimated_delivery_cost: string | null
   outcome: FinancialAssessmentOutcome | ''
 
   submitted_at: string | null
@@ -135,6 +140,26 @@ export type FinancialAssessment = {
 
   history:
     FinancialAssessmentHistory[]
+}
+
+export type CommercialReview = {
+  id: number; lead: number; financial_assessment: number; status: string; status_display: string
+  reason: string; revised_scope: string; revised_budget_min: string | null; revised_budget_max: string | null
+  currency: string; revised_timeline: string; notes: string; assessed_by_name: string; created_at: string
+  estimated_delivery_cost: string | null
+  budget_shortfall: string | null
+}
+
+export type CommercialException = {
+  id: number; lead: number; financial_assessment: number; lead_name: string; company_name: string
+  financial_outcome: FinancialAssessmentOutcome; justification: string; supporting_notes: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'; status_display: string
+  requested_by_name: string; reviewed_by_name: string | null; reviewer_comments: string
+  requested_at: string; reviewed_at: string | null
+}
+
+export type CommercialReviewState = {
+  commercial_review_required: boolean; reviews: CommercialReview[]; exceptions: CommercialException[]
 }
 
 
@@ -157,6 +182,7 @@ export type UpdateFinancialAssessmentRequestInput =
 
 export type UpdateFinancialAssessmentWorkInput = {
   financial_comments: string
+  estimated_delivery_cost?: string | null
   outcome: FinancialAssessmentOutcome | ''
 }
 
@@ -742,3 +768,27 @@ export async function openFinancialAssessmentDocument(
     throw error
   }
 }
+
+async function commercialRequest<T>(path: string, method = 'GET', body?: Record<string, unknown>): Promise<T> {
+  const response = await authenticatedRequest(path, { method, body: body ? JSON.stringify(body) : undefined })
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+  return response.json() as Promise<T>
+}
+
+export const getCommercialReview = (leadId: number) =>
+  commercialRequest<CommercialReviewState>(`/api/v1/crm/leads/${leadId}/commercial-review/`)
+
+export const reviseCommercialTerms = (leadId: number, input: Record<string, unknown>) =>
+  commercialRequest<CommercialReview>(`/api/v1/crm/leads/${leadId}/revise-commercial-terms/`, 'POST', input)
+
+export const requestFinancialReassessment = (leadId: number) =>
+  commercialRequest<FinancialAssessment>(`/api/v1/crm/leads/${leadId}/request-financial-reassessment/`, 'POST', {})
+
+export const requestCommercialException = (leadId: number, justification: string, supporting_notes = '') =>
+  commercialRequest<CommercialException>(`/api/v1/crm/leads/${leadId}/request-commercial-exception/`, 'POST', { justification, supporting_notes })
+
+export const getCommercialExceptions = () =>
+  commercialRequest<CommercialException[]>('/api/v1/crm/commercial-exceptions/')
+
+export const reviewCommercialException = (id: number, action: 'approve' | 'reject', reviewer_comments: string) =>
+  commercialRequest<CommercialException>(`/api/v1/crm/commercial-exceptions/${id}/${action}/`, 'POST', { reviewer_comments })

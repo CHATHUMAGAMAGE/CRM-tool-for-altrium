@@ -61,6 +61,11 @@ import {
   type CurrentUser,
 } from '../services/auth'
 
+import FormattedNarrative from '../components/common/FormattedNarrative'
+import LeadOverviewDetails from '../components/leads/LeadOverviewDetails'
+import CommercialReviewPanel from '../components/leads/CommercialReviewPanel'
+import AssessmentNarrativeView from '../components/common/AssessmentNarrativeView'
+
 import {
   createLeadCommunication,
   createLeadInternalNote,
@@ -2467,7 +2472,8 @@ function LeadWorkspacePage() {
     canManageFinancialAssessment &&
     !isClosedLead &&
     financeReadinessMissing.length === 0 &&
-    !hasActiveFinancialAssessment
+    !hasActiveFinancialAssessment &&
+    latestFinancialAssessment?.outcome !== 'FINANCIALLY_UNSUITABLE'
 
 
   const financeAllowsTechnicalAssessment =
@@ -2476,7 +2482,7 @@ function LeadWorkspacePage() {
       latestFinancialAssessment.status === 'SUBMITTED' ||
       latestFinancialAssessment.status === 'REVIEWED'
     ) &&
-    latestFinancialAssessment.outcome === 'FINANCIALLY_SUITABLE'
+    (latestFinancialAssessment.outcome === 'FINANCIALLY_SUITABLE' || latestFinancialAssessment.approved_commercial_exception)
 
 
   const canRequestTechnicalAssessment =
@@ -4469,7 +4475,7 @@ function LeadWorkspacePage() {
                         700,
                     }}
                   >
-                    Lead Information
+                    Lead Overview
                   </Typography>
 
                   <Typography
@@ -4484,12 +4490,14 @@ function LeadWorkspacePage() {
                         12,
                     }}
                   >
-                    Core contact and prospect information
+                    Project context, commercial details and contact information
                   </Typography>
                 </Box>
 
 
                 <Divider />
+
+                <LeadOverviewDetails lead={lead} />
 
 
                 <Box
@@ -4498,7 +4506,7 @@ function LeadWorkspacePage() {
                       2.5,
 
                     display:
-                      'grid',
+                      'none',
 
                     gridTemplateColumns: {
                       xs:
@@ -4830,23 +4838,7 @@ function LeadWorkspacePage() {
                             'var(--eleven-surface-soft)',
                         }}
                       >
-                        <Typography
-                          sx={{
-                            color:
-                              'var(--eleven-text-secondary)',
-
-                            fontSize:
-                              13,
-
-                            lineHeight:
-                              1.55,
-
-                            whiteSpace:
-                              'pre-wrap',
-                          }}
-                        >
-                          {lead!.qualification_notes}
-                        </Typography>
+                        <FormattedNarrative content={lead!.qualification_notes} compact />
                       </Box>
                     </Box>
                   ) : (
@@ -5113,6 +5105,12 @@ function LeadWorkspacePage() {
                       </Typography>
                     </Box>
                   </Stack>
+
+                  <Box sx={{ display: 'grid', gap: 1.25, mt: 2, pt: 1.75, borderTop: '1px solid', borderColor: 'divider' }}>
+                    <InformationItem label="Created By" value={lead.created_by_name || '—'} />
+                    <InformationItem label="Created" value={formatCompactDate(lead.created_at)} />
+                    <InformationItem label="Last Updated" value={formatCompactDate(lead.updated_at)} />
+                  </Box>
                 </Box>
               </Card>
 
@@ -5828,95 +5826,20 @@ function LeadWorkspacePage() {
                                 'var(--eleven-surface-soft)',
                             }}
                           >
-                            <Typography
-                              sx={{
-                                color:
-                                  'var(--eleven-text-secondary)',
-
-                                fontSize:
-                                  13,
-
-                                lineHeight:
-                                  1.55,
-
-                                whiteSpace:
-                                  'pre-wrap',
-                              }}
-                            >
-                              {
-                                latestTechnicalAssessment
-                                  .requirements
-                              }
-                            </Typography>
+                            <FormattedNarrative content={latestTechnicalAssessment.requirements} compact />
                           </Box>
                         </Box>
 
 
                         {latestTechnicalAssessment
                           .technical_comments && (
-                          <Box>
-                            <Typography
-                              sx={{
-                                color:
-                                  'var(--eleven-text-muted)',
-
-                                fontSize:
-                                  11,
-
-                                fontWeight:
-                                  600,
-
-                                textTransform:
-                                  'uppercase',
-
-                                letterSpacing:
-                                  '0.04em',
-                              }}
-                            >
-                              Technical Findings
-                            </Typography>
-
-
-                            <Box
-                              sx={{
-                                mt:
-                                  0.8,
-
-                                p:
-                                  1.5,
-
-                                border:
-                                  '1px solid var(--eleven-border)',
-
-                                borderRadius:
-                                  '8px',
-
-                                bgcolor:
-                                  'var(--eleven-surface-soft)',
-                              }}
-                            >
-                              <Typography
-                                sx={{
-                                  color:
-                                    'var(--eleven-text-secondary)',
-
-                                  fontSize:
-                                    13,
-
-                                  lineHeight:
-                                    1.55,
-
-                                  whiteSpace:
-                                    'pre-wrap',
-                                }}
-                              >
-                                {
-                                  latestTechnicalAssessment
-                                    .technical_comments
-                                }
-                              </Typography>
-                            </Box>
-                          </Box>
+                          <AssessmentNarrativeView
+                            content={latestTechnicalAssessment.technical_comments}
+                            assessmentType="technical"
+                            title="Technical Findings"
+                            subtitle="Feasibility, risks, skills and delivery constraints."
+                            showRawToggle={false}
+                          />
                         )}
 
 
@@ -6018,15 +5941,7 @@ function LeadWorkspacePage() {
                           'REVIEWED' &&
                           latestTechnicalAssessment
                             .review_notes && (
-                          <Alert
-                            severity="success"
-                            variant="outlined"
-                          >
-                            {
-                              latestTechnicalAssessment
-                                .review_notes
-                            }
-                          </Alert>
+                          <Alert severity="success" variant="outlined"><FormattedNarrative content={latestTechnicalAssessment.review_notes} compact /></Alert>
                         )}
 
 
@@ -6295,9 +6210,9 @@ function LeadWorkspacePage() {
                             label="Financial Outcome"
                             value={
                               latestFinancialAssessment.outcome === 'FINANCIALLY_SUITABLE'
-                                ? 'Financially suitable'
+                                ? 'Financially Viable'
                                 : latestFinancialAssessment.outcome === 'FINANCIALLY_UNSUITABLE'
-                                  ? 'Financially unsuitable'
+                                  ? 'Not Financially Viable'
                                   : 'Not recorded'
                             }
                           />
@@ -6391,94 +6306,21 @@ function LeadWorkspacePage() {
                                 'var(--eleven-surface-soft)',
                             }}
                           >
-                            <Typography
-                              sx={{
-                                color:
-                                  'var(--eleven-text-secondary)',
-
-                                fontSize:
-                                  13,
-
-                                lineHeight:
-                                  1.55,
-
-                                whiteSpace:
-                                  'pre-wrap',
-                              }}
-                            >
-                              {
-                                latestFinancialAssessment
-                                  .requirements
-                              }
-                            </Typography>
+                            <FormattedNarrative content={latestFinancialAssessment.requirements} compact />
                           </Box>
                         </Box>
 
 
                         {latestFinancialAssessment
                           .financial_comments && (
-                          <Box>
-                            <Typography
-                              sx={{
-                                color:
-                                  'var(--eleven-text-muted)',
-
-                                fontSize:
-                                  11,
-
-                                fontWeight:
-                                  600,
-
-                                textTransform:
-                                  'uppercase',
-
-                                letterSpacing:
-                                  '0.04em',
-                              }}
-                            >
-                              Financial Findings
-                            </Typography>
-
-                            <Box
-                              sx={{
-                                mt:
-                                  0.8,
-
-                                p:
-                                  1.5,
-
-                                border:
-                                  '1px solid var(--eleven-border)',
-
-                                borderRadius:
-                                  '8px',
-
-                                bgcolor:
-                                  'var(--eleven-surface-soft)',
-                              }}
-                            >
-                              <Typography
-                                sx={{
-                                  color:
-                                    'var(--eleven-text-secondary)',
-
-                                  fontSize:
-                                    13,
-
-                                  lineHeight:
-                                    1.55,
-
-                                  whiteSpace:
-                                    'pre-wrap',
-                                }}
-                              >
-                                {
-                                  latestFinancialAssessment
-                                    .financial_comments
-                                }
-                              </Typography>
-                            </Box>
-                          </Box>
+                          <AssessmentNarrativeView
+                            content={latestFinancialAssessment.financial_comments}
+                            assessmentType="financial"
+                            outcome={latestFinancialAssessment.outcome}
+                            title="Financial Findings"
+                            subtitle="Cost, budget, risk and financial viability."
+                            showRawToggle={false}
+                          />
                         )}
 
 
@@ -6541,15 +6383,7 @@ function LeadWorkspacePage() {
                           'REVIEWED' &&
                           latestFinancialAssessment
                             .review_notes && (
-                          <Alert
-                            severity="success"
-                            variant="outlined"
-                          >
-                            {
-                              latestFinancialAssessment
-                                .review_notes
-                            }
-                          </Alert>
+                          <Alert severity="success" variant="outlined"><FormattedNarrative content={latestFinancialAssessment.review_notes} compact /></Alert>
                         )}
 
 
@@ -6578,6 +6412,12 @@ function LeadWorkspacePage() {
                     )}
                   </Box>
                 </Card>
+              )}
+
+              {currentUser?.role === 'SALES_MANAGER' && latestFinancialAssessment?.outcome === 'FINANCIALLY_UNSUITABLE' && (
+                <Box sx={{ gridColumn: { lg: '1 / -1' } }}>
+                  <CommercialReviewPanel leadId={lead.id} finance={latestFinancialAssessment} />
+                </Box>
               )}
 
 
@@ -6906,28 +6746,7 @@ function LeadWorkspacePage() {
                           </Stack>
 
 
-                          {communication.notes && (
-                            <Typography
-                              sx={{
-                                mb:
-                                  1,
-
-                                color:
-                                  'text.secondary',
-
-                                fontSize:
-                                  13,
-
-                                lineHeight:
-                                  1.55,
-
-                                whiteSpace:
-                                  'pre-wrap',
-                              }}
-                            >
-                              {communication.notes}
-                            </Typography>
-                          )}
+                          {communication.notes && <Box sx={{ mb: 1 }}><FormattedNarrative content={communication.notes} compact /></Box>}
 
 
                           <Typography
@@ -7720,28 +7539,7 @@ function LeadWorkspacePage() {
                             </Stack>
 
 
-                            {supportingText && (
-                              <Typography
-                                sx={{
-                                  mb:
-                                    1,
-
-                                  color:
-                                    'text.secondary',
-
-                                  fontSize:
-                                    13,
-
-                                  lineHeight:
-                                    1.55,
-
-                                  whiteSpace:
-                                    'pre-wrap',
-                                }}
-                              >
-                                {supportingText}
-                              </Typography>
-                            )}
+                            {supportingText && (historyItem.metadata.kind === 'INTERNAL_NOTE' ? <Box sx={{ mb: 1, p: 1.25, bgcolor: 'var(--eleven-surface-soft)', borderRadius: 1.5 }}><FormattedNarrative content={supportingText} compact /></Box> : <Typography sx={{ mb: 1, color: 'text.secondary', fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{supportingText}</Typography>)}
 
 
                             <Stack
@@ -9351,57 +9149,13 @@ function LeadWorkspacePage() {
 
               {latestTechnicalAssessment
                 ?.technical_comments && (
-                <Box
-                  sx={{
-                    p:
-                      2,
-
-                    border:
-                      '1px solid var(--eleven-border)',
-
-                    borderRadius:
-                      '10px',
-
-                    bgcolor:
-                      'var(--eleven-surface-soft)',
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      mb:
-                        0.75,
-
-                      fontSize:
-                        12,
-
-                      fontWeight:
-                        600,
-
-                      color:
-                        'var(--eleven-text-secondary)',
-                    }}
-                  >
-                    Technical Findings
-                  </Typography>
-
-                  <Typography
-                    sx={{
-                      fontSize:
-                        13,
-
-                      lineHeight:
-                        1.55,
-
-                      whiteSpace:
-                        'pre-wrap',
-                    }}
-                  >
-                    {
-                      latestTechnicalAssessment
-                        .technical_comments
-                    }
-                  </Typography>
-                </Box>
+                <AssessmentNarrativeView
+                  content={latestTechnicalAssessment.technical_comments}
+                  assessmentType="technical"
+                  title="Technical Findings"
+                  subtitle="Feasibility, risks, skills and delivery constraints."
+                  showRawToggle={false}
+                />
               )}
 
 
@@ -9747,57 +9501,14 @@ function LeadWorkspacePage() {
 
               {latestFinancialAssessment
                 ?.financial_comments && (
-                <Box
-                  sx={{
-                    p:
-                      2,
-
-                    border:
-                      '1px solid var(--eleven-border)',
-
-                    borderRadius:
-                      '10px',
-
-                    bgcolor:
-                      'var(--eleven-surface-soft)',
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      mb:
-                        0.75,
-
-                      fontSize:
-                        12,
-
-                      fontWeight:
-                        600,
-
-                      color:
-                        'var(--eleven-text-secondary)',
-                    }}
-                  >
-                    Financial Findings
-                  </Typography>
-
-                  <Typography
-                    sx={{
-                      fontSize:
-                        13,
-
-                      lineHeight:
-                        1.55,
-
-                      whiteSpace:
-                        'pre-wrap',
-                    }}
-                  >
-                    {
-                      latestFinancialAssessment
-                        .financial_comments
-                    }
-                  </Typography>
-                </Box>
+                <AssessmentNarrativeView
+                  content={latestFinancialAssessment.financial_comments}
+                  assessmentType="financial"
+                  outcome={latestFinancialAssessment.outcome}
+                  title="Financial Findings"
+                  subtitle="Cost, budget, risk and financial viability."
+                  showRawToggle={false}
+                />
               )}
 
 

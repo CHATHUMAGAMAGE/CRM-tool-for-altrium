@@ -7,6 +7,7 @@ from rest_framework import serializers
 from accounts.models import UserProfile
 
 from .models import (
+    CommercialReview,
     FinancialAssessment,
     FinancialAssessmentDocument,
     FinancialAssessmentHistory,
@@ -319,6 +320,10 @@ class FinancialAssessmentSerializer(
     reviewed_by_name = (
         serializers.SerializerMethodField()
     )
+    assessment_number = serializers.SerializerMethodField()
+    previous_assessment = serializers.SerializerMethodField()
+    reassessment_context = serializers.SerializerMethodField()
+    approved_commercial_exception = serializers.SerializerMethodField()
 
     documents = (
         FinancialAssessmentDocumentSerializer(
@@ -339,6 +344,10 @@ class FinancialAssessmentSerializer(
 
         fields = [
             "id",
+            "assessment_number",
+            "previous_assessment",
+            "reassessment_context",
+            "approved_commercial_exception",
             "lead",
             "lead_company_name",
             "lead_contact_name",
@@ -364,6 +373,7 @@ class FinancialAssessmentSerializer(
             "status",
             "status_display",
             "financial_comments",
+            "estimated_delivery_cost",
             "outcome",
             "submitted_at",
             "reviewed_at",
@@ -407,6 +417,24 @@ class FinancialAssessmentSerializer(
         return get_user_display_name(
             obj.reviewed_by,
         )
+
+    def get_assessment_number(self, obj):
+        return FinancialAssessment.objects.filter(lead=obj.lead, created_at__lte=obj.created_at).count()
+
+    def get_previous_assessment(self, obj):
+        previous = FinancialAssessment.objects.filter(lead=obj.lead, created_at__lt=obj.created_at).order_by("-created_at", "-id").first()
+        if previous is None:
+            return None
+        return {"id": previous.id, "outcome": previous.outcome, "status": previous.status, "submitted_at": previous.submitted_at}
+
+    def get_reassessment_context(self, obj):
+        review = obj.lead.commercial_reviews.filter(status=CommercialReview.Status.REASSESSMENT_REQUESTED).order_by("-updated_at", "-id").first()
+        if review is None:
+            return None
+        return {"reason": review.reason, "revised_scope": review.revised_scope, "revised_budget_min": review.revised_budget_min, "revised_budget_max": review.revised_budget_max, "currency": review.currency, "revised_timeline": review.revised_timeline, "notes": review.notes}
+
+    def get_approved_commercial_exception(self, obj):
+        return obj.commercial_exceptions.filter(status="APPROVED").exists()
 
 
 class FinancialAssessmentCreateSerializer(
@@ -528,6 +556,15 @@ class FinancialAssessmentCreateSerializer(
                     )
                 }
             )
+
+        latest_completed = FinancialAssessment.objects.filter(
+            lead=lead,
+            status__in=[FinancialAssessment.Status.SUBMITTED, FinancialAssessment.Status.REVIEWED],
+        ).order_by("-submitted_at", "-id").first() if lead is not None else None
+        if latest_completed and latest_completed.outcome == FinancialAssessment.Outcome.FINANCIALLY_UNSUITABLE:
+            raise serializers.ValidationError({
+                "lead": "Use the Commercial Review workflow to revise terms and request a Financial Reassessment after a Not Financially Viable outcome."
+            })
 
         return attrs
 
@@ -737,6 +774,7 @@ class FinancialAssessmentWorkSerializer(
 
         fields = [
             "financial_comments",
+            "estimated_delivery_cost",
             "outcome",
         ]
 
@@ -747,6 +785,11 @@ class FinancialAssessmentWorkSerializer(
         return value.strip()
 
     def validate_outcome(self, value):
+        return value
+
+    def validate_estimated_delivery_cost(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("Estimated Delivery Cost cannot be negative.")
         return value
 
     def validate(
