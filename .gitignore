@@ -32,3 +32,10 @@ build/
 Thumbs.db
 .DS_Store
 pyrefly.toml
+
+
+# Local database dump
+/backend/eleven_local.sql
+
+# Local recovery / deployment secret files
+/backend/render-recovery-*.txt
