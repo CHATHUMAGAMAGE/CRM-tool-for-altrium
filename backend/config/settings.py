@@ -443,14 +443,6 @@ MFA_REQUIRED_ROLES = environment_list(
     ],
 )
 
-# Local-development escape hatch for temporarily unavailable authenticators.
-# This is deliberately ignored unless DEBUG=True so it cannot weaken a
-# production deployment through an accidental environment variable.
-MFA_DEBUG_BYPASS_ROLES = environment_list(
-    "MFA_DEBUG_BYPASS_ROLES",
-    default=[],
-) if DEBUG else []
-
 SUPPORTED_MFA_ROLES = {
     "ADMIN",
     "MARKETING",
@@ -464,7 +456,7 @@ SUPPORTED_MFA_ROLES = {
 }
 
 unknown_mfa_roles = (
-    set(MFA_REQUIRED_ROLES + MFA_DEBUG_BYPASS_ROLES)
+    set(MFA_REQUIRED_ROLES)
     - SUPPORTED_MFA_ROLES
 )
 
