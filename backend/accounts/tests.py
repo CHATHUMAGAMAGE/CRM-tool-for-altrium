@@ -83,6 +83,7 @@ class AuthenticationAPITests(APITestCase):
             "TECH_LEAD",
             "FINANCIAL_OFFICER",
             "DIRECTOR",
+            "EXECUTIVE",
         }
 
         actual_roles = {
@@ -103,6 +104,19 @@ class AuthenticationAPITests(APITestCase):
             role_labels["DIRECTOR"],
             "Director",
         )
+        self.assertEqual(role_labels["EXECUTIVE"], "Executive")
+
+    def test_executive_uses_normal_login_and_me_contract(self):
+        self.user.profile.role = UserProfile.Role.EXECUTIVE
+        self.user.profile.save(update_fields=["role"])
+        response = self.login()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {response.data["access"]}')
+        current = self.client.get(reverse("current-user"))
+        self.assertEqual(current.status_code, status.HTTP_200_OK)
+        self.assertEqual(current.data["role"], "EXECUTIVE")
+        self.assertEqual(current.data["role_display"], "Executive")
 
     def test_web_login_returns_access_and_sets_httponly_refresh_cookie(self):
         response = self.login()

@@ -71,6 +71,11 @@ class LeadApiTests(APITestCase):
             UserProfile.Role.DIRECTOR,
         )
 
+        self.executive = self.create_user(
+            "executive_test",
+            UserProfile.Role.EXECUTIVE,
+        )
+
         self.software_engineer = self.create_user(
             "engineer_test",
             UserProfile.Role.SOFTWARE_ENGINEER,
@@ -111,6 +116,25 @@ class LeadApiTests(APITestCase):
         self.list_url = reverse(
             "crm:lead-list-create",
         )
+
+    def test_executive_has_organisation_read_scope_without_write_scope(self):
+        self.client.force_authenticate(user=self.executive)
+        listed = self.client.get(self.list_url)
+        self.assertEqual(listed.status_code, status.HTTP_200_OK)
+        self.assertEqual({item["id"] for item in listed.data}, {self.lead.id, self.other_lead.id})
+
+        created = self.client.post(
+            self.list_url,
+            {"company_name": "Forbidden", "contact_name": "No Write", "phone": "0770000000"},
+            format="json",
+        )
+        self.assertEqual(created.status_code, status.HTTP_403_FORBIDDEN)
+        updated = self.client.patch(
+            reverse("crm:lead-detail", kwargs={"pk": self.lead.id}),
+            {"company_name": "Changed"},
+            format="json",
+        )
+        self.assertEqual(updated.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_cannot_list_leads(
         self,

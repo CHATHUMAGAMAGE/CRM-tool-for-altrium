@@ -4,7 +4,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers, status
-from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated, SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -33,7 +33,9 @@ class CommercialWorkflowPermission(BasePermission):
         role = getattr(getattr(request.user, "profile", None), "role", None)
         allowed = {UserProfile.Role.SALES_MANAGER}
         if getattr(view, "director_action", False):
-            allowed = {UserProfile.Role.DIRECTOR}
+            allowed = {UserProfile.Role.DIRECTOR, UserProfile.Role.EXECUTIVE}
+        elif request.method in SAFE_METHODS:
+            allowed |= {UserProfile.Role.DIRECTOR, UserProfile.Role.EXECUTIVE}
         return bool(request.user and request.user.is_authenticated and role in allowed)
 
 
@@ -70,6 +72,11 @@ class CommercialExceptionSerializer(serializers.ModelSerializer):
     lead_name = serializers.CharField(source="lead.project_name", read_only=True)
     company_name = serializers.CharField(source="lead.company_name", read_only=True)
     financial_outcome = serializers.CharField(source="financial_assessment.outcome", read_only=True)
+    client_budget_min = serializers.DecimalField(source="lead.budget_min", max_digits=14, decimal_places=2, read_only=True, allow_null=True)
+    client_budget_max = serializers.DecimalField(source="lead.budget_max", max_digits=14, decimal_places=2, read_only=True, allow_null=True)
+    currency = serializers.CharField(source="lead.budget_currency", read_only=True)
+    estimated_delivery_cost = serializers.DecimalField(source="financial_assessment.estimated_delivery_cost", max_digits=14, decimal_places=2, read_only=True, allow_null=True)
+    budget_shortfall = serializers.SerializerMethodField()
 
     class Meta:
         model = CommercialExceptionRequest
@@ -78,6 +85,12 @@ class CommercialExceptionSerializer(serializers.ModelSerializer):
 
     def get_requested_by_name(self, obj): return display_name(obj.requested_by)
     def get_reviewed_by_name(self, obj): return display_name(obj.reviewed_by)
+    def get_budget_shortfall(self, obj):
+        cost = obj.financial_assessment.estimated_delivery_cost
+        budget_max = obj.lead.budget_max
+        if cost is None or budget_max is None:
+            return None
+        return f'{max(cost - budget_max, Decimal("0.00")):.2f}'
 
 
 class LeadCommercialReviewView(APIView):
@@ -160,9 +173,12 @@ class RequestCommercialExceptionView(APIView):
         if CommercialExceptionRequest.objects.filter(financial_assessment=finance, status=CommercialExceptionRequest.Status.PENDING).exists():
             raise serializers.ValidationError({"detail": "A commercial exception is already pending for this assessment."})
         exception = CommercialExceptionRequest.objects.create(lead=lead, financial_assessment=finance, requested_by=request.user, justification=justification, supporting_notes=str(request.data.get("supporting_notes", "")).strip())
-        directors = User.objects.filter(is_active=True, profile__role=UserProfile.Role.DIRECTOR)
-        for director in directors:
-            create_notification(recipient=director, actor=request.user, kind=Notification.Kind.REVIEW, title="Commercial exception approval requested", message=f"Commercial exception approval requested for {lead.project_name or lead.company_name}.", target_url="/commercial-exceptions")
+        reviewers = User.objects.filter(
+            is_active=True,
+            profile__role__in=[UserProfile.Role.DIRECTOR, UserProfile.Role.EXECUTIVE],
+        )
+        for reviewer in reviewers:
+            create_notification(recipient=reviewer, actor=request.user, kind=Notification.Kind.REVIEW, title="Commercial exception approval requested", message=f"Commercial exception approval requested for {lead.project_name or lead.company_name}.", target_url="/executive/approvals")
         LeadHistory.objects.create(lead=lead, event_type=LeadHistory.EventType.UPDATED, description="Commercial exception approval requested.", performed_by=request.user, metadata={"workflow_event": "COMMERCIAL_EXCEPTION_REQUESTED", "exception_id": exception.id})
         return Response(CommercialExceptionSerializer(exception).data, status=status.HTTP_201_CREATED)
 
@@ -190,6 +206,8 @@ class CommercialExceptionReviewView(APIView):
         if action not in {"approve", "reject"}:
             raise serializers.ValidationError({"detail": "Invalid exception action."})
         comments = str(request.data.get("reviewer_comments", "")).strip()
+        if not comments:
+            raise serializers.ValidationError({"reviewer_comments": "A reviewer comment is required."})
         exception.status = CommercialExceptionRequest.Status.APPROVED if action == "approve" else CommercialExceptionRequest.Status.REJECTED
         exception.reviewed_by = request.user
         exception.reviewed_at = timezone.now()

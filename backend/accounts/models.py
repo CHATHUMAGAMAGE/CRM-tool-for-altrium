@@ -42,6 +42,11 @@ class UserProfile(models.Model):
             "Director",
         )
 
+        EXECUTIVE = (
+            "EXECUTIVE",
+            "Executive",
+        )
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,

@@ -19,6 +19,11 @@ from .models import (
 )
 from .report_pdf import PdfReport, build_pdf_context, report_pdf_filename
 
+REPORT_NAMES_FOR_TESTS = (
+    "lead-sources", "lead-conversion", "lead-status",
+    "sales-rep-performance", "deals",
+)
+
 
 class AnalyticsApiTests(APITestCase):
     def create_user(self, username, role):
@@ -33,6 +38,7 @@ class AnalyticsApiTests(APITestCase):
         self.manager.last_name = "Sellahennadi"
         self.manager.save(update_fields=["first_name", "last_name"])
         self.director = self.create_user("analytics_director", UserProfile.Role.DIRECTOR)
+        self.executive = self.create_user("analytics_executive", UserProfile.Role.EXECUTIVE)
         self.rep = self.create_user("analytics_rep", UserProfile.Role.SALES_REP)
         self.finance = self.create_user("analytics_finance", UserProfile.Role.FINANCIAL_OFFICER)
         self.tech_lead = self.create_user("analytics_tech", UserProfile.Role.TECH_LEAD)
@@ -112,10 +118,22 @@ class AnalyticsApiTests(APITestCase):
         self.assertEqual(response.data["kpis"]["lead_to_proceed_rate"], 33.3)
         self.assertEqual(response.data["decision_outcomes"]["pending"], 2)
 
+    def test_executive_dashboard_and_all_report_exports_are_available(self):
+        self.authenticate(self.executive)
+        dashboard = self.client.get(reverse("crm:executive-analytics-dashboard"))
+        self.assertEqual(dashboard.status_code, status.HTTP_200_OK)
+        self.assertIn("commercial_health", dashboard.data)
+        self.assertIn("sales_rep_summary", dashboard.data)
+        for report_name in REPORT_NAMES_FOR_TESTS:
+            report = self.client.get(reverse("crm:analytics-report", kwargs={"report_name": report_name}))
+            export = self.client.get(reverse("crm:analytics-report-export", kwargs={"report_name": report_name}))
+            self.assertEqual(report.status_code, status.HTTP_200_OK)
+            self.assertEqual(export.status_code, status.HTTP_200_OK)
+
     def test_dashboard_permissions_are_role_specific(self):
         manager_url = reverse("crm:manager-analytics-dashboard")
         executive_url = reverse("crm:executive-analytics-dashboard")
-        for user in (self.rep, self.finance, self.admin, self.director):
+        for user in (self.rep, self.finance, self.admin, self.director, self.executive):
             self.authenticate(user)
             self.assertEqual(self.client.get(manager_url).status_code, status.HTTP_403_FORBIDDEN)
         self.authenticate(self.manager)
@@ -206,7 +224,7 @@ class AnalyticsApiTests(APITestCase):
         for user in (self.rep, self.finance, self.tech_lead, self.admin):
             self.authenticate(user)
             self.assertEqual(self.client.get(url).status_code, status.HTTP_403_FORBIDDEN)
-        for user in (self.manager, self.director):
+        for user in (self.manager, self.director, self.executive):
             self.authenticate(user)
             self.assertEqual(self.client.get(url).status_code, status.HTTP_200_OK)
 

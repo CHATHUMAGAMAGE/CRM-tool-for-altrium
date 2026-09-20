@@ -7,6 +7,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework.permissions import (
     BasePermission,
     IsAuthenticated,
+    SAFE_METHODS,
 )
 from rest_framework.response import Response
 
@@ -65,9 +66,9 @@ class OpportunityManagementPermission(
         if profile is None:
             return False
 
-        return profile.role in {
-            UserProfile.Role.SALES_MANAGER,
-        }
+        if profile.role == UserProfile.Role.SALES_MANAGER:
+            return True
+        return request.method in SAFE_METHODS and profile.role == UserProfile.Role.EXECUTIVE
 
 
 def get_latest_completed_financial_assessment(

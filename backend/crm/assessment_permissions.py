@@ -45,6 +45,7 @@ class TechnicalAssessmentPermission(
             return role in {
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.TECH_LEAD,
+                UserProfile.Role.EXECUTIVE,
             }
 
         action = getattr(

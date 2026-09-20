@@ -45,6 +45,7 @@ class FinancialAssessmentPermission(
             return role in {
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.FINANCIAL_OFFICER,
+                UserProfile.Role.EXECUTIVE,
             }
 
         action = getattr(

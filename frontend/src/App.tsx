@@ -169,7 +169,7 @@ function DashboardEntry() {
     return <AnalyticsDashboardPage />
   }
 
-  if (currentRole === 'DIRECTOR') {
+  if (currentRole === 'DIRECTOR' || currentRole === 'EXECUTIVE') {
     return <AnalyticsDashboardPage executive />
   }
 
@@ -277,12 +277,13 @@ function App() {
             }
           />
 
-          <Route element={<RoleProtectedRoute allowedRoles={['SALES_MANAGER', 'DIRECTOR']} />}>
+          <Route element={<RoleProtectedRoute allowedRoles={['SALES_MANAGER', 'DIRECTOR', 'EXECUTIVE']} />}>
             <Route path="/reports" element={<Navigate to="/reports/lead-sources" replace />} />
             <Route path="/reports/:reportName" element={<ReportsPage />} />
           </Route>
-          <Route element={<RoleProtectedRoute allowedRoles={['DIRECTOR']} />}>
+          <Route element={<RoleProtectedRoute allowedRoles={['DIRECTOR', 'EXECUTIVE']} />}>
             <Route path="/commercial-exceptions" element={<CommercialExceptionsPage />} />
+            <Route path="/executive/approvals" element={<CommercialExceptionsPage />} />
           </Route>
 
           <Route
@@ -320,6 +321,7 @@ function App() {
                 allowedRoles={[
                   'ADMIN',
                   'SALES_MANAGER',
+                  'EXECUTIVE',
                 ]}
               />
             }
