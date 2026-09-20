@@ -8,6 +8,7 @@ export type UserRole =
   | 'PROJECT_MANAGER'
   | 'SOFTWARE_ENGINEER'
   | 'DIRECTOR'
+  | 'EXECUTIVE'
 
 
 export type AssignableAdminRole =
@@ -28,6 +29,7 @@ export const USER_ROLES = {
   PROJECT_MANAGER: 'PROJECT_MANAGER',
   SOFTWARE_ENGINEER: 'SOFTWARE_ENGINEER',
   DIRECTOR: 'DIRECTOR',
+  EXECUTIVE: 'EXECUTIVE',
 } as const
 
 
@@ -42,7 +44,18 @@ Record<UserRole, string> = {
   PROJECT_MANAGER: 'Project Manager',
   SOFTWARE_ENGINEER: 'Software Engineer',
   DIRECTOR: 'Director',
+  EXECUTIVE: 'Executive',
 }
+
+export const EXECUTIVE_PRIMARY_NAVIGATION = [
+  'Dashboard',
+  'Pipeline',
+  'Opportunity Portfolio',
+  'Deal Pipeline',
+  'Opportunity Review',
+  'Reports & Analytics',
+  'Approvals',
+] as const
 
 
 export const ADMIN_ASSIGNABLE_ROLE_OPTIONS:

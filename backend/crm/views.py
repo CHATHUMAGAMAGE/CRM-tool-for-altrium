@@ -1114,6 +1114,7 @@ class LeadQuerysetMixin:
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.PROJECT_MANAGER,
                 UserProfile.Role.DIRECTOR,
+                UserProfile.Role.EXECUTIVE,
                 UserProfile.Role.MARKETING,
             }
         ):

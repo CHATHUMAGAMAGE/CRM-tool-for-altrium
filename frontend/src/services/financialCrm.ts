@@ -156,6 +156,8 @@ export type CommercialException = {
   status: 'PENDING' | 'APPROVED' | 'REJECTED'; status_display: string
   requested_by_name: string; reviewed_by_name: string | null; reviewer_comments: string
   requested_at: string; reviewed_at: string | null
+  client_budget_min: string | null; client_budget_max: string | null; currency: string
+  estimated_delivery_cost: string | null; budget_shortfall: string | null
 }
 
 export type CommercialReviewState = {

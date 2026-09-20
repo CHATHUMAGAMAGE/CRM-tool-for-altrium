@@ -451,9 +451,13 @@ function AppSidebar({
     currentUser?.role ===
     'SALES_REP'
 
+  const isExecutive = currentUser?.role === 'EXECUTIVE'
+
 
   const leadListLabel =
-    isSalesRepresentative
+    isExecutive
+      ? 'Opportunity Portfolio'
+      : isSalesRepresentative
       ? 'My Leads'
       : 'All Leads'
 
@@ -490,7 +494,7 @@ function AppSidebar({
 
   const canSeeReports =
     currentUser !== null &&
-    hasRequiredRole(currentUser.role, ['SALES_MANAGER', 'DIRECTOR'])
+    hasRequiredRole(currentUser.role, ['SALES_MANAGER', 'DIRECTOR', 'EXECUTIVE'])
 
   const isReportsActive =
     location.pathname === '/reports' ||
@@ -527,6 +531,7 @@ function AppSidebar({
       [
         'ADMIN',
         'SALES_MANAGER',
+        'EXECUTIVE',
       ],
     )
 
@@ -992,7 +997,7 @@ function AppSidebar({
                 )
               }
             >
-              Leads
+              {isExecutive ? 'Pipeline' : 'Leads'}
             </Button>
 
 
@@ -1033,8 +1038,15 @@ function AppSidebar({
                   {leadListLabel}
                 </Button>
 
+                {isExecutive && <Button
+                  startIcon={<BarChartRounded />}
+                  onClick={() => handleNavigate('/reports/deals')}
+                  sx={childButtonSx(location.pathname === '/reports/deals')}
+                >
+                  Deal Pipeline
+                </Button>}
 
-                <Button
+                {!isExecutive && <Button
                   startIcon={
                     <CalendarMonthOutlined />
                   }
@@ -1050,10 +1062,9 @@ function AppSidebar({
                   }
                 >
                   Follow-ups
-                </Button>
+                </Button>}
 
-
-                <Button
+                {!isExecutive && <Button
                   startIcon={
                     <ChatBubbleOutlineRounded />
                   }
@@ -1069,7 +1080,7 @@ function AppSidebar({
                   }
                 >
                   Activity
-                </Button>
+                </Button>}
               </Stack>
             </Collapse>
 
@@ -1101,6 +1112,16 @@ function AppSidebar({
                 sx={navigationButtonSx(isReportsActive)}
               >
                 Reports & Analytics
+              </Button>
+            )}
+
+            {currentUser?.role === 'EXECUTIVE' && (
+              <Button
+                startIcon={<AssignmentOutlined />}
+                onClick={() => handleNavigate('/executive/approvals')}
+                sx={navigationButtonSx(location.pathname === '/executive/approvals')}
+              >
+                Approvals
               </Button>
             )}
 

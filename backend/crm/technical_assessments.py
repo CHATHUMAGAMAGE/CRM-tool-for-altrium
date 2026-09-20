@@ -131,8 +131,7 @@ class TechnicalAssessmentAccessMixin:
             return queryset
 
         if (
-            role
-            == UserProfile.Role.SALES_MANAGER
+            role in {UserProfile.Role.SALES_MANAGER, UserProfile.Role.EXECUTIVE}
         ):
             return queryset
 

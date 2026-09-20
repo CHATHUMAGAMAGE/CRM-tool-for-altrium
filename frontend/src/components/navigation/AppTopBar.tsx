@@ -794,6 +794,7 @@ function AppTopBar({
                     'SALES_MANAGER',
                     'PROJECT_MANAGER',
                     'DIRECTOR',
+                    'EXECUTIVE',
                   ].includes(
                     role,
                   )
@@ -1561,7 +1562,9 @@ function AppTopBar({
         : currentUser?.role ===
             'ADMIN' ||
           currentUser?.role ===
-            'SALES_MANAGER'
+            'SALES_MANAGER' ||
+          currentUser?.role ===
+            'EXECUTIVE'
           ? 'Search leads and assessments...'
           : currentUser?.role ===
               'SOFTWARE_ENGINEER'

@@ -456,6 +456,8 @@ function LeadsPage() {
     currentUser?.role ===
     'SALES_MANAGER'
 
+  const isExecutive = currentUser?.role === 'EXECUTIVE'
+
 
   const canCreateLead =
     currentUser !== null &&
@@ -1027,7 +1029,9 @@ function LeadsPage() {
 
 
   const pageTitle =
-    isSalesRepresentative
+    isExecutive
+      ? 'Opportunity Portfolio'
+      : isSalesRepresentative
       ? 'My Leads'
       : isSalesManager
         ? 'All Leads'
@@ -1035,7 +1039,9 @@ function LeadsPage() {
 
 
   const pageDescription =
-    isSalesRepresentative
+    isExecutive
+      ? 'Organisation-wide visibility into active and closed sales opportunities.'
+      : isSalesRepresentative
       ? 'View and work with leads assigned to you.'
       : isSalesManager
         ? 'Manage and assign leads across the sales team.'
@@ -1669,14 +1675,14 @@ function LeadsPage() {
                   }}
                 >
                   <InputLabel>
-                    Assigned To
+                    {isExecutive ? 'Sales Representative' : 'Assigned To'}
                   </InputLabel>
 
                   <Select
                     value={
                       assigneeFilter
                     }
-                    label="Assigned To"
+                    label={isExecutive ? 'Sales Representative' : 'Assigned To'}
                     onChange={(
                       event,
                     ) =>
@@ -1802,7 +1808,9 @@ function LeadsPage() {
                       700,
                   }}
                 >
-                  {isSalesRepresentative
+                  {isExecutive
+                    ? 'Opportunity Portfolio'
+                    : isSalesRepresentative
                     ? 'Assigned Leads'
                     : 'Lead List'}
                 </Typography>
@@ -1819,7 +1827,9 @@ function LeadsPage() {
                       12.5,
                   }}
                 >
-                  {isSalesRepresentative
+                  {isExecutive
+                    ? 'Organisation-wide opportunity records for management review'
+                    : isSalesRepresentative
                     ? 'Leads currently assigned to you'
                     : 'Sales team lead records'}
                 </Typography>
@@ -1838,8 +1848,8 @@ function LeadsPage() {
                 {filteredLeads.length}{' '}
                 {filteredLeads.length ===
                 1
-                  ? 'lead'
-                  : 'leads'}
+                  ? (isExecutive ? 'opportunity' : 'lead')
+                  : (isExecutive ? 'opportunities' : 'leads')}
               </Typography>
             </Stack>
           </Box>
@@ -1863,7 +1873,7 @@ function LeadsPage() {
                         2.75,
                     }}
                   >
-                    Lead
+                    {isExecutive ? 'Opportunity / Lead' : 'Lead'}
                   </TableCell>
 
                   <TableCell>
@@ -1871,17 +1881,17 @@ function LeadsPage() {
                   </TableCell>
 
                   <TableCell>
-                    Source
+                    {isExecutive ? 'Acquisition Source' : 'Source'}
                   </TableCell>
 
                   {!isSalesRepresentative && (
                     <TableCell>
-                      Assigned To
+                      {isExecutive ? 'Sales Representative' : 'Assigned To'}
                     </TableCell>
                   )}
 
                   <TableCell>
-                    Status
+                    {isExecutive ? 'Current Stage' : 'Status'}
                   </TableCell>
 
                   <TableCell>
@@ -1895,7 +1905,7 @@ function LeadsPage() {
                         2.75,
                     }}
                   >
-                    Action
+                    {isExecutive ? 'Drill-down' : 'Action'}
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -2033,7 +2043,7 @@ function LeadsPage() {
                                     1.35,
                                 }}
                               >
-                                {lead.contact_name}
+                                {isExecutive ? (lead.project_name || lead.contact_name) : lead.contact_name}
                               </Typography>
 
                               <Typography
@@ -2063,9 +2073,7 @@ function LeadsPage() {
                                     'nowrap',
                                 }}
                               >
-                                {lead.email ||
-                                  lead.phone ||
-                                  'No contact details'}
+                                {isExecutive ? lead.contact_name : (lead.email || lead.phone || 'No contact details')}
                               </Typography>
                             </Box>
                           </Stack>
@@ -2223,11 +2231,11 @@ function LeadsPage() {
                                 12.5,
                             }}
                           >
-                            {!isSalesRepresentative &&
+                            {!isExecutive && !isSalesRepresentative &&
                             lead.assigned_to ===
                               null
                               ? 'Assign'
-                              : 'Open'}
+                              : isExecutive ? 'View' : 'Open'}
                           </Button>
                         </TableCell>
                       </TableRow>

@@ -40,6 +40,10 @@ export type DashboardData = {
   team_performance?: Array<Record<string, string | number>>
   attention_required?: Array<{ lead_id: number; lead: string; company: string; issue: string; waiting_days: number }>
   decision_outcomes?: { proceed: number; do_not_proceed: number; pending: number }
+  commercial_health?: Record<string, number>
+  sales_rep_summary?: Array<Record<string, string | number>>
+  pending_approvals?: number
+  pipeline_summary?: Record<string, number>
 }
 
 export type ReportData = {

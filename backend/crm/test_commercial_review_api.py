@@ -24,6 +24,7 @@ class CommercialReviewWorkflowTests(APITestCase):
         self.manager = self.user("commercial_manager", UserProfile.Role.SALES_MANAGER)
         self.finance = self.user("commercial_finance", UserProfile.Role.FINANCIAL_OFFICER)
         self.director = self.user("commercial_director", UserProfile.Role.DIRECTOR)
+        self.executive = self.user("commercial_executive", UserProfile.Role.EXECUTIVE)
         self.tech = self.user("commercial_tech", UserProfile.Role.TECH_LEAD)
         self.lead = Lead.objects.create(
             company_name="GreenMart Retail (Pvt) Ltd", contact_name="GreenMart Contact",
@@ -115,6 +116,54 @@ class CommercialReviewWorkflowTests(APITestCase):
         self.assertEqual(approved.status_code, status.HTTP_200_OK)
         self.assessment.refresh_from_db()
         self.assertEqual(self.assessment.outcome, FinancialAssessment.Outcome.FINANCIALLY_UNSUITABLE)
+
+    def test_executive_can_review_exception_and_audit_records_actor(self):
+        self.submit_failed_finance()
+        self.mark_finance_reviewed()
+        self.client.force_authenticate(self.manager)
+        requested = self.client.post(
+            reverse("crm:request-commercial-exception", kwargs={"pk": self.lead.id}),
+            {"justification": "Strategic account."}, format="json",
+        )
+        self.client.force_authenticate(self.executive)
+        listed = self.client.get(reverse("crm:commercial-exception-list"))
+        self.assertEqual(listed.status_code, status.HTTP_200_OK)
+        approved = self.client.post(
+            reverse("crm:commercial-exception-review", kwargs={"pk": requested.data["id"], "action": "approve"}),
+            {"reviewer_comments": "Approved with executive oversight."}, format="json",
+        )
+        self.assertEqual(approved.status_code, status.HTTP_200_OK)
+        self.assessment.refresh_from_db()
+        self.assertEqual(self.assessment.outcome, FinancialAssessment.Outcome.FINANCIALLY_UNSUITABLE)
+        self.assertTrue(LeadHistory.objects.filter(performed_by=self.executive, metadata__workflow_event="COMMERCIAL_EXCEPTION_APPROVED").exists())
+
+    def test_executive_cannot_self_approve_or_review_without_comment(self):
+        exception = CommercialExceptionRequest.objects.create(
+            lead=self.lead, financial_assessment=self.assessment,
+            requested_by=self.executive, justification="Own request",
+        )
+        self.client.force_authenticate(self.executive)
+        url = reverse("crm:commercial-exception-review", kwargs={"pk": exception.id, "action": "approve"})
+        self.assertEqual(self.client.post(url, {"reviewer_comments": "No"}, format="json").status_code, status.HTTP_400_BAD_REQUEST)
+
+        exception.requested_by = self.manager
+        exception.save(update_fields=["requested_by"])
+        self.assertEqual(self.client.post(url, {"reviewer_comments": ""}, format="json").status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_executive_can_reject_exception_with_audited_comment(self):
+        exception = CommercialExceptionRequest.objects.create(
+            lead=self.lead, financial_assessment=self.assessment,
+            requested_by=self.manager, justification="Strategic request",
+        )
+        self.client.force_authenticate(self.executive)
+        response = self.client.post(
+            reverse("crm:commercial-exception-review", kwargs={"pk": exception.id, "action": "reject"}),
+            {"reviewer_comments": "Shortfall is outside approved tolerance."}, format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        exception.refresh_from_db()
+        self.assertEqual(exception.status, CommercialExceptionRequest.Status.REJECTED)
+        self.assertEqual(exception.reviewed_by, self.executive)
 
     def test_approved_exception_allows_technical_then_proceed(self):
         self.submit_failed_finance()

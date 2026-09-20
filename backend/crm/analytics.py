@@ -69,6 +69,7 @@ class AnalyticsRolePermission(BasePermission):
     allowed_roles = {
         UserProfile.Role.SALES_MANAGER,
         UserProfile.Role.DIRECTOR,
+        UserProfile.Role.EXECUTIVE,
     }
 
     def has_permission(self, request, view):
@@ -86,7 +87,7 @@ class ManagerAnalyticsPermission(AnalyticsRolePermission):
 
 
 class DirectorAnalyticsPermission(AnalyticsRolePermission):
-    allowed_roles = {UserProfile.Role.DIRECTOR}
+    allowed_roles = {UserProfile.Role.DIRECTOR, UserProfile.Role.EXECUTIVE}
 
 
 def percentage(numerator, denominator):
@@ -557,6 +558,20 @@ def manager_dashboard(filters):
 def executive_dashboard(filters):
     leads = selected_leads(filters)
     metrics = common_metrics(leads)
+    lead_ids = [lead.id for lead in leads]
+    stage_counts = Counter(assessment_stage(lead) for lead in leads)
+    deal_statuses = Counter(
+        lead.deal.status for lead in leads if optional_related(lead, "deal")
+    )
+    overdue = FollowUp.objects.filter(
+        lead_id__in=lead_ids,
+        status=FollowUp.Status.PENDING,
+        due_date__lt=timezone.now(),
+    ).count()
+    pending_exceptions = CommercialExceptionRequest.objects.filter(
+        lead_id__in=lead_ids,
+        status=CommercialExceptionRequest.Status.PENDING,
+    ).count()
     return {
         "filters": serialized_filters(filters),
         "filter_options": filter_options(),
@@ -565,15 +580,29 @@ def executive_dashboard(filters):
             "lead_to_proceed_rate": "Percentage of all selected Leads that received a Proceed decision.",
         },
         "kpis": {
-            key: metrics[key]
-            for key in (
-                "leads_created",
-                "deals_generated",
-                "lead_to_deal_conversion_rate",
-                "lead_to_proceed_rate",
-            )
+            **metrics,
+            "open_deals": deal_statuses.get(Deal.Status.OPEN, 0),
+            "won_deals": deal_statuses.get(Deal.Status.WON, 0),
+            "lost_deals": deal_statuses.get(Deal.Status.LOST, 0),
+            "financially_viable": stage_counts.get("AWAITING_TECHNICAL", 0) + stage_counts.get("TECHNICAL_PENDING", 0) + stage_counts.get("DECISION_READY", 0) + stage_counts.get("PROCEED", 0) + stage_counts.get("DEAL_CREATED", 0),
+            "not_financially_viable": stage_counts.get("FINANCIALLY_UNSUITABLE", 0),
+            "commercial_reviews_required": stage_counts.get("COMMERCIAL_REVIEW_REQUIRED", 0),
+            "pending_commercial_exceptions": pending_exceptions,
+            "overdue_follow_ups": overdue,
+            "unassigned_leads": sum(1 for lead in leads if not lead.assigned_to_id),
+            "pending_assessments": sum(1 for lead in leads if assessment_stage(lead) in {"FINANCE_PENDING", "AWAITING_TECHNICAL", "TECHNICAL_PENDING"}),
         },
+        "pipeline_summary": pipeline_counts(leads),
         "source_performance": source_rows(leads),
+        "sales_rep_summary": team_rows(leads),
+        "attention_required": attention_rows(leads),
+        "commercial_health": {
+            "financially_viable": stage_counts.get("AWAITING_TECHNICAL", 0) + stage_counts.get("TECHNICAL_PENDING", 0) + stage_counts.get("DECISION_READY", 0) + stage_counts.get("PROCEED", 0) + stage_counts.get("DEAL_CREATED", 0),
+            "not_financially_viable": stage_counts.get("FINANCIALLY_UNSUITABLE", 0),
+            "commercial_reviews_required": stage_counts.get("COMMERCIAL_REVIEW_REQUIRED", 0),
+            "pending_commercial_exceptions": pending_exceptions,
+        },
+        "pending_approvals": pending_exceptions,
         "decision_outcomes": {
             "proceed": metrics["proceed"],
             "do_not_proceed": metrics["do_not_proceed"],

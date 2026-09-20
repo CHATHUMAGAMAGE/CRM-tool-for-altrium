@@ -440,6 +440,7 @@ MFA_REQUIRED_ROLES = environment_list(
         "ADMIN",
         "SALES_MANAGER",
         "DIRECTOR",
+        "EXECUTIVE",
     ],
 )
 
@@ -453,6 +454,7 @@ SUPPORTED_MFA_ROLES = {
     "PROJECT_MANAGER",
     "SOFTWARE_ENGINEER",
     "DIRECTOR",
+    "EXECUTIVE",
 }
 
 unknown_mfa_roles = (

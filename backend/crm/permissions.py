@@ -83,6 +83,7 @@ class LeadPermission(BasePermission):
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.PROJECT_MANAGER,
                 UserProfile.Role.DIRECTOR,
+                UserProfile.Role.EXECUTIVE,
             }
 
         if request.method == "POST":
@@ -139,7 +140,7 @@ class LeadPermission(BasePermission):
 
         if (
             role
-            == UserProfile.Role.DIRECTOR
+            in {UserProfile.Role.DIRECTOR, UserProfile.Role.EXECUTIVE}
         ):
             return (
                 request.method
@@ -221,6 +222,7 @@ class CommunicationPermission(
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.PROJECT_MANAGER,
                 UserProfile.Role.DIRECTOR,
+                UserProfile.Role.EXECUTIVE,
             }
 
         if request.method in {
@@ -306,6 +308,7 @@ class FollowUpPermission(
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.PROJECT_MANAGER,
                 UserProfile.Role.DIRECTOR,
+                UserProfile.Role.EXECUTIVE,
             }
 
         if request.method == "POST":
@@ -374,6 +377,7 @@ class LeadInsightPermission(
         UserProfile.Role.SALES_MANAGER,
         UserProfile.Role.PROJECT_MANAGER,
         UserProfile.Role.DIRECTOR,
+        UserProfile.Role.EXECUTIVE,
     }
 
     def has_permission(
