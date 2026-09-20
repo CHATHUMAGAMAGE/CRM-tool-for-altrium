@@ -1124,7 +1124,7 @@ class MFAAuthenticationAPITests(APITestCase):
         MFA_REQUIRED_ROLES=["SALES_MANAGER"],
         MFA_DEBUG_BYPASS_ROLES=["SALES_MANAGER"],
     )
-    def test_debug_bypass_allows_sales_manager_login_without_mfa(self):
+    def test_sales_manager_requires_mfa_in_debug_despite_legacy_bypass(self):
         self.user.profile.role = UserProfile.Role.SALES_MANAGER
         self.user.profile.mfa_enabled = True
         self.user.profile.save(update_fields=["role", "mfa_enabled"])
@@ -1132,8 +1132,12 @@ class MFAAuthenticationAPITests(APITestCase):
         response = self.password_login()
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("access", response.data)
-        self.assertNotIn("mfa_required", response.data)
+        self.assertTrue(response.data["mfa_required"])
+        self.assertNotIn("access", response.data)
+        self.assertNotIn("refresh", response.data)
+        cookie = response.cookies[settings.AUTH_REFRESH_COOKIE_NAME]
+        self.assertEqual(cookie.value, "")
+        self.assertEqual(cookie["max-age"], 0)
 
     @override_settings(
         DEBUG=False,
@@ -1150,6 +1154,25 @@ class MFAAuthenticationAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["mfa_required"])
         self.assertNotIn("access", response.data)
+
+    @override_settings(
+        DEBUG=True,
+        MFA_REQUIRED_ROLES=["SALES_MANAGER"],
+        MFA_DEBUG_BYPASS_ROLES=["SALES_MANAGER"],
+    )
+    def test_unenrolled_sales_manager_requires_setup_despite_legacy_bypass(self):
+        self.user.profile.role = UserProfile.Role.SALES_MANAGER
+        self.user.profile.save(update_fields=["role"])
+
+        response = self.password_login()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["mfa_setup_required"])
+        self.assertNotIn("access", response.data)
+        self.assertNotIn("refresh", response.data)
+        cookie = response.cookies[settings.AUTH_REFRESH_COOKIE_NAME]
+        self.assertEqual(cookie.value, "")
+        self.assertEqual(cookie["max-age"], 0)
 
     def begin_setup(
         self,
