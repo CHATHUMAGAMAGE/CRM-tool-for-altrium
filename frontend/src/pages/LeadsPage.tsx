@@ -1218,6 +1218,24 @@ function LeadsPage() {
           </Stack>
         </Stack>
 
+        {isExecutive && (
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            sx={{ mb: 2.5 }}
+          >
+            <Button variant="contained" onClick={() => navigate('/leads')}>
+              Opportunities
+            </Button>
+            <Button variant="outlined" onClick={() => navigate('/reports/deals')}>
+              Deals
+            </Button>
+            <Button variant="outlined" onClick={() => navigate('/opportunity-review')}>
+              Decision Status
+            </Button>
+          </Stack>
+        )}
+
 
         {error && (
           <Alert

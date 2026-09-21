@@ -975,7 +975,9 @@ function AppSidebar({
                 <PeopleOutlineRounded />
               }
               endIcon={
-                leadsExpanded
+                isExecutive
+                  ? undefined
+                  : leadsExpanded
                   ? (
                     <ExpandLessRounded />
                   )
@@ -984,7 +986,9 @@ function AppSidebar({
                   )
               }
               onClick={() =>
-                setLeadsExpanded(
+                isExecutive
+                  ? handleNavigate('/leads')
+                  : setLeadsExpanded(
                   (
                     current,
                   ) =>
@@ -1003,7 +1007,7 @@ function AppSidebar({
 
             <Collapse
               in={
-                leadsExpanded
+                !isExecutive && leadsExpanded
               }
               timeout="auto"
               unmountOnExit
@@ -1037,14 +1041,6 @@ function AppSidebar({
                 >
                   {leadListLabel}
                 </Button>
-
-                {isExecutive && <Button
-                  startIcon={<BarChartRounded />}
-                  onClick={() => handleNavigate('/reports/deals')}
-                  sx={childButtonSx(location.pathname === '/reports/deals')}
-                >
-                  Deal Pipeline
-                </Button>}
 
                 {!isExecutive && <Button
                   startIcon={
@@ -1085,7 +1081,7 @@ function AppSidebar({
             </Collapse>
 
 
-            {canSeeOpportunityReview && (
+            {canSeeOpportunityReview && !isExecutive && (
               <Button
                 startIcon={
                   <GavelRounded />

@@ -43,6 +43,15 @@ import {
 
 import FormattedNarrative from '../components/common/FormattedNarrative'
 import AssessmentNarrativeView from '../components/common/AssessmentNarrativeView'
+import WorkspaceSectionNav from '../components/common/WorkspaceSectionNav'
+
+const financialWorkspaceSections = [
+  { id: 'financial-lead-context', label: 'Lead Context' },
+  { id: 'financial-findings', label: 'Financial Findings' },
+  { id: 'financial-documents', label: 'Documents' },
+  { id: 'financial-details', label: 'Assessment Details' },
+  { id: 'financial-history', label: 'History' },
+]
 
 import {
   getFinancialAssessment,
@@ -1149,6 +1158,8 @@ function FinancialAssessmentWorkspacePage() {
         </Alert>
       )}
 
+      <WorkspaceSectionNav sections={financialWorkspaceSections} />
+
 
       <Box
         sx={{
@@ -1189,6 +1200,7 @@ function FinancialAssessmentWorkspacePage() {
           }}
         >
           <Paper
+            id="financial-lead-context"
             variant="outlined"
             sx={{
               p:
@@ -1474,6 +1486,7 @@ function FinancialAssessmentWorkspacePage() {
 
 
           <Paper
+            id="financial-findings"
             variant="outlined"
             sx={{
               p:
@@ -1636,6 +1649,7 @@ function FinancialAssessmentWorkspacePage() {
 
 
           <Paper
+            id="financial-documents"
             variant="outlined"
             sx={{
               p:
@@ -2184,6 +2198,7 @@ function FinancialAssessmentWorkspacePage() {
           }}
         >
           <Paper
+            id="financial-details"
             variant="outlined"
             sx={{
               p:
@@ -2340,6 +2355,7 @@ function FinancialAssessmentWorkspacePage() {
 
 
           <Paper
+            id="financial-history"
             variant="outlined"
             sx={{
               p:

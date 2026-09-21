@@ -4299,6 +4299,18 @@ function LeadWorkspacePage() {
         <Card
           variant="outlined"
           sx={{
+            position:
+              'sticky',
+
+            top:
+              72,
+
+            zIndex:
+              8,
+
+            bgcolor:
+              'rgba(255, 255, 255, 0.97)',
+
             mb:
               2.5,
 
@@ -6414,9 +6426,15 @@ function LeadWorkspacePage() {
                 </Card>
               )}
 
-              {currentUser?.role === 'SALES_MANAGER' && latestFinancialAssessment?.outcome === 'FINANCIALLY_UNSUITABLE' && (
+              {currentUser?.role === 'SALES_MANAGER' && latestFinancialAssessment && (
                 <Box sx={{ gridColumn: { lg: '1 / -1' } }}>
-                  <CommercialReviewPanel leadId={lead.id} finance={latestFinancialAssessment} />
+                  <CommercialReviewPanel
+                    leadId={lead.id}
+                    finance={latestFinancialAssessment}
+                    technicalStatus={latestTechnicalAssessment?.status}
+                    onRequestTechnical={openAssessmentDialog}
+                    onReviewTechnical={openReviewAssessmentDialog}
+                  />
                 </Box>
               )}
 
