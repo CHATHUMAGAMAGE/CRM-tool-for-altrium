@@ -165,6 +165,94 @@ class CommercialReviewWorkflowTests(APITestCase):
         self.assertEqual(exception.status, CommercialExceptionRequest.Status.REJECTED)
         self.assertEqual(exception.reviewed_by, self.executive)
 
+    def test_executive_decision_notifies_manager_with_persistent_lead_target(self):
+        exception = CommercialExceptionRequest.objects.create(
+            lead=self.lead, financial_assessment=self.assessment,
+            requested_by=self.manager, justification="Strategic request",
+        )
+        self.client.force_authenticate(self.executive)
+        response = self.client.post(
+            reverse("crm:commercial-exception-review", kwargs={"pk": exception.id, "action": "approve"}),
+            {"reviewer_comments": "Strategic approval granted."}, format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        exception.refresh_from_db()
+        self.assertEqual(exception.reviewed_by, self.executive)
+        self.assertIsNotNone(exception.reviewed_at)
+        self.assertEqual(exception.reviewer_comments, "Strategic approval granted.")
+        notification = Notification.objects.filter(recipient=self.manager).latest("created_at")
+        self.assertEqual(notification.target_url, f"/leads/{self.lead.id}")
+        self.assertIn("Commercial exception approved", notification.message)
+        self.assertIn("Strategic approval granted", notification.message)
+
+    def test_pending_exception_blocks_duplicate_revision_and_reassessment(self):
+        self.submit_failed_finance()
+        self.mark_finance_reviewed()
+        CommercialExceptionRequest.objects.create(
+            lead=self.lead, financial_assessment=self.assessment,
+            requested_by=self.manager, justification="Pending decision",
+        )
+        review = CommercialReview.objects.get(lead=self.lead)
+        review.status = CommercialReview.Status.REVISED
+        review.reason = "Reduce scope"
+        review.revised_scope = "Core scope"
+        review.save(update_fields=["status", "reason", "revised_scope"])
+        self.client.force_authenticate(self.manager)
+
+        duplicate = self.client.post(
+            reverse("crm:request-commercial-exception", kwargs={"pk": self.lead.id}),
+            {"justification": "Second request"}, format="json",
+        )
+        reassessment = self.client.post(
+            reverse("crm:request-financial-reassessment", kwargs={"pk": self.lead.id}),
+            {}, format="json",
+        )
+        revision = self.client.post(
+            reverse("crm:revise-commercial-terms", kwargs={"pk": self.lead.id}),
+            {"reason": "Another revision", "revised_scope": "Another scope"}, format="json",
+        )
+
+        self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(reassessment.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(revision.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("currently pending", str(duplicate.data))
+        self.assertEqual(CommercialExceptionRequest.objects.filter(lead=self.lead).count(), 1)
+        self.assertEqual(self.lead.financial_assessments.count(), 1)
+
+    def test_active_reassessment_blocks_exception_based_on_stale_finance(self):
+        self.submit_failed_finance()
+        self.mark_finance_reviewed()
+        FinancialAssessment.objects.create(
+            lead=self.lead, requested_by=self.manager, assigned_to=self.finance,
+            requirements="Reassess revised terms",
+            status=FinancialAssessment.Status.IN_PROGRESS,
+        )
+        self.client.force_authenticate(self.manager)
+        response = self.client.post(
+            reverse("crm:request-commercial-exception", kwargs={"pk": self.lead.id}),
+            {"justification": "Use original evidence"}, format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Financial Reassessment is currently active", str(response.data))
+        self.assertFalse(CommercialExceptionRequest.objects.filter(lead=self.lead).exists())
+
+    def test_commercial_exception_history_is_preserved(self):
+        first = CommercialExceptionRequest.objects.create(
+            lead=self.lead, financial_assessment=self.assessment,
+            requested_by=self.manager, justification="First request",
+            status=CommercialExceptionRequest.Status.REJECTED,
+            reviewed_by=self.executive, reviewed_at=timezone.now(),
+            reviewer_comments="Revise the terms.",
+        )
+        second = CommercialExceptionRequest.objects.create(
+            lead=self.lead, financial_assessment=self.assessment,
+            requested_by=self.manager, justification="Revised request",
+        )
+        self.client.force_authenticate(self.manager)
+        response = self.client.get(reverse("crm:lead-commercial-review", kwargs={"pk": self.lead.id}))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item["id"] for item in response.data["exceptions"]], [second.id, first.id])
+
     def test_approved_exception_allows_technical_then_proceed(self):
         self.submit_failed_finance()
         exception = CommercialExceptionRequest.objects.create(lead=self.lead, financial_assessment=self.assessment, requested_by=self.manager, justification="Strategic", status=CommercialExceptionRequest.Status.APPROVED, reviewed_by=self.director, reviewed_at=timezone.now())

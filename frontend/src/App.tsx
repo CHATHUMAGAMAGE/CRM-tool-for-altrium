@@ -282,7 +282,7 @@ function App() {
             <Route path="/reports/:reportName" element={<ReportsPage />} />
           </Route>
           <Route element={<RoleProtectedRoute allowedRoles={['DIRECTOR', 'EXECUTIVE']} />}>
-            <Route path="/commercial-exceptions" element={<CommercialExceptionsPage />} />
+            <Route path="/commercial-exceptions" element={<Navigate to="/executive/approvals" replace />} />
             <Route path="/executive/approvals" element={<CommercialExceptionsPage />} />
           </Route>
 

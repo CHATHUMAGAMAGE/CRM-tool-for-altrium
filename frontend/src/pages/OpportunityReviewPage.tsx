@@ -41,7 +41,17 @@ import {
 
 import FormattedNarrative from '../components/common/FormattedNarrative'
 import AssessmentNarrativeView from '../components/common/AssessmentNarrativeView'
+import WorkspaceSectionNav from '../components/common/WorkspaceSectionNav'
+
+const opportunityReviewSections = [
+  { id: 'opportunity-queue', label: 'Queue' },
+  { id: 'opportunity-overview', label: 'Overview' },
+  { id: 'opportunity-finance', label: 'Finance & Commercial' },
+  { id: 'opportunity-technical', label: 'Technical' },
+  { id: 'opportunity-decision', label: 'Decision' },
+]
 import CommercialReviewPanel from '../components/leads/CommercialReviewPanel'
+import { getCurrentUser } from '../services/auth'
 
 import {
   getLeads,
@@ -434,6 +444,20 @@ function InformationItem({
 function OpportunityReviewPage() {
   const navigate =
     useNavigate()
+
+  const [currentRole, setCurrentRole] = useState<string | null>(null)
+  const isExecutive = currentRole === 'EXECUTIVE'
+  const canManageDecisions = currentRole === 'SALES_MANAGER' || currentRole === 'ADMIN'
+
+  useEffect(() => {
+    let mounted = true
+    void getCurrentUser().then((user) => {
+      if (mounted) setCurrentRole(user.role)
+    }).catch(() => {
+      if (mounted) setCurrentRole(null)
+    })
+    return () => { mounted = false }
+  }, [])
 
 
   const [
@@ -1358,7 +1382,7 @@ function OpportunityReviewPage() {
                     '-0.025em',
                 }}
               >
-                Opportunity Review
+                {isExecutive ? 'Opportunity Decisions' : 'Opportunity Review'}
               </Typography>
             </Stack>
 
@@ -1374,7 +1398,9 @@ function OpportunityReviewPage() {
                   13.5,
               }}
             >
-              Review specialist evidence, record Proceed or Do Not Proceed, and convert proceeding Leads into Deals.
+              {isExecutive
+                ? 'Inspect organisation-wide decision status and the evidence supporting each opportunity outcome.'
+                : 'Review specialist evidence, record Proceed or Do Not Proceed, and convert proceeding Leads into Deals.'}
             </Typography>
           </Box>
 
@@ -1441,6 +1467,8 @@ function OpportunityReviewPage() {
             {successMessage}
           </Alert>
         )}
+
+        <WorkspaceSectionNav sections={opportunityReviewSections} />
 
 
         <Card
@@ -1652,6 +1680,7 @@ function OpportunityReviewPage() {
             }}
           >
             <Card
+              id="opportunity-queue"
               variant="outlined"
               sx={{
                 borderRadius:
@@ -2068,6 +2097,7 @@ function OpportunityReviewPage() {
             {selectedItem && (
               <>
                 <Card
+                  id="opportunity-overview"
                   variant="outlined"
                   sx={{
                     borderRadius:
@@ -2316,6 +2346,7 @@ function OpportunityReviewPage() {
                   }}
                 >
                   <Card
+                    id="opportunity-technical"
                     variant="outlined"
                     sx={{
                       order:
@@ -2500,6 +2531,7 @@ function OpportunityReviewPage() {
 
 
                   <Card
+                    id="opportunity-finance"
                     variant="outlined"
                     sx={{
                       order:
@@ -2695,6 +2727,7 @@ function OpportunityReviewPage() {
 
 
                 <Card
+                  id="opportunity-decision"
                   variant="outlined"
                   sx={{
                     gridColumn: {
@@ -3026,7 +3059,7 @@ function OpportunityReviewPage() {
                         </Typography>
 
 
-                        {selectedItem
+                        {canManageDecisions && selectedItem
                           .opportunityState
                           .can_convert && (
                           <Button
@@ -3091,7 +3124,7 @@ function OpportunityReviewPage() {
                         </Alert>
 
 
-                        <Stack
+                        {canManageDecisions ? <Stack
                           direction={{
                             xs:
                               'column',
@@ -3133,7 +3166,9 @@ function OpportunityReviewPage() {
                           >
                             Do Not Proceed
                           </Button>
-                        </Stack>
+                        </Stack> : <Alert severity="info" variant="outlined">
+                          This opportunity is ready for a Sales Manager decision. Executive access is read-only.
+                        </Alert>}
                       </Stack>
                     ) : (
                       <Alert
@@ -3151,7 +3186,7 @@ function OpportunityReviewPage() {
         )}
 
 
-        <Dialog
+        {canManageDecisions && <Dialog
           open={
             decisionDialogOpen
           }
@@ -3339,7 +3374,7 @@ function OpportunityReviewPage() {
               )}
             </Button>
           </DialogActions>
-        </Dialog>
+        </Dialog>}
       </Box>
     </Box>
   )

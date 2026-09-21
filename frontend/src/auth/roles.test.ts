@@ -14,10 +14,11 @@ describe('Executive role', () => {
   })
 
   it('uses management navigation without operational follow-up or activity queues', () => {
-    expect(EXECUTIVE_PRIMARY_NAVIGATION).toContain('Opportunity Portfolio')
-    expect(EXECUTIVE_PRIMARY_NAVIGATION).toContain('Approvals')
-    expect(EXECUTIVE_PRIMARY_NAVIGATION).not.toContain('Follow-ups')
-    expect(EXECUTIVE_PRIMARY_NAVIGATION).not.toContain('Activity')
-    expect(EXECUTIVE_PRIMARY_NAVIGATION).not.toContain('Administration')
+    expect(EXECUTIVE_PRIMARY_NAVIGATION).toEqual([
+      'Dashboard',
+      'Pipeline',
+      'Reports & Analytics',
+      'Approvals',
+    ])
   })
 })

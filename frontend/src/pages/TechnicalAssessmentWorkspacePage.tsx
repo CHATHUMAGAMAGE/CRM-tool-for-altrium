@@ -48,6 +48,16 @@ import {
 
 import FormattedNarrative from '../components/common/FormattedNarrative'
 import AssessmentNarrativeView from '../components/common/AssessmentNarrativeView'
+import WorkspaceSectionNav from '../components/common/WorkspaceSectionNav'
+
+const technicalWorkspaceSections = [
+  { id: 'technical-lead-context', label: 'Lead Context' },
+  { id: 'technical-findings', label: 'Technical Findings' },
+  { id: 'technical-team', label: 'Team' },
+  { id: 'technical-documents', label: 'Documents' },
+  { id: 'technical-details', label: 'Assessment Details' },
+  { id: 'technical-history', label: 'History' },
+]
 
 import {
   createTechnicalAssessmentRecommendation,
@@ -1144,6 +1154,8 @@ function TechnicalAssessmentWorkspacePage() {
         </Alert>
       )}
 
+      <WorkspaceSectionNav sections={technicalWorkspaceSections} />
+
 
       <Box
         sx={{
@@ -1166,6 +1178,7 @@ function TechnicalAssessmentWorkspacePage() {
           }}
         >
           <Paper
+            id="technical-lead-context"
             variant="outlined"
             sx={{
               p: 2.2,
@@ -1283,6 +1296,7 @@ function TechnicalAssessmentWorkspacePage() {
 
 
           <Paper
+            id="technical-findings"
             variant="outlined"
             sx={{
               p: 2.2,
@@ -1382,6 +1396,7 @@ function TechnicalAssessmentWorkspacePage() {
 
 
           <Paper
+            id="technical-team"
             variant="outlined"
             sx={{
               p: 2.2,
@@ -1696,6 +1711,7 @@ function TechnicalAssessmentWorkspacePage() {
 
 
           <Paper
+            id="technical-documents"
             variant="outlined"
             sx={{
               p: 2.2,
@@ -2065,6 +2081,7 @@ function TechnicalAssessmentWorkspacePage() {
           }}
         >
           <Paper
+            id="technical-details"
             variant="outlined"
             sx={{
               p: 2,
@@ -2176,6 +2193,7 @@ function TechnicalAssessmentWorkspacePage() {
 
 
           <Paper
+            id="technical-history"
             variant="outlined"
             sx={{
               p: 2,

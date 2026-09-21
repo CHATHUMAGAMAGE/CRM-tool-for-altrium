@@ -50,9 +50,6 @@ Record<UserRole, string> = {
 export const EXECUTIVE_PRIMARY_NAVIGATION = [
   'Dashboard',
   'Pipeline',
-  'Opportunity Portfolio',
-  'Deal Pipeline',
-  'Opportunity Review',
   'Reports & Analytics',
   'Approvals',
 ] as const

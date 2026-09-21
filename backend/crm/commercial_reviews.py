@@ -17,6 +17,18 @@ from .notifications import create_notification
 
 User = get_user_model()
 
+PENDING_EXCEPTION_MESSAGE = (
+    "An Executive Commercial Exception review is currently pending. "
+    "Wait for the Executive decision before starting another commercial resolution action."
+)
+
+
+def has_pending_exception(lead):
+    return CommercialExceptionRequest.objects.filter(
+        lead=lead,
+        status=CommercialExceptionRequest.Status.PENDING,
+    ).exists()
+
 
 def display_name(user):
     return user.get_full_name().strip() or user.username if user else None
@@ -113,6 +125,8 @@ class ReviseCommercialTermsView(APIView):
     @transaction.atomic
     def post(self, request, pk):
         lead = get_object_or_404(Lead.objects.select_for_update(), pk=pk)
+        if has_pending_exception(lead):
+            raise serializers.ValidationError({"detail": PENDING_EXCEPTION_MESSAGE})
         finance = latest_completed_finance(lead)
         if not finance or finance.outcome != FinancialAssessment.Outcome.FINANCIALLY_UNSUITABLE:
             raise serializers.ValidationError({"detail": "Commercial terms can only be revised after a completed Not Financially Viable assessment."})
@@ -138,6 +152,8 @@ class RequestFinancialReassessmentView(APIView):
     @transaction.atomic
     def post(self, request, pk):
         lead = get_object_or_404(Lead.objects.select_for_update(), pk=pk)
+        if has_pending_exception(lead):
+            raise serializers.ValidationError({"detail": PENDING_EXCEPTION_MESSAGE})
         review = CommercialReview.objects.filter(lead=lead, status=CommercialReview.Status.REVISED).select_related("financial_assessment").first()
         if review is None:
             raise serializers.ValidationError({"detail": "Commercial terms must be revised before requesting reassessment."})
@@ -161,7 +177,7 @@ class RequestCommercialExceptionView(APIView):
 
     @transaction.atomic
     def post(self, request, pk):
-        lead = get_object_or_404(Lead, pk=pk)
+        lead = get_object_or_404(Lead.objects.select_for_update(), pk=pk)
         finance = latest_completed_finance(lead)
         if not finance or finance.outcome != FinancialAssessment.Outcome.FINANCIALLY_UNSUITABLE:
             raise serializers.ValidationError({"detail": "An exception can only be requested for a completed Not Financially Viable assessment."})
@@ -170,8 +186,21 @@ class RequestCommercialExceptionView(APIView):
         justification = str(request.data.get("justification", "")).strip()
         if not justification:
             raise serializers.ValidationError({"justification": "Exception justification is required."})
-        if CommercialExceptionRequest.objects.filter(financial_assessment=finance, status=CommercialExceptionRequest.Status.PENDING).exists():
-            raise serializers.ValidationError({"detail": "A commercial exception is already pending for this assessment."})
+        if has_pending_exception(lead):
+            raise serializers.ValidationError({"detail": PENDING_EXCEPTION_MESSAGE})
+        if lead.financial_assessments.filter(
+            status__in=[
+                FinancialAssessment.Status.REQUESTED,
+                FinancialAssessment.Status.IN_PROGRESS,
+                FinancialAssessment.Status.SUBMITTED,
+            ],
+        ).exclude(pk=finance.pk).exists():
+            raise serializers.ValidationError({
+                "detail": (
+                    "A Financial Reassessment is currently active. Wait for the reassessment "
+                    "to be completed and reviewed before requesting a Commercial Exception."
+                ),
+            })
         exception = CommercialExceptionRequest.objects.create(lead=lead, financial_assessment=finance, requested_by=request.user, justification=justification, supporting_notes=str(request.data.get("supporting_notes", "")).strip())
         reviewers = User.objects.filter(
             is_active=True,
@@ -214,5 +243,15 @@ class CommercialExceptionReviewView(APIView):
         exception.reviewer_comments = comments
         exception.save(update_fields=["status", "reviewed_by", "reviewed_at", "reviewer_comments"])
         LeadHistory.objects.create(lead=exception.lead, event_type=LeadHistory.EventType.UPDATED, description=f"Commercial exception {exception.status.lower()}.", performed_by=request.user, metadata={"workflow_event": f"COMMERCIAL_EXCEPTION_{exception.status}", "exception_id": exception.id})
-        create_notification(recipient=exception.requested_by, actor=request.user, kind=Notification.Kind.REVIEW, title=f"Commercial exception {exception.status.lower()}", message=comments, target_url=f"/leads/{exception.lead_id}")
+        lead_name = exception.lead.project_name or exception.lead.company_name
+        comment_summary = comments if len(comments) <= 140 else f"{comments[:137]}..."
+        message = (
+            f"Commercial exception {exception.status.lower()} for {lead_name}. "
+            + (
+                f"Executive comment: {comment_summary}"
+                if exception.status == CommercialExceptionRequest.Status.APPROVED
+                else "Open the opportunity to review the Executive decision."
+            )
+        )
+        create_notification(recipient=exception.requested_by, actor=request.user, kind=Notification.Kind.REVIEW, title=f"Commercial exception {exception.status.lower()}", message=message, target_url=f"/leads/{exception.lead_id}")
         return Response(CommercialExceptionSerializer(exception).data)

@@ -145,7 +145,7 @@ export type FinancialAssessment = {
 export type CommercialReview = {
   id: number; lead: number; financial_assessment: number; status: string; status_display: string
   reason: string; revised_scope: string; revised_budget_min: string | null; revised_budget_max: string | null
-  currency: string; revised_timeline: string; notes: string; assessed_by_name: string; created_at: string
+  currency: string; revised_timeline: string; notes: string; assessed_by_name: string; created_by_name: string; created_at: string
   estimated_delivery_cost: string | null
   budget_shortfall: string | null
 }
