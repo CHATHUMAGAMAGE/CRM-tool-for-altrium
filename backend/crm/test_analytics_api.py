@@ -2,6 +2,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -17,7 +18,7 @@ from .models import (
     LeadOpportunityDecision,
     TechnicalAssessment,
 )
-from .report_pdf import PdfReport, build_pdf_context, report_pdf_filename
+from .report_pdf import PdfReport, _visual_rows, build_pdf_context, report_pdf_filename
 
 REPORT_NAMES_FOR_TESTS = (
     "lead-sources", "lead-conversion", "lead-status",
@@ -99,6 +100,38 @@ class AnalyticsApiTests(APITestCase):
 
     def authenticate(self, user):
         self.client.force_authenticate(user=user)
+
+    def create_proceed_lead(self, suffix, *, with_deal):
+        lead = Lead.objects.create(
+            company_name=f"Proceed {suffix}", contact_name=f"Contact {suffix}",
+            phone=f"0771000{suffix:03d}", source=Lead.Source.WEBSITE,
+            assigned_to=self.rep, created_by=self.manager,
+        )
+        finance = FinancialAssessment.objects.create(
+            lead=lead, requested_by=self.manager, assigned_to=self.finance,
+            requirements="Assess budget", status=FinancialAssessment.Status.REVIEWED,
+            outcome=FinancialAssessment.Outcome.FINANCIALLY_SUITABLE,
+            submitted_at=timezone.now(), reviewed_at=timezone.now(), reviewed_by=self.manager,
+        )
+        technical = TechnicalAssessment.objects.create(
+            lead=lead, requested_by=self.manager, assigned_to=self.tech_lead,
+            requirements="Assess feasibility", status=TechnicalAssessment.Status.REVIEWED,
+            technical_comments="Feasible", submitted_at=timezone.now(),
+            reviewed_at=timezone.now(), reviewed_by=self.manager,
+        )
+        decision = LeadOpportunityDecision.objects.create(
+            lead=lead, financial_assessment=finance, technical_assessment=technical,
+            decision=LeadOpportunityDecision.Decision.PROCEED,
+            decision_notes="Proceed", decided_by=self.manager,
+        )
+        if with_deal:
+            Deal.objects.create(
+                source_lead=lead, opportunity_decision=decision,
+                name=f"Proceed Deal {suffix}", company_name=lead.company_name,
+                contact_name=lead.contact_name, phone=lead.phone,
+                assigned_to=self.rep, created_by=self.manager,
+            )
+        return lead
 
     def test_manager_dashboard_returns_operational_metrics(self):
         self.authenticate(self.manager)
@@ -244,6 +277,11 @@ class AnalyticsApiTests(APITestCase):
         context = build_pdf_context("lead-sources", report_payload("lead-sources", filters), filters, self.manager)
         self.assertEqual(context["generated_by"], "Nishitha Sellahennadi")
         self.assertEqual(context["generated_role"], "Sales Manager")
+        html = render_to_string("crm/reports/pdf/report.html", context)
+        self.assertIn("Role: Sales Manager", html)
+        self.assertNotIn("Nishitha Sellahennadi - Sales Manager", html)
+        self.assertIn('style="width: 100.0%;"', html)
+        self.assertNotIn("<svg", html)
         self.assertTrue(context["logo_uri"].endswith("/static/reports/eleven-logo-horizontal.png"))
         self.assertIn(("Lead Source", "Website"), context["filters"])
         self.assertIn(("Sales Representative", "analytics_rep"), context["filters"])
@@ -284,6 +322,98 @@ class AnalyticsApiTests(APITestCase):
         self.assertEqual(values["lead_to_proceed"], 33.3)
         self.assertEqual(values["proceed_to_deal"], 100.0)
         self.assertEqual(values["lead_to_deal"], 33.3)
+
+    def test_visual_rows_scale_relative_to_the_largest_category(self):
+        source_payload = {
+            "summary": [
+                {"source_display": "Other", "leads": 5},
+                {"source_display": "Website", "leads": 3},
+                {"source_display": "Referral", "leads": 3},
+            ],
+        }
+        rows = _visual_rows("lead-sources", source_payload)
+        self.assertEqual([row["width"] for row in rows], [100.0, 60.0, 60.0])
+        self.assertEqual([row["percentage"] for row in rows], [45.5, 27.3, 27.3])
+        self.assertEqual(rows[0]["display_value"], "5 (45.5%)")
+
+        status_rows = _visual_rows("lead-status", {
+            "distributions": {"assessment_stages": {
+                "FINANCE_NOT_REQUESTED": 6, "DEAL_CREATED": 3,
+                "DO_NOT_PROCEED": 1, "EXCEPTION_APPROVED": 1,
+            }},
+        })
+        self.assertEqual([row["width"] for row in status_rows[:2]], [100.0, 50.0])
+        self.assertAlmostEqual(status_rows[2]["width"], 16.7, places=1)
+        self.assertAlmostEqual(status_rows[3]["width"], 16.7, places=1)
+
+        zero_rows = _visual_rows("deals", {
+            "distributions": {"deal_statuses": {"Won": 5, "Lost": 0}},
+        })
+        self.assertEqual([row["width"] for row in zero_rows], [100.0, 0.0])
+
+    def test_sales_rep_and_deal_status_visuals_share_proportional_scaling(self):
+        rep_rows = _visual_rows("sales-rep-performance", {
+            "summary": [
+                {"sales_rep_name": "Rep A", "deals": 6},
+                {"sales_rep_name": "Rep B", "deals": 3},
+                {"sales_rep_name": "Rep C", "deals": 1},
+            ],
+        })
+        self.assertEqual([row["width"] for row in rep_rows], [100.0, 50.0, 16.7])
+        deal_rows = _visual_rows("deals", {
+            "distributions": {"deal_statuses": {"Open": 3, "Won": 5, "Lost": 2}},
+        })
+        self.assertEqual([row["width"] for row in deal_rows], [60.0, 100.0, 40.0])
+
+    def test_proceed_to_deal_is_data_driven_for_three_of_three(self):
+        self.create_proceed_lead(1, with_deal=True)
+        self.create_proceed_lead(2, with_deal=True)
+        self.authenticate(self.manager)
+        response = self.client.get(reverse("crm:analytics-report", kwargs={"report_name": "lead-conversion"}))
+        values = {metric["key"]: metric["value"] for metric in response.data["metrics"]}
+        self.assertEqual(values["proceed"], 3)
+        self.assertEqual(values["proceed_to_deal"], 100.0)
+
+    def test_proceed_to_deal_is_data_driven_for_two_of_four(self):
+        self.create_proceed_lead(1, with_deal=True)
+        self.create_proceed_lead(2, with_deal=False)
+        self.create_proceed_lead(3, with_deal=False)
+        self.authenticate(self.manager)
+        response = self.client.get(reverse("crm:analytics-report", kwargs={"report_name": "lead-conversion"}))
+        values = {metric["key"]: metric["value"] for metric in response.data["metrics"]}
+        self.assertEqual(values["proceed"], 4)
+        self.assertEqual(values["proceed_to_deal"], 50.0)
+
+    def test_proceed_to_deal_is_zero_for_empty_cohort(self):
+        self.authenticate(self.manager)
+        future = (timezone.localdate() + timedelta(days=30)).isoformat()
+        response = self.client.get(
+            reverse("crm:analytics-report", kwargs={"report_name": "lead-conversion"}),
+            {"date_from": future, "date_to": future},
+        )
+        values = {metric["key"]: metric["value"] for metric in response.data["metrics"]}
+        self.assertEqual(values["proceed"], 0)
+        self.assertEqual(values["proceed_to_deal"], 0.0)
+
+    def test_pdf_uses_clear_proceed_label_and_no_duplicate_conversion_section(self):
+        self.authenticate(self.manager)
+        response = self.client.get(reverse("crm:analytics-report", kwargs={"report_name": "lead-conversion"}))
+        labels = [metric["label"] for metric in response.data["metrics"]]
+        self.assertIn("Leads Proceeding", labels)
+        self.assertNotIn("Proceed Decisions", labels)
+        self.assertNotIn("<h2>Conversion Rates</h2>", render_to_string(
+            "crm/reports/pdf/report.html",
+            build_pdf_context(
+                "lead-conversion", response.data,
+                {
+                    "date_from": timezone.localdate().replace(day=1),
+                    "date_to": timezone.localdate(), "sales_rep": None,
+                    "source": "", "status": "", "assessment_stage": "",
+                    "final_decision": "", "deal_status": "",
+                },
+                self.manager,
+            ),
+        ))
 
     def test_status_report_separates_final_decision_from_current_stage(self):
         self.authenticate(self.manager)

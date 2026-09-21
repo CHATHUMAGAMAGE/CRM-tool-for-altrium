@@ -519,6 +519,7 @@ def common_metrics(leads):
         "lead_to_deal_conversion_rate": percentage(deals, len(leads)),
         "lead_to_proceed_rate": percentage(proceed, len(leads)),
         "proceed_to_deal_conversion_rate": percentage(deals_from_proceed, proceed),
+        "deals_from_proceed": deals_from_proceed,
         "proceed": proceed,
         "do_not_proceed": len(decisions) - proceed,
         "pending_final_decision": len(leads) - len(decisions),
@@ -664,7 +665,7 @@ def report_semantics(report_name, leads, records, summary, metrics):
     if report_name == "lead-sources":
         report_metrics = [
             {"key": "total_leads", "label": "Total Leads", "value": len(leads)},
-            {"key": "proceed", "label": "Proceed Decisions", "value": metrics["proceed"]},
+            {"key": "proceed", "label": "Leads Proceeding", "value": metrics["proceed"]},
             {"key": "deals", "label": "Deals Created", "value": metrics["deals_generated"]},
             {"key": "lead_to_deal", "label": "Lead-to-Deal Conversion", "value": metrics["lead_to_deal_conversion_rate"], "suffix": "%"},
         ]
@@ -688,7 +689,7 @@ def report_semantics(report_name, leads, records, summary, metrics):
     elif report_name == "lead-conversion":
         report_metrics = [
             {"key": "total_leads", "label": "Total Leads", "value": len(leads)},
-            {"key": "proceed", "label": "Proceed Decisions", "value": metrics["proceed"]},
+            {"key": "proceed", "label": "Leads Proceeding", "value": metrics["proceed"]},
             {"key": "deals", "label": "Deals Created", "value": metrics["deals_generated"]},
             {"key": "lead_to_proceed", "label": "Lead-to-Proceed Rate", "value": metrics["lead_to_proceed_rate"], "suffix": "%"},
             {"key": "proceed_to_deal", "label": "Proceed-to-Deal Conversion", "value": metrics["proceed_to_deal_conversion_rate"], "suffix": "%"},
@@ -696,8 +697,9 @@ def report_semantics(report_name, leads, records, summary, metrics):
         ]
         observations.append(f'{metrics["proceed"]} of {len(leads)} {_plural(len(leads), "Lead")} received a Proceed decision ({metrics["lead_to_proceed_rate"]}%).')
         if metrics["proceed"]:
-            prefix = "All" if metrics["deals_generated"] == metrics["proceed"] else str(metrics["deals_generated"])
-            observations.append(f'{prefix} {metrics["proceed"]} Leads with a Proceed decision generated a Deal, resulting in a {metrics["proceed_to_deal_conversion_rate"]}% Proceed-to-Deal conversion rate.' if prefix == "All" else f'{metrics["deals_generated"]} of {metrics["proceed"]} Proceed Leads generated Deals, resulting in a {metrics["proceed_to_deal_conversion_rate"]}% Proceed-to-Deal conversion rate.')
+            deals_from_proceed = metrics["deals_from_proceed"]
+            prefix = "All" if deals_from_proceed == metrics["proceed"] else str(deals_from_proceed)
+            observations.append(f'{prefix} {metrics["proceed"]} Leads with a Proceed decision generated a Deal, resulting in a {metrics["proceed_to_deal_conversion_rate"]}% Proceed-to-Deal conversion rate.' if prefix == "All" else f'{deals_from_proceed} of {metrics["proceed"]} Proceed Leads generated Deals, resulting in a {metrics["proceed_to_deal_conversion_rate"]}% Proceed-to-Deal conversion rate.')
     elif report_name == "lead-status":
         stage_counts = dict(Counter(record["assessment_stage"] for record in records))
         decision_counts = {"PENDING": metrics["pending_final_decision"], "PROCEED": metrics["proceed"], "DO_NOT_PROCEED": metrics["do_not_proceed"]}
@@ -707,7 +709,7 @@ def report_semantics(report_name, leads, records, summary, metrics):
         report_metrics = [
             {"key": "total_leads", "label": "Total Leads", "value": len(leads)},
             {"key": "pending_decision", "label": "Pending Final Decision", "value": metrics["pending_final_decision"]},
-            {"key": "proceed", "label": "Proceed Decisions", "value": metrics["proceed"]},
+            {"key": "proceed", "label": "Leads Proceeding", "value": metrics["proceed"]},
             {"key": "deals", "label": "Deals Created", "value": metrics["deals_generated"]},
             {"key": "awaiting_finance", "label": "Awaiting Finance Initiation", "value": stage_counts.get("FINANCE_NOT_REQUESTED", 0)},
         ]
