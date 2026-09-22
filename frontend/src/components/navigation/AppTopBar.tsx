@@ -25,6 +25,7 @@ import {
   MenuItem,
   Paper,
   Popper,
+  Snackbar,
   Stack,
   TextField,
   Toolbar,
@@ -69,6 +70,7 @@ import {
 } from '../../services/crm'
 
 import ProfileSettingsDialog from '../profile/ProfileSettingsDialog'
+import { runLogoutFlow } from './logoutFlow'
 
 import {
   getFinancialAssessments,
@@ -550,6 +552,14 @@ function AppTopBar({
     setIsLoggingOut,
   ] =
     useState(false)
+
+  const logoutPendingRef =
+    useRef(false)
+
+  const [
+    logoutError,
+    setLogoutError,
+  ] = useState('')
 
 
   const loadReminders =
@@ -1573,27 +1583,18 @@ function AppTopBar({
 
 
   const handleLogout =
-    () => {
-      if (
-        isLoggingOut
-      ) {
-        return
-      }
-
-      setIsLoggingOut(
-        true,
-      )
-
-      handleCloseUserMenu()
-
-      void logoutUser()
-
-      navigate(
-        '/login',
-        {
-          replace: true,
-        },
-      )
+    async () => {
+      await runLogoutFlow({
+        pending: logoutPendingRef,
+        logout: logoutUser,
+        setPending: setIsLoggingOut,
+        setError: setLogoutError,
+        beforeLogout: handleCloseUserMenu,
+        navigateToLogin: () => navigate(
+          '/login',
+          { replace: true },
+        ),
+      })
     }
 
 
@@ -3247,6 +3248,17 @@ function AppTopBar({
             : 'Log out'}
         </MenuItem>
       </Menu>
+
+      <Snackbar
+        open={Boolean(logoutError)}
+        autoHideDuration={6000}
+        onClose={() => setLogoutError('')}
+        message={logoutError}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'center',
+        }}
+      />
 
 
       <ProfileSettingsDialog

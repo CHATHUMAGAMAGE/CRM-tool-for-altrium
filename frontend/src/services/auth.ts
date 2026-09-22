@@ -955,7 +955,8 @@ Promise<void> {
   clearAccessToken()
 
   try {
-    await fetch(
+    const response =
+      await fetch(
       `${API_BASE_URL}/api/v1/auth/logout/`,
       {
         method:
@@ -965,8 +966,17 @@ Promise<void> {
           'include',
       },
     )
-  } catch {
-    // The local in-memory access token is already gone.
+
+    if (
+      !response.ok
+    ) {
+      throw new Error(
+        await getApiErrorMessage(
+          response,
+          'Unable to log out. Please try again.',
+        ),
+      )
+    }
   } finally {
     clearAccessToken()
   }
