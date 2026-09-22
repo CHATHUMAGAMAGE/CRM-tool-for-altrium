@@ -50,7 +50,6 @@ const ACTIVE_LEAD_STATUSES:
 LeadStatus[] = [
   'NEW',
   'CONTACTED',
-  'QUALIFIED',
   'PROPOSAL',
 ]
 
@@ -60,7 +59,7 @@ type SalesRepDashboardFocus =
   | 'ACTIVE_LEADS'
   | 'DUE_SOON'
   | 'OVERDUE'
-  | 'QUALIFIED'
+  | 'PROPOSAL'
 
 
 function getStatusColor(
@@ -453,22 +452,6 @@ function DashboardPage() {
     )
 
 
-  const qualifiedLeadCount =
-    useMemo(
-      () =>
-        leads.filter(
-          (
-            lead,
-          ) =>
-            lead.status ===
-            'QUALIFIED',
-        ).length,
-      [
-        leads,
-      ],
-    )
-
-
   const newLeadCount =
     useMemo(
       () =>
@@ -698,7 +681,7 @@ function DashboardPage() {
       () => {
         if (
           dashboardFocus ===
-          'QUALIFIED'
+          'PROPOSAL'
         ) {
           return leads
             .filter(
@@ -706,7 +689,7 @@ function DashboardPage() {
                 lead,
               ) =>
                 lead.status ===
-                'QUALIFIED',
+                'PROPOSAL',
             )
             .sort(
               (
@@ -925,13 +908,13 @@ function DashboardPage() {
 
           {
             title:
-              'Qualified',
+              'Proposal',
 
             value:
-              qualifiedLeadCount,
+              proposalLeadCount,
 
             focus:
-              'QUALIFIED' as const,
+              'PROPOSAL' as const,
 
             icon:
               (
@@ -980,13 +963,13 @@ function DashboardPage() {
 
           {
             title:
-              'Qualified Leads',
+              'Proposal Leads',
 
             focus:
               null,
 
             value:
-              qualifiedLeadCount,
+              proposalLeadCount,
 
             icon:
               (
@@ -1263,13 +1246,13 @@ function DashboardPage() {
 
                   {
                     label:
-                      'Qualified',
+                      'Proposal',
 
                     value:
-                      qualifiedLeadCount,
+                      proposalLeadCount,
 
                     path:
-                      '/leads?view=ACTIVE&status=QUALIFIED',
+                      '/leads?view=ACTIVE&status=PROPOSAL',
                   },
                 ].map(
                   (
@@ -2168,7 +2151,7 @@ function DashboardPage() {
                           'Qualified',
 
                         value:
-                          qualifiedLeadCount,
+                          proposalLeadCount,
                       },
 
                       {
@@ -2645,7 +2628,7 @@ function DashboardPage() {
                             'Qualified',
 
                           value:
-                            qualifiedLeadCount,
+                            proposalLeadCount,
                         },
 
                         {
@@ -3102,8 +3085,8 @@ function DashboardPage() {
                     >
                       {isSalesRepresentative
                         ? dashboardFocus ===
-                            'QUALIFIED'
-                          ? 'My Qualified Leads'
+                            'PROPOSAL'
+                          ? 'My Proposal Leads'
                           : dashboardFocus ===
                               'ACTIVE_LEADS'
                             ? 'My Active Leads'
@@ -3125,8 +3108,8 @@ function DashboardPage() {
                     >
                       {isSalesRepresentative
                         ? dashboardFocus ===
-                            'QUALIFIED'
-                          ? 'Leads currently at the qualified stage'
+                            'PROPOSAL'
+                          ? 'Leads currently at the proposal stage'
                           : dashboardFocus ===
                               'ACTIVE_LEADS'
                             ? 'All active leads currently assigned to you'
@@ -3142,7 +3125,7 @@ function DashboardPage() {
                   >
                     {isSalesRepresentative &&
                       (dashboardFocus ===
-                        'QUALIFIED' ||
+                        'PROPOSAL' ||
                         dashboardFocus ===
                           'ACTIVE_LEADS') && (
                         <Button

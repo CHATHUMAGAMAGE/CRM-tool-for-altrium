@@ -226,16 +226,40 @@ class FinancialAssessmentAPITests(
             item["id"]
             for item in response.data
         }
+        self.assertIn(self.financial_officer.id, returned_ids)
+        self.assertIn(self.other_financial_officer.id, returned_ids)
 
-        self.assertIn(
-            self.financial_officer.id,
-            returned_ids,
-        )
+    def test_assigned_sales_rep_can_read_only_their_financial_assessment(self):
+        assessment = self.create_financial_assessment()
+        self.client.force_authenticate(self.sales_rep)
 
-        self.assertIn(
-            self.other_financial_officer.id,
-            returned_ids,
+        detail = self.client.get(reverse("crm:financial-assessment-detail", kwargs={"pk": assessment.id}))
+        self.assertEqual(detail.status_code, status.HTTP_200_OK, detail.data)
+
+        other_rep = User.objects.create_user(username="other_finance_rep", password="TestPass123!")
+        other_rep.profile.role = UserProfile.Role.SALES_REP
+        other_rep.profile.save(update_fields=["role"])
+        other_lead = Lead.objects.create(
+            company_name="Other Finance Company", contact_name="Other Contact",
+            phone="0700000000", assigned_to=other_rep, created_by=self.sales_manager,
         )
+        other_assessment = FinancialAssessment.objects.create(
+            lead=other_lead, requested_by=self.sales_manager,
+            assigned_to=self.financial_officer, requirements="Assess finance.",
+        )
+        denied = self.client.get(reverse("crm:financial-assessment-detail", kwargs={"pk": other_assessment.id}))
+        self.assertEqual(denied.status_code, status.HTTP_404_NOT_FOUND)
+
+        create = self.client.post(reverse("crm:financial-assessment-list-create"), {}, format="json")
+        self.assertEqual(create.status_code, status.HTTP_403_FORBIDDEN)
+
+        response = self.client.get(reverse("crm:financial-assessment-list-create"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        returned_ids = {
+            item["id"]
+            for item in response.data
+        }
+        self.assertEqual(returned_ids, {assessment.id})
 
     def test_sales_manager_can_request_financial_assessment(
         self,
@@ -501,6 +525,7 @@ class FinancialAssessmentAPITests(
     def test_assigned_financial_officer_can_start_assessment(
         self,
     ):
+        original_lead_status = self.lead.status
         assessment = (
             self.create_financial_assessment()
         )
@@ -534,6 +559,9 @@ class FinancialAssessmentAPITests(
             .Status
             .IN_PROGRESS,
         )
+
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.status, original_lead_status)
 
     def test_other_financial_officer_cannot_start_assessment(
         self,
@@ -812,6 +840,7 @@ class FinancialAssessmentAPITests(
                     "the expected budget. "
                     "Financially viable."
                 ),
+                "estimated_delivery_cost": "1250000.00",
                 "outcome": FinancialAssessment.Outcome.FINANCIALLY_SUITABLE,
             },
             format="json",

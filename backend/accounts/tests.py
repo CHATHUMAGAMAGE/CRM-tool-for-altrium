@@ -2147,6 +2147,26 @@ class ProfileAndAssignableRoleTests(APITestCase):
             serializer.errors,
         )
 
+    def test_admin_can_assign_executive_role(self):
+        serializer = AdminUserCreateSerializer(data={
+            "username": "new_executive",
+            "email": "executive@altrium.lk",
+            "first_name": "Executive",
+            "last_name": "User",
+            "role": "EXECUTIVE",
+        })
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_admin_can_assign_software_engineer_role(self):
+        serializer = AdminUserCreateSerializer(data={
+            "username": "new_engineer",
+            "email": "engineer@altrium.lk",
+            "first_name": "Software",
+            "last_name": "Engineer",
+            "role": "SOFTWARE_ENGINEER",
+        })
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_admin_cannot_assign_unused_marketing_role(self):
         serializer = AdminUserCreateSerializer(
             data={

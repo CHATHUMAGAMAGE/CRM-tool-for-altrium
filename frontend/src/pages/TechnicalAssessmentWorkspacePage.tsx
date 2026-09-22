@@ -288,6 +288,8 @@ function TechnicalAssessmentWorkspacePage() {
     setCanManageAssessment,
   ] = useState(false)
 
+  const [isSalesRepView, setIsSalesRepView] = useState(false)
+
 
   const [
     technicalComments,
@@ -399,7 +401,8 @@ function TechnicalAssessmentWorkspacePage() {
 
         if (
           user.role !== 'TECH_LEAD' &&
-          user.role !== 'SALES_MANAGER'
+          user.role !== 'SALES_MANAGER' &&
+          user.role !== 'SALES_REP'
         ) {
           navigate(
             '/dashboard',
@@ -436,6 +439,7 @@ function TechnicalAssessmentWorkspacePage() {
         setCanManageAssessment(
           isAssignedTechLead,
         )
+        setIsSalesRepView(user.role === 'SALES_REP')
 
         const [
           recommendationData,
@@ -1117,6 +1121,12 @@ function TechnicalAssessmentWorkspacePage() {
         </Alert>
       )}
 
+      {isSalesRepView && (
+        <Alert severity="info" variant="outlined" sx={{ mt: 2 }}>
+          Assessment information is view-only for Sales Representatives.
+        </Alert>
+      )}
+
 
       {assessment.status ===
         'REQUESTED' && (
@@ -1462,6 +1472,7 @@ function TechnicalAssessmentWorkspacePage() {
                   </InputLabel>
 
                   <Select
+                    disabled={availableEngineers.length === 0}
                     value={
                       selectedEngineerId
                     }
@@ -1552,6 +1563,7 @@ function TechnicalAssessmentWorkspacePage() {
                   variant="contained"
                   disabled={
                     isAddingRecommendation ||
+                    availableEngineers.length === 0 ||
                     !selectedEngineerId
                   }
                   onClick={() =>
@@ -1583,7 +1595,7 @@ function TechnicalAssessmentWorkspacePage() {
                     mt: 2,
                   }}
                 >
-                  No Software Engineer accounts are currently available.
+                  No active Software Engineers are currently available. Ask an Administrator to create a Software Engineer account.
                 </Alert>
               )}
 

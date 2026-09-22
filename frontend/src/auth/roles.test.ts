@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { EXECUTIVE_PRIMARY_NAVIGATION, hasRequiredRole, USER_ROLE_LABELS } from './roles'
+import { ADMIN_ASSIGNABLE_ROLE_OPTIONS, EXECUTIVE_PRIMARY_NAVIGATION, hasRequiredRole, USER_ROLE_LABELS } from './roles'
 
 describe('Executive role', () => {
   it('uses the expected user-facing label', () => {
@@ -20,5 +20,14 @@ describe('Executive role', () => {
       'Reports & Analytics',
       'Approvals',
     ])
+  })
+})
+
+describe('Administrator assignable roles', () => {
+  it('includes Executive and Software Engineer accounts', () => {
+    expect(ADMIN_ASSIGNABLE_ROLE_OPTIONS).toEqual(expect.arrayContaining([
+      { value: 'EXECUTIVE', label: 'Executive' },
+      { value: 'SOFTWARE_ENGINEER', label: 'Software Engineer' },
+    ]))
   })
 })

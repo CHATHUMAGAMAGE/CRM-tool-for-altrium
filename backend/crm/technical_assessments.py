@@ -31,6 +31,7 @@ from accounts.models import UserProfile
 from .assessment_permissions import (
     TechnicalAssessmentPermission,
 )
+from .lead_workflow import update_lead_status_from_workflow
 
 from .models import (
     TechnicalAssessment,
@@ -142,6 +143,9 @@ class TechnicalAssessmentAccessMixin:
             return queryset.filter(
                 assigned_to=user,
             )
+
+        if role == UserProfile.Role.SALES_REP:
+            return queryset.filter(lead__assigned_to=user)
 
         return queryset.none()
 
@@ -519,6 +523,11 @@ class TechnicalAssessmentReviewView(
             title="Technical assessment reviewed",
             message=reviewed.review_notes,
             target_url=f"/technical-assessments/{reviewed.id}",
+        )
+
+        update_lead_status_from_workflow(
+            reviewed.lead,
+            performed_by=request.user,
         )
 
         return Response(

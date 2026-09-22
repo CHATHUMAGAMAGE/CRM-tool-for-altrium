@@ -209,6 +209,7 @@ class LeadSerializer(
             requested_status
             in {
                 Lead.Status.QUALIFIED,
+                Lead.Status.SUBMITTED_FOR_QUALIFICATION,
                 Lead.Status.DISQUALIFIED,
             }
             and requested_status != current_status

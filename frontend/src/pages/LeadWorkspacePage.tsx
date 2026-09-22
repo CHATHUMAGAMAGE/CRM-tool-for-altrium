@@ -958,7 +958,6 @@ const ACTIVE_WORKLOAD_STATUSES:
 LeadStatus[] = [
   'NEW',
   'CONTACTED',
-  'QUALIFIED',
   'PROPOSAL',
 ]
 
@@ -1828,7 +1827,9 @@ function LeadWorkspacePage() {
               user.role ===
                 'SALES_MANAGER' ||
               user.role ===
-                'ADMIN'
+                'ADMIN' ||
+              user.role ===
+                'SALES_REP'
             ) {
               try {
                 const [
@@ -1837,7 +1838,9 @@ function LeadWorkspacePage() {
                 ] =
                   await Promise.all([
                     getTechnicalAssessments(),
-                    getTechLeads(),
+                    user.role === 'SALES_REP'
+                      ? Promise.resolve([])
+                      : getTechLeads(),
                   ])
 
                 if (
@@ -1878,7 +1881,9 @@ function LeadWorkspacePage() {
                 ] =
                   await Promise.all([
                     getFinancialAssessments(),
-                    getFinancialOfficers(),
+                    user.role === 'SALES_REP'
+                      ? Promise.resolve([])
+                      : getFinancialOfficers(),
                   ])
 
                 if (
@@ -2294,14 +2299,12 @@ function LeadWorkspacePage() {
 
 
   const canReviewLead =
-    canManageLead &&
-    !isClosedLead &&
-    lead.status === 'SUBMITTED_FOR_QUALIFICATION'
+    false
 
   const canSubmitForQualification =
-    isSalesRep &&
-    lead.assigned_to === currentUser?.id &&
-    (lead.status === 'NEW' || lead.status === 'CONTACTED')
+    false
+
+  const showLegacyQualification = false
 
 
   const hasPassedQualification =
@@ -4666,7 +4669,7 @@ function LeadWorkspacePage() {
                 QUALIFICATION REVIEW
               */}
 
-              {lead ? false && (<Card
+              {showLegacyQualification && (<Card
                 variant="outlined"
                 sx={{
                   gridColumn: {
@@ -4942,7 +4945,7 @@ function LeadWorkspacePage() {
                     </Button>
                   )}
                 </Box>
-              </Card>) : null}
+              </Card>)}
 
 
               </Stack>
@@ -5515,7 +5518,7 @@ function LeadWorkspacePage() {
                 TECHNICAL ASSESSMENT
               */}
 
-              {canManageTechnicalAssessment && (
+              {(canManageTechnicalAssessment || isSalesRep) && (
                 <Card
                   variant="outlined"
                   sx={{
@@ -5600,6 +5603,8 @@ function LeadWorkspacePage() {
                       </Box>
 
 
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                      {isSalesRep && <Chip size="small" label="View only" color="info" variant="outlined" />}
                       {latestTechnicalAssessment && (
                         <Chip
                           size="small"
@@ -5616,6 +5621,7 @@ function LeadWorkspacePage() {
                           variant="outlined"
                         />
                       )}
+                      </Stack>
                     </Stack>
                   </Box>
 
@@ -5989,7 +5995,7 @@ function LeadWorkspacePage() {
                 FINANCIAL ASSESSMENT
               */}
 
-              {canManageFinancialAssessment && (
+              {(canManageFinancialAssessment || isSalesRep) && (
                 <Card
                   variant="outlined"
                   sx={{
@@ -6074,6 +6080,8 @@ function LeadWorkspacePage() {
                       </Box>
 
 
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                      {isSalesRep && <Chip size="small" label="View only" color="info" variant="outlined" />}
                       {latestFinancialAssessment && (
                         <Chip
                           size="small"
@@ -6090,6 +6098,7 @@ function LeadWorkspacePage() {
                           variant="outlined"
                         />
                       )}
+                      </Stack>
                     </Stack>
                   </Box>
 

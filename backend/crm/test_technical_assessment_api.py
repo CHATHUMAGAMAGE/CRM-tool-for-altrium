@@ -238,6 +238,30 @@ class TechnicalAssessmentAPITests(
             self.qualified_lead,
         )
 
+    def test_assigned_sales_rep_can_read_only_their_technical_assessment(self):
+        assessment = self.create_assessment()
+        self.client.force_authenticate(self.sales_rep)
+
+        detail = self.client.get(reverse("crm:technical-assessment-detail", kwargs={"pk": assessment.id}))
+        self.assertEqual(detail.status_code, status.HTTP_200_OK, detail.data)
+
+        other_rep = User.objects.create_user(username="other_technical_rep", password="TestPass123!")
+        other_rep.profile.role = UserProfile.Role.SALES_REP
+        other_rep.profile.save(update_fields=["role"])
+        other_lead = Lead.objects.create(
+            company_name="Other Technical Company", contact_name="Other Contact",
+            phone="0700000001", assigned_to=other_rep, created_by=self.sales_manager,
+        )
+        other_assessment = TechnicalAssessment.objects.create(
+            lead=other_lead, requested_by=self.sales_manager,
+            assigned_to=self.tech_lead, requirements="Assess technical feasibility.",
+        )
+        denied = self.client.get(reverse("crm:technical-assessment-detail", kwargs={"pk": other_assessment.id}))
+        self.assertEqual(denied.status_code, status.HTTP_404_NOT_FOUND)
+
+        create = self.client.post(reverse("crm:technical-assessment-list-create"), {}, format="json")
+        self.assertEqual(create.status_code, status.HTTP_403_FORBIDDEN)
+
         self.assertEqual(
             assessment.requested_by,
             self.sales_manager,
@@ -516,6 +540,8 @@ class TechnicalAssessmentAPITests(
         assessment = (
             self.create_assessment()
         )
+        lead = assessment.lead
+        original_lead_status = lead.status
 
         self.client.force_authenticate(
             user=self.tech_lead,
@@ -561,6 +587,9 @@ class TechnicalAssessmentAPITests(
             )
             .exists()
         )
+
+        lead.refresh_from_db()
+        self.assertEqual(lead.status, original_lead_status)
 
 
     def test_other_tech_lead_cannot_start_assessment(

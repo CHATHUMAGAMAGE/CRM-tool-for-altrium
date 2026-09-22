@@ -17,6 +17,8 @@ export type AssignableAdminRole =
   | 'SALES_MANAGER'
   | 'TECH_LEAD'
   | 'FINANCIAL_OFFICER'
+  | 'SOFTWARE_ENGINEER'
+  | 'EXECUTIVE'
 
 
 export const USER_ROLES = {
@@ -79,6 +81,14 @@ Array<{
   {
     value: 'FINANCIAL_OFFICER',
     label: 'Financial Officer',
+  },
+  {
+    value: 'SOFTWARE_ENGINEER',
+    label: 'Software Engineer',
+  },
+  {
+    value: 'EXECUTIVE',
+    label: 'Executive',
   },
 ]
 

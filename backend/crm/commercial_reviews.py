@@ -13,6 +13,7 @@ from .models import (
     CommercialExceptionRequest, CommercialReview, FinancialAssessment,
     FinancialAssessmentHistory, Lead, LeadHistory, Notification,
 )
+from .lead_workflow import update_lead_status_from_workflow
 from .notifications import create_notification
 
 User = get_user_model()
@@ -242,6 +243,11 @@ class CommercialExceptionReviewView(APIView):
         exception.reviewed_at = timezone.now()
         exception.reviewer_comments = comments
         exception.save(update_fields=["status", "reviewed_by", "reviewed_at", "reviewer_comments"])
+        if exception.status == CommercialExceptionRequest.Status.APPROVED:
+            update_lead_status_from_workflow(
+                exception.lead,
+                performed_by=request.user,
+            )
         LeadHistory.objects.create(lead=exception.lead, event_type=LeadHistory.EventType.UPDATED, description=f"Commercial exception {exception.status.lower()}.", performed_by=request.user, metadata={"workflow_event": f"COMMERCIAL_EXCEPTION_{exception.status}", "exception_id": exception.id})
         lead_name = exception.lead.project_name or exception.lead.company_name
         comment_summary = comments if len(comments) <= 140 else f"{comments[:137]}..."

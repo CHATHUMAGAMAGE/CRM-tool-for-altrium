@@ -11,6 +11,7 @@ from rest_framework.test import APITestCase
 from accounts.models import UserProfile
 
 from .models import (
+    CommercialExceptionRequest,
     Deal,
     FinancialAssessment,
     FollowUp,
@@ -18,12 +19,358 @@ from .models import (
     LeadOpportunityDecision,
     TechnicalAssessment,
 )
+from .analytics import parse_filters, report_payload
 from .report_pdf import PdfReport, _visual_rows, build_pdf_context, report_pdf_filename
 
 REPORT_NAMES_FOR_TESTS = (
     "lead-sources", "lead-conversion", "lead-status",
     "sales-rep-performance", "deals",
 )
+
+
+class GoldenReportReconciliationTests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.manager = User.objects.create_user(
+            username="golden_manager", password="TestPassword123!"
+        )
+        cls.manager.profile.role = UserProfile.Role.SALES_MANAGER
+        cls.manager.profile.save(update_fields=["role"])
+
+        cls.finance_user = User.objects.create_user(
+            username="golden_finance", password="TestPassword123!"
+        )
+        cls.finance_user.profile.role = UserProfile.Role.FINANCIAL_OFFICER
+        cls.finance_user.profile.save(update_fields=["role"])
+        cls.tech_user = User.objects.create_user(
+            username="golden_tech", password="TestPassword123!"
+        )
+        cls.tech_user.profile.role = UserProfile.Role.TECH_LEAD
+        cls.tech_user.profile.save(update_fields=["role"])
+
+        cls.rep_a = cls._create_rep("golden_rep_a", "Rep", "A")
+        cls.rep_b = cls._create_rep("golden_rep_b", "Rep", "B")
+        sources = (
+            [Lead.Source.WEBSITE] * 4
+            + [Lead.Source.REFERRAL] * 3
+            + [Lead.Source.OTHER] * 3
+        )
+        assignments = [
+            cls.rep_a,
+            cls.rep_a,
+            cls.rep_b,
+            cls.rep_a,
+            cls.rep_a,
+            cls.rep_a,
+            cls.rep_a,
+            cls.rep_b,
+            cls.rep_b,
+            None,
+        ]
+        cls.leads = []
+        for index, (source, assigned_to) in enumerate(
+            zip(sources, assignments, strict=True), start=1
+        ):
+            lead = Lead.objects.create(
+                company_name=f"Golden Company {index}",
+                contact_name=f"Golden Contact {index}",
+                phone=f"07700000{index:02d}",
+                project_name=f"Golden Lead {index}",
+                source=source,
+                source_details="Golden campaign" if source == Lead.Source.OTHER else "",
+                status=Lead.Status.PROPOSAL if index <= 6 else Lead.Status.CONTACTED,
+                assigned_to=assigned_to,
+                created_by=cls.manager,
+            )
+            cls.leads.append(lead)
+
+        for index, lead in enumerate(cls.leads[:6]):
+            finance = FinancialAssessment.objects.create(
+                lead=lead,
+                requested_by=cls.manager,
+                assigned_to=cls.finance_user,
+                requirements="Golden financial review",
+                status=FinancialAssessment.Status.REVIEWED,
+                outcome=FinancialAssessment.Outcome.FINANCIALLY_SUITABLE,
+                reviewed_at=timezone.now(),
+                reviewed_by=cls.manager,
+            )
+            technical = TechnicalAssessment.objects.create(
+                lead=lead,
+                requested_by=cls.manager,
+                assigned_to=cls.tech_user,
+                requirements="Golden technical review",
+                status=TechnicalAssessment.Status.REVIEWED,
+                technical_comments="Feasible",
+                reviewed_at=timezone.now(),
+                reviewed_by=cls.manager,
+            )
+            decision = LeadOpportunityDecision.objects.create(
+                lead=lead,
+                financial_assessment=finance,
+                technical_assessment=technical,
+                decision=(
+                    LeadOpportunityDecision.Decision.PROCEED
+                    if index < 4
+                    else LeadOpportunityDecision.Decision.DO_NOT_PROCEED
+                ),
+                decision_notes="Golden decision",
+                decided_by=cls.manager,
+            )
+            if index < 3:
+                Deal.objects.create(
+                    source_lead=lead,
+                    opportunity_decision=decision,
+                    name=f"Golden Deal {index + 1}",
+                    company_name=lead.company_name,
+                    contact_name=lead.contact_name,
+                    phone=lead.phone,
+                    status=Deal.Status.OPEN if index < 2 else Deal.Status.WON,
+                    assigned_to=lead.assigned_to,
+                    created_by=cls.manager,
+                )
+
+    @classmethod
+    def _create_rep(cls, username, first_name, last_name):
+        user = User.objects.create_user(
+            username=username,
+            password="TestPassword123!",
+            first_name=first_name,
+            last_name=last_name,
+        )
+        user.profile.role = UserProfile.Role.SALES_REP
+        user.profile.save(update_fields=["role"])
+        return user
+
+    def setUp(self):
+        self.client.force_authenticate(self.manager)
+
+    @staticmethod
+    def metric_values(payload):
+        return {metric["key"]: metric["value"] for metric in payload["metrics"]}
+
+    def get_report(self, report_name, params=None):
+        response = self.client.get(
+            reverse("crm:analytics-report", kwargs={"report_name": report_name}),
+            params or {},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        return response.data
+
+    def test_all_five_reports_reconcile_against_golden_dataset(self):
+        payloads = {
+            name: self.get_report(name)
+            for name in REPORT_NAMES_FOR_TESTS
+        }
+
+        conversion = self.metric_values(payloads["lead-conversion"])
+        self.assertEqual(conversion["total_leads"], 10)
+        self.assertEqual(conversion["proceed"], 4)
+        self.assertEqual(conversion["deals"], 3)
+        self.assertEqual(conversion["lead_to_proceed"], 40.0)
+        self.assertEqual(conversion["proceed_to_deal"], 75.0)
+        self.assertEqual(conversion["lead_to_deal"], 30.0)
+
+        sources = {
+            row["source"]: row for row in payloads["lead-sources"]["summary"]
+        }
+        self.assertEqual(
+            {key: row["leads"] for key, row in sources.items()},
+            {Lead.Source.WEBSITE: 4, Lead.Source.REFERRAL: 3, Lead.Source.OTHER: 3},
+        )
+        self.assertEqual(sum(row["leads"] for row in sources.values()), 10)
+        self.assertEqual(sum(row["deals"] for row in sources.values()), 3)
+        source_visuals = _visual_rows("lead-sources", payloads["lead-sources"])
+        self.assertEqual(sum(row["percentage"] for row in source_visuals), 100.0)
+
+        status_payload = payloads["lead-status"]
+        decisions = status_payload["distributions"]["final_decisions"]
+        self.assertEqual(decisions, {"PENDING": 4, "PROCEED": 4, "DO_NOT_PROCEED": 2})
+        self.assertEqual(sum(decisions.values()), 10)
+        self.assertEqual(sum(status_payload["summary"].values()), 10)
+
+        reps = {
+            row["sales_rep"]: row
+            for row in payloads["sales-rep-performance"]["summary"]
+        }
+        self.assertEqual(reps[self.rep_a.id]["assigned_leads"], 6)
+        self.assertEqual(reps[self.rep_a.id]["deals"], 2)
+        self.assertEqual(reps[self.rep_a.id]["conversion_rate"], 33.3)
+        self.assertEqual(reps[self.rep_b.id]["assigned_leads"], 3)
+        self.assertEqual(reps[self.rep_b.id]["deals"], 1)
+        self.assertEqual(reps[self.rep_b.id]["conversion_rate"], 33.3)
+        performance = self.metric_values(payloads["sales-rep-performance"])
+        self.assertEqual(performance["assigned_leads"], 9)
+        self.assertEqual(performance["unassigned"], 1)
+        self.assertEqual(performance["assigned_leads"] + performance["unassigned"], 10)
+
+        deal_payload = payloads["deals"]
+        deals = self.metric_values(deal_payload)
+        self.assertEqual(deals["total_deals"], 3)
+        self.assertEqual(deals["open"], 2)
+        self.assertEqual(deals["won"], 1)
+        self.assertEqual(deals["lost"], 0)
+        self.assertEqual(deals["open"] + deals["won"] + deals["lost"], 3)
+        self.assertEqual(len(deal_payload["records"]), 3)
+
+    def test_csv_and_pdf_context_use_the_json_record_cohort(self):
+        filters = parse_filters({})
+        for report_name in REPORT_NAMES_FOR_TESTS:
+            with self.subTest(report_name=report_name):
+                payload = report_payload(report_name, filters)
+                json_payload = self.get_report(report_name)
+                self.assertEqual(payload["records"], json_payload["records"])
+
+                csv_response = self.client.get(
+                    reverse(
+                        "crm:analytics-report-export",
+                        kwargs={"report_name": report_name},
+                    )
+                )
+                self.assertEqual(csv_response.status_code, status.HTTP_200_OK)
+                csv_rows = csv_response.content.decode("utf-8-sig").splitlines()
+                self.assertEqual(len(csv_rows) - 1, len(payload["records"]))
+
+                context = build_pdf_context(
+                    report_name, payload, filters, self.manager
+                )
+                self.assertEqual(context["records"], payload["records"])
+                self.assertEqual(len(context["table_rows"]), len(payload["records"]))
+
+    def test_supported_filters_reconcile_across_json_csv_and_pdf_context(self):
+        today = timezone.localdate().isoformat()
+        filter_cases = (
+            {"date_from": today, "date_to": today},
+            {"sales_rep": str(self.rep_a.id)},
+            {"source": Lead.Source.WEBSITE},
+            {"status": Lead.Status.PROPOSAL},
+            {"assessment_stage": "DEAL_CREATED"},
+            {"final_decision": LeadOpportunityDecision.Decision.PROCEED},
+            {"deal_status": Deal.Status.OPEN},
+        )
+        url = reverse(
+            "crm:analytics-report", kwargs={"report_name": "lead-conversion"}
+        )
+        csv_url = reverse(
+            "crm:analytics-report-export",
+            kwargs={"report_name": "lead-conversion"},
+        )
+        for query in filter_cases:
+            with self.subTest(query=query):
+                json_response = self.client.get(url, query)
+                csv_response = self.client.get(csv_url, query)
+                self.assertEqual(json_response.status_code, status.HTTP_200_OK)
+                self.assertEqual(csv_response.status_code, status.HTTP_200_OK)
+
+                filters = parse_filters(query)
+                payload = report_payload("lead-conversion", filters)
+                self.assertEqual(json_response.data["records"], payload["records"])
+                self.assertEqual(
+                    len(csv_response.content.decode("utf-8-sig").splitlines()) - 1,
+                    len(payload["records"]),
+                )
+                context = build_pdf_context(
+                    "lead-conversion", payload, filters, self.manager
+                )
+                self.assertEqual(context["records"], payload["records"])
+
+    def test_submitted_assessments_remain_pending_until_reviewed(self):
+        finance_lead = Lead.objects.create(
+            company_name="Submitted Finance",
+            contact_name="Finance Pending",
+            phone="0779999901",
+            source=Lead.Source.WEBSITE,
+            assigned_to=self.rep_a,
+            created_by=self.manager,
+        )
+        FinancialAssessment.objects.create(
+            lead=finance_lead,
+            requested_by=self.manager,
+            assigned_to=self.finance_user,
+            requirements="Await manager review",
+            status=FinancialAssessment.Status.SUBMITTED,
+            outcome=FinancialAssessment.Outcome.FINANCIALLY_SUITABLE,
+        )
+
+        technical_lead = Lead.objects.create(
+            company_name="Submitted Technical",
+            contact_name="Technical Pending",
+            phone="0779999902",
+            source=Lead.Source.WEBSITE,
+            assigned_to=self.rep_a,
+            created_by=self.manager,
+        )
+        FinancialAssessment.objects.create(
+            lead=technical_lead,
+            requested_by=self.manager,
+            assigned_to=self.finance_user,
+            requirements="Reviewed finance",
+            status=FinancialAssessment.Status.REVIEWED,
+            outcome=FinancialAssessment.Outcome.FINANCIALLY_SUITABLE,
+            reviewed_at=timezone.now(),
+            reviewed_by=self.manager,
+        )
+        TechnicalAssessment.objects.create(
+            lead=technical_lead,
+            requested_by=self.manager,
+            assigned_to=self.tech_user,
+            requirements="Await manager review",
+            status=TechnicalAssessment.Status.SUBMITTED,
+            technical_comments="Submitted findings",
+        )
+
+        payload = self.get_report("lead-status")
+        stages = {record["lead_id"]: record["assessment_stage"] for record in payload["records"]}
+        self.assertEqual(stages[finance_lead.id], "FINANCE_PENDING")
+        self.assertEqual(stages[technical_lead.id], "TECHNICAL_PENDING")
+
+    def test_approved_exception_progresses_into_technical_workflow(self):
+        lead = Lead.objects.create(
+            company_name="Approved Exception",
+            contact_name="Exception Contact",
+            phone="0779999903",
+            source=Lead.Source.OTHER,
+            source_details="Commercial exception",
+            assigned_to=self.rep_a,
+            created_by=self.manager,
+        )
+        finance = FinancialAssessment.objects.create(
+            lead=lead,
+            requested_by=self.manager,
+            assigned_to=self.finance_user,
+            requirements="Reviewed unsuitable finance",
+            status=FinancialAssessment.Status.REVIEWED,
+            outcome=FinancialAssessment.Outcome.FINANCIALLY_UNSUITABLE,
+            reviewed_at=timezone.now(),
+            reviewed_by=self.manager,
+        )
+        CommercialExceptionRequest.objects.create(
+            lead=lead,
+            financial_assessment=finance,
+            requested_by=self.manager,
+            justification="Strategic exception",
+            status=CommercialExceptionRequest.Status.APPROVED,
+            reviewed_by=self.manager,
+            reviewed_at=timezone.now(),
+        )
+
+        payload = self.get_report("lead-status")
+        stages = {record["lead_id"]: record["assessment_stage"] for record in payload["records"]}
+        self.assertEqual(stages[lead.id], "EXCEPTION_APPROVED")
+
+        TechnicalAssessment.objects.create(
+            lead=lead,
+            requested_by=self.manager,
+            assigned_to=self.tech_user,
+            requirements="Exception technical review",
+            status=TechnicalAssessment.Status.REVIEWED,
+            technical_comments="Feasible",
+            reviewed_at=timezone.now(),
+            reviewed_by=self.manager,
+        )
+        payload = self.get_report("lead-status")
+        stages = {record["lead_id"]: record["assessment_stage"] for record in payload["records"]}
+        self.assertEqual(stages[lead.id], "DECISION_READY")
 
 
 class AnalyticsApiTests(APITestCase):
@@ -143,6 +490,27 @@ class AnalyticsApiTests(APITestCase):
         self.assertEqual(response.data["kpis"]["overdue_follow_ups"], 1)
         self.assertTrue(response.data["attention_required"])
         self.assertEqual(response.data["team_performance"][0]["assigned_leads"], 3)
+
+        status_values = {
+            option["value"] for option in response.data["filter_options"]["statuses"]
+        }
+        self.assertIn(Lead.Status.NEW, status_values)
+        self.assertIn(Lead.Status.CONTACTED, status_values)
+        self.assertIn(Lead.Status.PROPOSAL, status_values)
+        self.assertNotIn(Lead.Status.QUALIFIED, status_values)
+        self.assertNotIn(Lead.Status.SUBMITTED_FOR_QUALIFICATION, status_values)
+
+    def test_legacy_statuses_are_rejected_as_current_report_filters(self):
+        self.authenticate(self.manager)
+        url = reverse("crm:analytics-report", kwargs={"report_name": "lead-status"})
+
+        for legacy_status in (
+            Lead.Status.QUALIFIED,
+            Lead.Status.SUBMITTED_FOR_QUALIFICATION,
+        ):
+            with self.subTest(legacy_status=legacy_status):
+                response = self.client.get(url, {"status": legacy_status})
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_director_dashboard_uses_total_leads_for_lead_to_proceed_rate(self):
         self.authenticate(self.director)
@@ -300,7 +668,7 @@ class AnalyticsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             [record["lead_id"] for record in generate_pdf.call_args.args[1]["records"]],
-            [self.pending_lead.id],
+            [self.pending_lead.id, self.unsuitable_lead.id],
         )
 
         response = self.client.get(url, {"final_decision": "PROCEED"})
