@@ -11,6 +11,7 @@ import AppSidebar, {
   SIDEBAR_WIDTH,
 } from '../components/navigation/AppSidebar'
 import AppTopBar from '../components/navigation/AppTopBar'
+import PageScrollAssist from '../components/common/PageScrollAssist'
 
 function AppShell() {
   const theme = useTheme()
@@ -96,6 +97,8 @@ function AppShell() {
         <AppTopBar
           onMenuClick={handleMenuClick}
         />
+
+        <PageScrollAssist />
 
         <Box
           component="main"

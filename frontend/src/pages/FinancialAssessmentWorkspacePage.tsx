@@ -211,6 +211,8 @@ function FinancialAssessmentWorkspacePage() {
     setCanManageAssessment,
   ] = useState(false)
 
+  const [isSalesRepView, setIsSalesRepView] = useState(false)
+
   const [
     history,
     setHistory,
@@ -355,7 +357,8 @@ function FinancialAssessmentWorkspacePage() {
 
           if (
             user.role !== 'FINANCIAL_OFFICER' &&
-            user.role !== 'SALES_MANAGER'
+            user.role !== 'SALES_MANAGER' &&
+            user.role !== 'SALES_REP'
           ) {
             navigate(
               '/dashboard',
@@ -396,6 +399,7 @@ function FinancialAssessmentWorkspacePage() {
           setCanManageAssessment(
             isAssignedFinancialOfficer,
           )
+          setIsSalesRepView(user.role === 'SALES_REP')
 
           const [
             documentData,
@@ -1115,6 +1119,12 @@ function FinancialAssessmentWorkspacePage() {
           }}
         >
           {success}
+        </Alert>
+      )}
+
+      {isSalesRepView && (
+        <Alert severity="info" variant="outlined" sx={{ mt: 2 }}>
+          Assessment information is view-only for Sales Representatives.
         </Alert>
       )}
 

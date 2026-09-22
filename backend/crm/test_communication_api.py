@@ -8,7 +8,7 @@ from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 
-from .models import Communication, Lead
+from .models import Communication, Lead, LeadHistory
 
 
 User = get_user_model()
@@ -116,6 +116,40 @@ class CommunicationApiTests(APITestCase):
             "summary": "Sent product information",
             "notes": "Included the requested product overview.",
         }
+
+    def test_first_communication_moves_new_lead_to_contacted_once(self):
+        self.client.force_authenticate(self.sales_rep)
+
+        response = self.client.post(self.url(self.lead), self.payload(), format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.status, Lead.Status.CONTACTED)
+        transitions = LeadHistory.objects.filter(
+            lead=self.lead,
+            event_type=LeadHistory.EventType.STATUS_CHANGED,
+            metadata__new_status=Lead.Status.CONTACTED,
+        )
+        self.assertEqual(transitions.count(), 1)
+        self.assertEqual(
+            transitions.get().metadata["communication_id"],
+            response.data["id"],
+        )
+
+        second = self.client.post(self.url(self.lead), self.payload(), format="json")
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED, second.data)
+        self.assertEqual(transitions.count(), 1)
+
+    def test_communication_does_not_downgrade_proposal(self):
+        self.lead.status = Lead.Status.PROPOSAL
+        self.lead.save(update_fields=["status"])
+        self.client.force_authenticate(self.sales_rep)
+
+        response = self.client.post(self.url(self.lead), self.payload(), format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.status, Lead.Status.PROPOSAL)
 
     def test_unauthenticated_user_cannot_list_communications(self):
         response = self.client.get(self.url(self.lead))

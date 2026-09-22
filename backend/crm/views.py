@@ -1144,7 +1144,6 @@ class LeadQuerysetMixin:
         active_statuses = [
             Lead.Status.NEW,
             Lead.Status.CONTACTED,
-            Lead.Status.QUALIFIED,
             Lead.Status.PROPOSAL,
         ]
 
@@ -1226,107 +1225,6 @@ class LeadDetailView(
         IsAuthenticated,
         LeadPermission,
     ]
-
-
-class LeadSubmitForQualificationView(generics.GenericAPIView):
-    permission_classes = [IsAuthenticated, LeadPermission]
-    is_qualification_submission = True
-
-    def post(self, request, pk):
-        lead = get_object_or_404(
-            Lead.objects.select_related("assigned_to"),
-            pk=pk,
-        )
-        self.check_object_permissions(request, lead)
-
-        profile = getattr(request.user, "profile", None)
-        if profile is None or profile.role != UserProfile.Role.SALES_REP:
-            raise ValidationError({"detail": "Only a Sales Representative can submit a lead for qualification."})
-
-        if lead.assigned_to_id != request.user.id:
-            raise ValidationError({"detail": "Only the assigned Sales Representative can submit this lead."})
-
-        if lead.status not in {Lead.Status.NEW, Lead.Status.CONTACTED}:
-            raise ValidationError({"status": "Only a new or contacted lead can be submitted for qualification."})
-
-        if lead.responsible_manager is None:
-            raise ValidationError({"responsible_manager": "A responsible Sales Manager must be set before submission."})
-
-        handover_note = str(request.data.get("handover_note", "")).strip()
-        if not handover_note:
-            raise ValidationError({"handover_note": "A handover note is required."})
-
-        lead.status = Lead.Status.SUBMITTED_FOR_QUALIFICATION
-        lead.handover_note = handover_note
-        lead.review_feedback = ""
-        lead.submitted_for_qualification_at = timezone.now()
-        lead.submitted_for_qualification_by = request.user
-        lead.save(update_fields=[
-            "status", "handover_note", "review_feedback",
-            "submitted_for_qualification_at",
-            "submitted_for_qualification_by", "updated_at",
-        ])
-
-        LeadHistory.objects.create(
-            lead=lead,
-            event_type=LeadHistory.EventType.SUBMITTED_FOR_QUALIFICATION,
-            description="Lead submitted to Sales Manager for qualification review.",
-            performed_by=request.user,
-            metadata={"handover_note": handover_note},
-        )
-        create_notification(
-            recipient=lead.responsible_manager,
-            actor=request.user,
-            kind=Notification.Kind.SUBMISSION,
-            title="Lead ready for qualification",
-            message=f"{lead.contact_name} at {lead.company_name} was submitted for your review.",
-            target_url=f"/leads/{lead.id}",
-        )
-        return Response(LeadSerializer(lead, context={"request": request}).data)
-
-
-class LeadReturnForInformationView(generics.GenericAPIView):
-    permission_classes = [IsAuthenticated, LeadPermission]
-    is_qualification_return = True
-
-    def post(self, request, pk):
-        lead = get_object_or_404(Lead.objects.all(), pk=pk)
-        self.check_object_permissions(request, lead)
-
-        profile = getattr(request.user, "profile", None)
-        if profile is None or profile.role not in {
-            UserProfile.Role.ADMIN,
-            UserProfile.Role.SALES_MANAGER,
-            UserProfile.Role.PROJECT_MANAGER,
-        }:
-            raise ValidationError({"detail": "Only management can return a lead for more information."})
-
-        if lead.status != Lead.Status.SUBMITTED_FOR_QUALIFICATION:
-            raise ValidationError({"status": "This lead is not awaiting qualification review."})
-
-        feedback = str(request.data.get("review_feedback", "")).strip()
-        if not feedback:
-            raise ValidationError({"review_feedback": "Feedback for the Sales Representative is required."})
-
-        lead.status = Lead.Status.CONTACTED
-        lead.review_feedback = feedback
-        lead.save(update_fields=["status", "review_feedback", "updated_at"])
-        LeadHistory.objects.create(
-            lead=lead,
-            event_type=LeadHistory.EventType.RETURNED_FOR_MORE_INFORMATION,
-            description="Lead returned to the Sales Representative for more information.",
-            performed_by=request.user,
-            metadata={"review_feedback": feedback},
-        )
-        create_notification(
-            recipient=lead.assigned_to,
-            actor=request.user,
-            kind=Notification.Kind.RETURNED,
-            title="Lead returned for more information",
-            message=feedback,
-            target_url=f"/leads/{lead.id}",
-        )
-        return Response(LeadSerializer(lead, context={"request": request}).data)
 
 
 class LeadHistoryListView(
@@ -1672,11 +1570,29 @@ class CommunicationListCreateView(
                 }
             )
 
-        serializer.save(
+        communication = serializer.save(
             lead=lead,
             created_by=
                 self.request.user,
         )
+
+        if lead.status == Lead.Status.NEW:
+            lead.status = Lead.Status.CONTACTED
+            lead.save(update_fields=["status", "updated_at"])
+            LeadHistory.objects.create(
+                lead=lead,
+                event_type=LeadHistory.EventType.STATUS_CHANGED,
+                description=(
+                    "Lead moved from New to Contacted after the first "
+                    "customer communication."
+                ),
+                performed_by=self.request.user,
+                metadata={
+                    "previous_status": Lead.Status.NEW,
+                    "new_status": Lead.Status.CONTACTED,
+                    "communication_id": communication.id,
+                },
+            )
 
 
 class CommunicationDetailView(
@@ -2036,7 +1952,6 @@ class DashboardStatsView(
         active_statuses = [
             Lead.Status.NEW,
             Lead.Status.CONTACTED,
-            Lead.Status.QUALIFIED,
             Lead.Status.PROPOSAL,
         ]
 

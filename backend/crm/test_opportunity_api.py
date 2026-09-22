@@ -7,6 +7,8 @@ from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile
 
+from .lead_workflow import update_lead_status_from_workflow
+
 from .models import (
     Customer,
     Deal,
@@ -462,7 +464,7 @@ class OpportunityApiTests(APITestCase):
 
         self.assertEqual(
             self.lead.status,
-            Lead.Status.CONTACTED,
+            Lead.Status.LOST,
         )
 
         self.assertFalse(
@@ -632,6 +634,14 @@ class OpportunityApiTests(APITestCase):
     def test_proceeding_lead_can_be_converted_to_deal(
         self,
     ):
+        advanced = update_lead_status_from_workflow(
+            self.lead,
+            performed_by=self.sales_manager,
+        )
+        self.assertTrue(advanced)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.status, Lead.Status.PROPOSAL)
+
         approval_response = (
             self.proceed_with_lead()
         )

@@ -33,11 +33,9 @@ from .models import (
 ACTIVE_LEAD_STATUSES = {
     Lead.Status.NEW,
     Lead.Status.CONTACTED,
-    Lead.Status.QUALIFIED,
     Lead.Status.PROPOSAL,
 }
 COMPLETED_ASSESSMENT_STATUSES = {
-    FinancialAssessment.Status.SUBMITTED,
     FinancialAssessment.Status.REVIEWED,
 }
 ASSESSMENT_STAGES = (
@@ -150,7 +148,14 @@ def parse_filters(query_params):
     deal_status = query_params.get("deal_status") or ""
 
     valid_sources = {choice for choice, _ in Lead.Source.choices}
-    valid_statuses = {choice for choice, _ in Lead.Status.choices}
+    valid_statuses = {
+        choice
+        for choice, _ in Lead.Status.choices
+        if choice not in {
+            Lead.Status.QUALIFIED,
+            Lead.Status.SUBMITTED_FOR_QUALIFICATION,
+        }
+    }
     valid_decisions = {choice for choice, _ in LeadOpportunityDecision.Decision.choices}
     valid_deal_statuses = {choice for choice, _ in Deal.Status.choices}
     validations = (
@@ -251,11 +256,14 @@ def assessment_stage(lead):
         ).order_by("-requested_at", "-id").first()
         if exception and exception.status == CommercialExceptionRequest.Status.PENDING:
             return "EXCEPTION_PENDING"
-        if exception and exception.status == CommercialExceptionRequest.Status.APPROVED:
-            return "EXCEPTION_APPROVED"
-        return "COMMERCIAL_REVIEW_REQUIRED"
+        if not exception or exception.status != CommercialExceptionRequest.Status.APPROVED:
+            return "COMMERCIAL_REVIEW_REQUIRED"
     technical = latest_related(lead, "analytics_technical_assessments")
     if technical is None:
+        if (
+            finance.outcome == FinancialAssessment.Outcome.FINANCIALLY_UNSUITABLE
+        ):
+            return "EXCEPTION_APPROVED"
         return "AWAITING_TECHNICAL"
     if technical.status not in COMPLETED_ASSESSMENT_STATUSES:
         return "TECHNICAL_PENDING"
@@ -308,7 +316,14 @@ def filter_options():
             {"id": user.id, "name": display_name(user)} for user in reps
         ],
         "sources": [{"value": value, "label": label} for value, label in Lead.Source.choices],
-        "statuses": [{"value": value, "label": label} for value, label in Lead.Status.choices],
+        "statuses": [
+            {"value": value, "label": label}
+            for value, label in Lead.Status.choices
+            if value not in {
+                Lead.Status.QUALIFIED,
+                Lead.Status.SUBMITTED_FOR_QUALIFICATION,
+            }
+        ],
         "assessment_stages": [
             {"value": value, "label": value.replace("_", " ").title()}
             for value in ASSESSMENT_STAGES
@@ -392,7 +407,11 @@ def pipeline_counts(leads):
         decision = optional_related(lead, "opportunity_decision")
         if finance:
             stages["finance_requested"] += 1
-            if finance.outcome == FinancialAssessment.Outcome.FINANCIALLY_SUITABLE:
+            if (
+                finance.status == FinancialAssessment.Status.REVIEWED
+                and finance.outcome
+                == FinancialAssessment.Outcome.FINANCIALLY_SUITABLE
+            ):
                 stages["financially_suitable"] += 1
         if technical:
             stages["technical_assessment"] += 1

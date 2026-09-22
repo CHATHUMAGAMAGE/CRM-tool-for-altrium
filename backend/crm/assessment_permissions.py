@@ -46,6 +46,7 @@ class TechnicalAssessmentPermission(
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.TECH_LEAD,
                 UserProfile.Role.EXECUTIVE,
+                UserProfile.Role.SALES_REP,
             }
 
         action = getattr(

@@ -46,6 +46,7 @@ class FinancialAssessmentPermission(
                 UserProfile.Role.SALES_MANAGER,
                 UserProfile.Role.FINANCIAL_OFFICER,
                 UserProfile.Role.EXECUTIVE,
+                UserProfile.Role.SALES_REP,
             }
 
         action = getattr(

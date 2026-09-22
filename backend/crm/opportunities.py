@@ -703,17 +703,12 @@ class LeadConvertToDealView(
             lead.status
         )
 
-        lead.status = (
-            Lead.Status.PROPOSAL
-        )
-
         lead.converted_at = (
             timezone.now()
         )
 
         lead.save(
             update_fields=[
-                "status",
                 "converted_at",
                 "updated_at",
             ]
@@ -725,13 +720,12 @@ class LeadConvertToDealView(
             event_type=(
                 LeadHistory
                 .EventType
-                .STATUS_CHANGED
+                .UPDATED
             ),
 
             description=(
-                "Proceeding Lead converted "
-                f"to Deal #{deal.id} and "
-                "moved to Proposal."
+                "Lead converted successfully. "
+                f"Open Deal #{deal.id} was created."
             ),
 
             performed_by=request.user,

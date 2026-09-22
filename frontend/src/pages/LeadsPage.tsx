@@ -61,6 +61,12 @@ import {
   type LeadStatus,
 } from '../services/crm'
 
+import {
+  activeLeadStatuses,
+  closedLeadStatuses,
+  selectableLeadStatuses,
+} from './leadStatusOptions'
+
 
 type LeadView =
   | 'ACTIVE'
@@ -68,28 +74,13 @@ type LeadView =
   | 'ALL'
 
 
-const activeStatuses:
-LeadStatus[] = [
-  'NEW',
-  'CONTACTED',
-  'QUALIFIED',
-  'PROPOSAL',
-]
+const activeStatuses = activeLeadStatuses
 
 
-const closedStatuses:
-LeadStatus[] = [
-  'WON',
-  'LOST',
-  'DISQUALIFIED',
-]
+const closedStatuses = closedLeadStatuses
 
 
-const allStatuses:
-LeadStatus[] = [
-  ...activeStatuses,
-  ...closedStatuses,
-]
+const allStatuses = selectableLeadStatuses
 
 
 const leadCreatorRoles:
@@ -155,6 +146,9 @@ function getStatusLabel(
 
     case 'QUALIFIED':
       return 'Qualified'
+
+    case 'SUBMITTED_FOR_QUALIFICATION':
+      return 'Submitted for Qualification'
 
     case 'PROPOSAL':
       return 'Proposal'
@@ -2171,20 +2165,30 @@ function LeadsPage() {
                           <Chip
                             size="small"
                             label={
-                              lead.status_display ||
-                              getStatusLabel(
-                                lead.status,
-                              )
+                              lead.converted_at
+                                ? 'Converted to Deal'
+                                : lead.status_display ||
+                                  getStatusLabel(
+                                    lead.status,
+                                  )
                             }
                             color={
-                              getStatusColor(
-                                lead.status,
-                              )
+                              lead.converted_at
+                                ? 'success'
+                                : getStatusColor(
+                                  lead.status,
+                                )
                             }
-                            variant="outlined"
+                            variant={
+                              lead.converted_at
+                                ? 'filled'
+                                : 'outlined'
+                            }
                             sx={{
                               bgcolor:
-                                'var(--eleven-paper)',
+                                lead.converted_at
+                                  ? undefined
+                                  : 'var(--eleven-paper)',
 
                               fontSize:
                                 11.5,

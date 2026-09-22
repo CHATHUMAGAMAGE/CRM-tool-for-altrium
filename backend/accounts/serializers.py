@@ -17,6 +17,8 @@ ADMIN_ASSIGNABLE_ROLE_VALUES = {
     UserProfile.Role.SALES_MANAGER,
     UserProfile.Role.TECH_LEAD,
     UserProfile.Role.FINANCIAL_OFFICER,
+    UserProfile.Role.SOFTWARE_ENGINEER,
+    UserProfile.Role.EXECUTIVE,
 }
 
 ADMIN_ASSIGNABLE_ROLE_CHOICES = [
