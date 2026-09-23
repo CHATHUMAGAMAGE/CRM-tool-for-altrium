@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -45,6 +46,7 @@ import {
 
 import BrandLogo from '../BrandLogo'
 import ProfileSettingsDialog from '../profile/ProfileSettingsDialog'
+import { runLogoutFlow } from './logoutFlow'
 
 import {
   getCurrentUser,
@@ -177,6 +179,14 @@ function AppSidebar({
     useState(
       false,
     )
+
+  const logoutPendingRef =
+    useRef(false)
+
+  const [
+    logoutError,
+    setLogoutError,
+  ] = useState('')
 
 
   const [
@@ -386,28 +396,18 @@ function AppSidebar({
 
 
   const handleLogout =
-    () => {
-      if (
-        isLoggingOut
-      ) {
-        return
-      }
-
-      setIsLoggingOut(
-        true,
-      )
-
-      void logoutUser()
-
-      onNavigate?.()
-
-      navigate(
-        '/login',
-        {
-          replace:
-            true,
-        },
-      )
+    async () => {
+      await runLogoutFlow({
+        pending: logoutPendingRef,
+        logout: logoutUser,
+        setPending: setIsLoggingOut,
+        setError: setLogoutError,
+        beforeLogout: onNavigate,
+        navigateToLogin: () => navigate(
+          '/login',
+          { replace: true },
+        ),
+      })
     }
 
 
@@ -417,7 +417,7 @@ function AppSidebar({
       ?.trim() ||
     currentUser
       ?.username ||
-    'ELEVEN User'
+    'Loading profile...'
 
 
   const initials =
@@ -1270,6 +1270,17 @@ function AppSidebar({
             ? 'Logging out...'
             : 'Log out'}
         </Button>
+
+        {logoutError && (
+          <Typography
+            role="alert"
+            color="error"
+            variant="caption"
+            sx={{ px: 2 }}
+          >
+            {logoutError}
+          </Typography>
+        )}
       </Stack>
 
 
