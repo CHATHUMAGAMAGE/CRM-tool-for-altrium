@@ -39,3 +39,4 @@ pyrefly.toml
 
 # Local recovery / deployment secret files
 /backend/render-recovery-*.txt
+/backend/.venv-old/
