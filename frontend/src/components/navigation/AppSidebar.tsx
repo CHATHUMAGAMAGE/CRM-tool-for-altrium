@@ -417,7 +417,7 @@ function AppSidebar({
       ?.trim() ||
     currentUser
       ?.username ||
-    'ELEVEN User'
+    'Loading profile...'
 
 
   const initials =

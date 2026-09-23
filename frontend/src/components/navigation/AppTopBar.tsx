@@ -1166,7 +1166,7 @@ function AppTopBar({
       if (
         !currentUser
       ) {
-        return 'ELEVEN User'
+        return 'Loading profile...'
       }
 
       const fullName = [
@@ -1180,7 +1180,7 @@ function AppTopBar({
       return (
         fullName ||
         currentUser.username ||
-        'ELEVEN User'
+        'User'
       )
     }, [
       currentUser,

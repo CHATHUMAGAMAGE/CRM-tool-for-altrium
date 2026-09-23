@@ -74,7 +74,7 @@ describe('runLogoutFlow', () => {
     expect(navigateToLogin).toHaveBeenCalledOnce()
   })
 
-  it('does not navigate when server logout fails', async () => {
+  it('leaves the protected app even when server logout fails', async () => {
     const navigateToLogin = vi.fn()
     const setError = vi.fn()
 
@@ -88,7 +88,7 @@ describe('runLogoutFlow', () => {
       setError,
     })).resolves.toBe(false)
 
-    expect(navigateToLogin).not.toHaveBeenCalled()
+    expect(navigateToLogin).toHaveBeenCalledOnce()
     expect(setError).toHaveBeenLastCalledWith(
       'Unable to clear the server session.',
     )
@@ -97,7 +97,10 @@ describe('runLogoutFlow', () => {
   it.each([
     'ADMIN',
     'SALES_MANAGER',
+    'SALES_REP',
     'EXECUTIVE',
+    'FINANCIAL_OFFICER',
+    'TECH_LEAD',
   ])('uses the same stable login destination for %s logout', async () => {
     const navigateToLogin = vi.fn()
 

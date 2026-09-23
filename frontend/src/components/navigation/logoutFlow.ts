@@ -37,6 +37,8 @@ export async function runLogoutFlow({
         : 'Unable to log out. Please try again.',
     )
 
+    navigateToLogin()
+
     return false
   } finally {
     pending.current = false

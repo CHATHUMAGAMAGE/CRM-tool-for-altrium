@@ -111,6 +111,13 @@ type RefreshResponse = {
 }
 
 
+export type AuthSessionState =
+  | 'unknown'
+  | 'authenticated'
+  | 'logging_out'
+  | 'logged_out'
+
+
 let accessToken:
   string | null =
   null
@@ -119,6 +126,61 @@ let accessToken:
 let refreshRequest:
   Promise<string> | null =
   null
+
+
+let refreshAbortController:
+  AbortController | null =
+  null
+
+
+let sessionGeneration = 0
+
+
+let authSessionState:
+  AuthSessionState =
+  'unknown'
+
+
+const authSessionListeners =
+  new Set<
+    (state: AuthSessionState) => void
+  >()
+
+
+function publishAuthSessionState(
+  state: AuthSessionState,
+): void {
+  authSessionState = state
+
+  for (const listener of authSessionListeners) {
+    listener(state)
+  }
+}
+
+
+export function getAuthSessionState():
+AuthSessionState {
+  return authSessionState
+}
+
+
+function isExplicitlyLoggedOut(): boolean {
+  return (
+    authSessionState === 'logging_out' ||
+    authSessionState === 'logged_out'
+  )
+}
+
+
+export function subscribeToAuthSession(
+  listener: (state: AuthSessionState) => void,
+): () => void {
+  authSessionListeners.add(listener)
+
+  return () => {
+    authSessionListeners.delete(listener)
+  }
+}
 
 
 function clearLegacyBrowserTokens():
@@ -154,14 +216,38 @@ function setAccessToken(
 }
 
 
-function setAuthenticatedAccess(
+function establishAuthenticatedSession(
   token: string,
 ): void {
+  sessionGeneration += 1
+
+  refreshAbortController?.abort()
+  refreshAbortController = null
+  refreshRequest = null
+
   clearLegacyBrowserTokens()
 
   setAccessToken(
     token,
   )
+
+  publishAuthSessionState(
+    'authenticated',
+  )
+}
+
+
+function invalidateLocalSession(
+  state: 'logging_out' | 'logged_out' = 'logged_out',
+): void {
+  sessionGeneration += 1
+
+  refreshAbortController?.abort()
+  refreshAbortController = null
+  refreshRequest = null
+
+  clearAccessToken()
+  publishAuthSessionState(state)
 }
 
 
@@ -290,7 +376,7 @@ export async function loginUser(
   }
 
 
-  setAuthenticatedAccess(
+  establishAuthenticatedSession(
     result.access,
   )
 
@@ -395,7 +481,7 @@ export async function confirmMFASetup(
   }
 
 
-  setAuthenticatedAccess(
+  establishAuthenticatedSession(
     result.access,
   )
 
@@ -457,7 +543,7 @@ export async function verifyMFAChallenge(
   }
 
 
-  setAuthenticatedAccess(
+  establishAuthenticatedSession(
     result.access,
   )
 
@@ -689,81 +775,119 @@ boolean {
 
 export async function refreshAccessToken():
 Promise<string> {
-  const response =
-    await fetch(
-      `${API_BASE_URL}/api/v1/auth/refresh/`,
-      {
-        method:
-          'POST',
-
-        credentials:
-          'include',
-      },
-    )
-
-
-  if (!response.ok) {
-    clearAccessToken()
-
+  if (isExplicitlyLoggedOut()) {
     throw new Error(
-      'Session expired. Please log in again.',
+      'The session has been logged out.',
     )
   }
 
-
-  const result =
-    (await response.json()) as
-      RefreshResponse
-
-
-  if (
-    !result.access
-  ) {
-    clearAccessToken()
-
-    throw new Error(
-      'The authentication service did not return an access token.',
-    )
+  if (refreshRequest) {
+    return refreshRequest
   }
 
+  const generationAtStart =
+    sessionGeneration
 
-  setAuthenticatedAccess(
-    result.access,
-  )
+  const controller =
+    new AbortController()
 
-  return result.access
+  refreshAbortController = controller
+
+  const request = (async () => {
+    const response =
+      await fetch(
+        `${API_BASE_URL}/api/v1/auth/refresh/`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          signal: controller.signal,
+        },
+      )
+
+    if (!response.ok) {
+      if (
+        generationAtStart === sessionGeneration
+      ) {
+        invalidateLocalSession()
+      }
+
+      throw new Error(
+        'Session expired. Please log in again.',
+      )
+    }
+
+    const result =
+      (await response.json()) as RefreshResponse
+
+    if (!result.access) {
+      if (
+        generationAtStart === sessionGeneration
+      ) {
+        invalidateLocalSession()
+      }
+
+      throw new Error(
+        'The authentication service did not return an access token.',
+      )
+    }
+
+    if (
+      controller.signal.aborted ||
+      generationAtStart !== sessionGeneration ||
+      isExplicitlyLoggedOut()
+    ) {
+      throw new Error(
+        'The refresh result belongs to an inactive session.',
+      )
+    }
+
+    setAccessToken(result.access)
+    publishAuthSessionState('authenticated')
+
+    return result.access
+  })()
+
+  refreshRequest = request
+
+  try {
+    return await request
+  } finally {
+    if (refreshRequest === request) {
+      refreshRequest = null
+    }
+
+    if (refreshAbortController === controller) {
+      refreshAbortController = null
+    }
+  }
 }
 
 
 export async function ensureValidSession():
 Promise<boolean> {
+  if (isExplicitlyLoggedOut()) {
+    return false
+  }
+
   if (
     hasValidAccessToken()
   ) {
+    if (authSessionState !== 'authenticated') {
+      publishAuthSessionState('authenticated')
+    }
+
     return true
   }
 
 
   try {
-    if (
-      !refreshRequest
-    ) {
-      refreshRequest =
-        refreshAccessToken()
-          .finally(
-            () => {
-              refreshRequest =
-                null
-            },
-          )
-    }
-
-
-    await refreshRequest
+    await refreshAccessToken()
 
     return hasValidAccessToken()
   } catch {
-    clearAccessToken()
+    if (!isExplicitlyLoggedOut()) {
+      invalidateLocalSession()
+    }
 
     return false
   }
@@ -815,8 +939,15 @@ Promise<CurrentUser> {
     response.status ===
     401
   ) {
-    const refreshedToken =
-      await refreshAccessToken()
+    let refreshedToken: string
+
+    try {
+      refreshedToken =
+        await refreshAccessToken()
+    } catch (error) {
+      invalidateLocalSession()
+      throw error
+    }
 
     const retryResponse =
       await fetch(
@@ -835,6 +966,10 @@ Promise<CurrentUser> {
     if (
       !retryResponse.ok
     ) {
+      if (retryResponse.status === 401) {
+        invalidateLocalSession()
+      }
+
       throw new Error(
         'Unable to retrieve the current user.',
       )
@@ -952,7 +1087,9 @@ Promise<CurrentUser> {
 
 export async function logoutUser():
 Promise<void> {
-  clearAccessToken()
+  invalidateLocalSession(
+    'logging_out',
+  )
 
   try {
     const response =
@@ -979,5 +1116,8 @@ Promise<void> {
     }
   } finally {
     clearAccessToken()
+    publishAuthSessionState(
+      'logged_out',
+    )
   }
 }

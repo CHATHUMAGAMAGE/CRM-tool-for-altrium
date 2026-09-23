@@ -2,20 +2,29 @@ import { useEffect, useState } from 'react'
 import { Box, CircularProgress } from '@mui/material'
 import { Navigate, Outlet } from 'react-router'
 import { ensureValidSession } from '../services/auth'
+import { useAuthSessionState } from '../auth/useAuthSessionState'
 
 function ProtectedRoute() {
-  const [isChecking, setIsChecking] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const sessionState = useAuthSessionState()
+  const [isAuthenticated, setIsAuthenticated] =
+    useState<boolean | null>(null)
+
+  const isExplicitlyLoggedOut =
+    sessionState === 'logging_out' ||
+    sessionState === 'logged_out'
 
   useEffect(() => {
     let isMounted = true
+
+    if (isExplicitlyLoggedOut) {
+      return () => { isMounted = false }
+    }
 
     const checkSession = async () => {
       const sessionIsValid = await ensureValidSession()
 
       if (isMounted) {
         setIsAuthenticated(sessionIsValid)
-        setIsChecking(false)
       }
     }
 
@@ -24,9 +33,13 @@ function ProtectedRoute() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [isExplicitlyLoggedOut, sessionState])
 
-  if (isChecking) {
+  if (isExplicitlyLoggedOut) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (isAuthenticated === null) {
     return (
       <Box
         sx={{
@@ -40,7 +53,7 @@ function ProtectedRoute() {
     )
   }
 
-  if (!isAuthenticated) {
+  if (isAuthenticated === false) {
     return <Navigate to="/login" replace />
   }
 
